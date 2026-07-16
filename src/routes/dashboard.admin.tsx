@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useRequireRole } from "@/hooks/use-require-role";
 import { WelcomeSection, QuickActionGrid, StatGrid, type StatItem } from "@/components/site/DashboardShared";
 import { useTestMode } from "@/hooks/use-test-mode";
+import { HQActivityFeed } from "@/components/site/HQActivityFeed";
 import { supabase } from "@/integrations/supabase/client";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -238,6 +239,9 @@ function KejaHubHQ() {
                 ) : <p className="text-sm text-muted-foreground">No requests yet</p>}
               </div>
             </div>
+
+            {/* HQ Activity Feed */}
+            <HQActivityFeed />
 
             {/* Operational modules */}
             <div>

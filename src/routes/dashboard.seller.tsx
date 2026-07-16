@@ -8,6 +8,7 @@ import { ListingCoach } from "@/components/site/ListingCoach";
 import { VerificationCenter } from "@/components/site/VerificationCenter";
 import { PromoteListing } from "@/components/site/PromoteListing";
 import { ListingPerformance } from "@/components/site/ListingPerformance";
+import { ListingPackages } from "@/components/site/ListingPackages";
 import { toast } from "sonner";
 import { Circle as HelpCircle } from "lucide-react";
 import { useRequireRole } from "@/hooks/use-require-role";
@@ -15,7 +16,7 @@ import { useTestMode } from "@/hooks/use-test-mode";
 import { WelcomeSection, QuickActionGrid, StatGrid, type StatItem } from "@/components/site/DashboardShared";
 
 export const Route = createFileRoute("/dashboard/seller")({
-  head: () => ({ meta: [{ title: "Seller Dashboard — KejaHub" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Property Partner Dashboard — KejaHub" }, { name: "robots", content: "noindex" }] }),
   component: SellerDashboard,
 });
 
@@ -142,6 +143,9 @@ function SellerDashboard() {
 
       {/* Verification Center */}
       <VerificationCenter userId={auth.user?.id} />
+
+      {/* Listing Packages */}
+      <ListingPackages userId={auth.user?.id} />
 
       {/* Listing coach for top 3 */}
       <div>

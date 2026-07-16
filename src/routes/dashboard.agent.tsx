@@ -10,9 +10,10 @@ import { WelcomeSection, QuickActionGrid, StatGrid, type StatItem } from "@/comp
 import { VerificationCenter } from "@/components/site/VerificationCenter";
 import { PromoteListing } from "@/components/site/PromoteListing";
 import { ListingPerformance } from "@/components/site/ListingPerformance";
+import { ListingPackages } from "@/components/site/ListingPackages";
 
 export const Route = createFileRoute("/dashboard/agent")({
-  head: () => ({ meta: [{ title: "Agent Dashboard — KejaHub" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Property Partner Dashboard — KejaHub" }, { name: "robots", content: "noindex" }] }),
   component: AgentDashboard,
 });
 
@@ -89,6 +90,9 @@ function AgentDashboard() {
 
       {/* Verification Center */}
       <VerificationCenter userId={auth.user?.id} />
+
+      {/* Listing Packages */}
+      <ListingPackages userId={auth.user?.id} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Assigned leads */}
