@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { HQPage } from "@/components/site/HQPage";
 import { HQInternalNotes } from "@/components/site/HQInternalNotes";
-import { Calendar, Phone, Mail, Check, X, RotateCw, Eye, Loader as Loader2, Flag, Ban, EyeOff, AlertTriangle } from "lucide-react";
+import { Calendar, Phone, Mail, Check, X, RotateCw, Eye, Loader as Loader2, Flag, Ban, EyeOff, TriangleAlert as AlertTriangle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
