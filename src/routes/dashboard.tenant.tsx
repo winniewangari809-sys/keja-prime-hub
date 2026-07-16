@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { properties } from "@/lib/mock-data";
 import { PropertyCard } from "@/components/site/PropertyCard";
-import { Heart, Search, Bell, MessageCircle, Eye, Sparkles, Settings, Loader as Loader2, MapPin, Clock, Users, Calendar, Home, Hotel, Store } from "lucide-react";
+import { Heart, Search, Bell, MessageCircle, Eye, Sparkles, Settings, Loader as Loader2, MapPin, Clock, Users, Calendar, Hop as Home, Hotel, Store } from "lucide-react";
 import { useRequireRole } from "@/hooks/use-require-role";
 import { useTestMode } from "@/hooks/use-test-mode";
 import { WelcomeSection, QuickActionGrid, StatGrid, type StatItem } from "@/components/site/DashboardShared";

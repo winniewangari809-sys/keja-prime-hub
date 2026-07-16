@@ -1,4 +1,4 @@
-import { BarChart3, Eye, Heart, Calendar, FileText, CheckCircle, Home, TrendingUp, Award } from "lucide-react";
+import { ChartBar as BarChart3, Eye, Heart, Calendar, FileText, CircleCheck as CheckCircle, Hop as Home, TrendingUp, Award } from "lucide-react";
 
 const performanceStats = [
   { icon: Heart, label: "Properties Saved", value: 47, delta: "+8 this week" },
