@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
+import { WhatsAppButton } from "@/components/site/WhatsAppButton";
 
 export function ConciergeInquiryPanel({ listing, propertyId, ownerId }: {
   listing: string;
@@ -56,6 +57,13 @@ export function ConciergeInquiryPanel({ listing, propertyId, ownerId }: {
       >
         <Calendar className="h-4 w-4" /> Schedule Viewing
       </Button>
+
+      <WhatsAppButton
+        variant="card"
+        label="WhatsApp KejaHub Concierge"
+        message={`Hello KejaHub, I am interested in "${listing}".`}
+        className="w-full"
+      />
 
       <p className="text-[11px] leading-relaxed text-muted-foreground text-center">
         All communication flows through KejaHub HQ. We coordinate viewings and inquiries on your behalf.

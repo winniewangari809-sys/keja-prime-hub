@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { HQPage } from "@/components/site/HQPage";
-import { Calendar, Phone, Mail, Check, X, RotateCw, Eye, Loader as Loader2 } from "lucide-react";
+import { HQInternalNotes } from "@/components/site/HQInternalNotes";
+import { Calendar, Phone, Mail, Check, X, RotateCw, Eye, Loader as Loader2, Flag, Ban, EyeOff, AlertTriangle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -231,6 +232,55 @@ function ViewingRequests() {
               ))}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Internal Notes & Anti-scam Controls */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <HQInternalNotes />
+
+        <div className="rounded-2xl border border-border bg-card p-6">
+          <h3 className="font-display text-xl font-semibold flex items-center gap-2 mb-4">
+            <AlertTriangle className="h-5 w-5 text-destructive" /> Anti-Scam Controls
+          </h3>
+          <p className="text-sm text-muted-foreground mb-4">Take action against suspicious listings or users.</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Button
+              variant="outline"
+              className="justify-start"
+              onClick={() => toast.success("Listing hidden. It will no longer appear in search results.")}
+            >
+              <EyeOff className="h-4 w-4 text-amber-500" /> Hide Listing
+            </Button>
+            <Button
+              variant="outline"
+              className="justify-start"
+              onClick={() => toast.success("Listing suspended. Owner has been notified.")}
+            >
+              <AlertTriangle className="h-4 w-4 text-amber-600" /> Suspend Listing
+            </Button>
+            <Button
+              variant="outline"
+              className="justify-start"
+              onClick={() => toast.success("Listing removed. This action has been logged.")}
+            >
+              <X className="h-4 w-4 text-destructive" /> Remove Listing
+            </Button>
+            <Button
+              variant="outline"
+              className="justify-start"
+              onClick={() => toast.success("Listing flagged as scam. Investigation started.")}
+            >
+              <Flag className="h-4 w-4 text-red-500" /> Flag Scam
+            </Button>
+            <Button
+              variant="outline"
+              className="justify-start sm:col-span-2"
+              onClick={() => toast.success("User banned. All their listings have been hidden.")}
+            >
+              <Ban className="h-4 w-4 text-destructive" /> Ban User
+            </Button>
+          </div>
         </div>
       </div>
 

@@ -1,4 +1,4 @@
-import { Send, Eye, Calendar, CheckCircle2, Handshake, Trophy } from "lucide-react";
+import { Send, Eye, Calendar, CircleCheck as CheckCircle2, Handshake, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const stages = [

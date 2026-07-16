@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { WhatsAppButton } from "@/components/site/WhatsAppButton";
 
 const benefits = [
   { icon: Eye, title: "Homepage placement", desc: "Your listing appears on the KejaHub homepage" },
@@ -88,6 +89,14 @@ export function PromoteListing({ propertyId, propertyTitle }: { propertyId?: str
         <p className="font-semibold text-foreground flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5" /> Payment Instructions</p>
         <p className="mt-1">Pay via M-Pesa to Paybill <span className="font-mono font-semibold">400200</span>, Account: <span className="font-mono font-semibold">KEJAHUB-PROMOTE</span></p>
         <p className="mt-0.5">Include your listing ID in the account reference for faster processing.</p>
+      </div>
+
+      <div className="mt-4">
+        <WhatsAppButton
+          variant="card"
+          label="Need Help Choosing a Package?"
+          message="Hello KejaHub, I need help choosing a listing package."
+        />
       </div>
     </div>
   );

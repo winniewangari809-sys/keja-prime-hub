@@ -4,12 +4,41 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { WhatsAppButton } from "@/components/site/WhatsAppButton";
 
 const verificationTiers = [
-  { tier: "Bronze", fee: "KSh 500", color: "text-amber-800 bg-amber-100", perks: ["Phone verified badge", "Basic listing exposure"] },
-  { tier: "Silver", fee: "KSh 1,500", color: "text-slate-800 bg-slate-200", perks: ["ID verified badge", "Priority in search"] },
-  { tier: "Gold", fee: "KSh 3,000", color: "text-yellow-900 bg-yellow-100", perks: ["Trusted Seller badge", "Better analytics", "Concierge priority"] },
-  { tier: "Platinum", fee: "KSh 5,000", color: "text-primary bg-primary/10", perks: ["Featured in Trusted Properties", "Top exposure", "VIP support"] },
+  {
+    tier: "Basic Listing",
+    fee: "Free",
+    color: "text-slate-700 bg-slate-100",
+    perks: ["Standard listing exposure", "Basic search visibility", "Self-service support"],
+    popularity: "Entry level",
+    reach: "Low",
+  },
+  {
+    tier: "Verified Property",
+    fee: "KSh 1,500",
+    color: "text-blue-800 bg-blue-100",
+    perks: ["Verified badge on listing", "Priority in search results", "ID & ownership verified", "Email support"],
+    popularity: "Most popular",
+    reach: "Medium",
+  },
+  {
+    tier: "Featured Property",
+    fee: "KSh 3,000",
+    color: "text-amber-800 bg-amber-100",
+    perks: ["Featured badge", "Homepage placement", "Higher search ranking", "Concierge priority", "Phone support"],
+    popularity: "High conversion",
+    reach: "High",
+  },
+  {
+    tier: "Premium Property",
+    fee: "KSh 5,000",
+    color: "text-primary bg-primary/10",
+    perks: ["Premium badge", "Top of search results", "Homepage spotlight", "VIP concierge support", "Analytics dashboard", "Social media promotion"],
+    popularity: "Maximum exposure",
+    reach: "Maximum",
+  },
 ];
 
 const requiredDocuments = [
@@ -108,7 +137,7 @@ export function VerificationCenter({ userId }: { userId?: string }) {
       {/* Verification Benefits */}
       <div className="rounded-2xl border border-border bg-card p-6">
         <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-          <Award className="h-5 w-5 text-primary" /> Verification Benefits
+          <Award className="h-5 w-5 text-primary" /> Verification Benefits & Tiers
         </h3>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {verificationTiers.map((t) => (
@@ -116,6 +145,10 @@ export function VerificationCenter({ userId }: { userId?: string }) {
               <span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold", t.color)}>
                 <ShieldCheck className="h-3.5 w-3.5" /> {t.tier}
               </span>
+              <div className="mt-3 space-y-1 text-xs">
+                <p className="text-muted-foreground"><span className="font-semibold text-foreground">Popularity:</span> {t.popularity}</p>
+                <p className="text-muted-foreground"><span className="font-semibold text-foreground">Expected Reach:</span> {t.reach}</p>
+              </div>
               <ul className="mt-3 space-y-1 text-xs">
                 {t.perks.map((p) => <li key={p} className="flex gap-1.5"><span className="text-primary">•</span>{p}</li>)}
               </ul>
@@ -165,6 +198,13 @@ export function VerificationCenter({ userId }: { userId?: string }) {
             </li>
           ))}
         </ol>
+        <div className="mt-4">
+          <WhatsAppButton
+            variant="card"
+            label="Questions About Verification?"
+            message="Hello KejaHub, I have questions about the verification process."
+          />
+        </div>
       </div>
     </div>
   );

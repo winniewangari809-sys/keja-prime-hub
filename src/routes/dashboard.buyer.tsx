@@ -7,6 +7,10 @@ import { useTestMode } from "@/hooks/use-test-mode";
 import { WelcomeSection, QuickActionGrid, StatGrid, type StatItem } from "@/components/site/DashboardShared";
 import { ScheduledViewings } from "@/components/site/ScheduledViewings";
 import { DashboardSearchBar } from "@/components/site/DashboardSearchBar";
+import { WhatsAppButton } from "@/components/site/WhatsAppButton";
+import { BuyerStatusTracker } from "@/components/site/BuyerStatusTracker";
+import { SavedProperties } from "@/components/site/SavedProperties";
+import { ViewingHistory } from "@/components/site/ViewingHistory";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -89,6 +93,15 @@ function BuyerDashboard() {
       {/* Scheduled Viewings */}
       <ScheduledViewings viewings={viewings} viewerRole="buyer" />
 
+      {/* Buyer Status Tracker */}
+      <BuyerStatusTracker currentStage={viewings.length > 0 ? "viewing_scheduled" : undefined} />
+
+      {/* Saved Properties */}
+      <SavedProperties userId={auth.user?.id} />
+
+      {/* Viewing History */}
+      <ViewingHistory userId={auth.user?.id} />
+
       {/* Recommended properties */}
       <div>
         <div className="flex items-center justify-between mb-6">
@@ -167,6 +180,9 @@ function BuyerDashboard() {
           <Settings className="h-4 w-4" /> Profile settings
         </button>
       </div>
+
+      <WhatsAppButton variant="floating" message="Hello KejaHub, I need help with my property search." />
     </section>
   );
 }
+

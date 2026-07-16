@@ -10,9 +10,10 @@ import { WelcomeSection, QuickActionGrid, StatGrid, type StatItem } from "@/comp
 import { VerificationCenter } from "@/components/site/VerificationCenter";
 import { PromoteListing } from "@/components/site/PromoteListing";
 import { ListingPerformance } from "@/components/site/ListingPerformance";
+import { ListingPackages } from "@/components/site/ListingPackages";
 
 export const Route = createFileRoute("/dashboard/landlord")({
-  head: () => ({ meta: [{ title: "Landlord Dashboard — KejaHub" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Property Partner Dashboard — KejaHub" }, { name: "robots", content: "noindex" }] }),
   component: LandlordDashboard,
 });
 
@@ -69,7 +70,7 @@ function LandlordDashboard() {
           </button>
         </div>
       )}
-      <WelcomeSection firstName={displayName} role={auth.role ?? "landlord"} subtitle="Manage your rental listings, track viewing requests and monitor your rental income." />
+      <WelcomeSection firstName={displayName} role={auth.role ?? "landlord"} subtitle="Manage your rental listings, track viewing requests and monitor your rental performance." />
 
       <QuickActionGrid actions={quickActions} />
 
@@ -107,6 +108,9 @@ function LandlordDashboard() {
 
       {/* Verification Center */}
       <VerificationCenter userId={auth.user?.id} />
+
+      {/* Listing Packages */}
+      <ListingPackages userId={auth.user?.id} />
 
       {/* Status tabs */}
       <div>
