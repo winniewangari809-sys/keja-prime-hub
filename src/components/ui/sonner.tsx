@@ -1,13 +1,1 @@
-import { Toaster } from "sonner";
-
-export function SonnerToaster() {
-  return (
-    <Toaster
-      theme="system"
-      richColors
-      expand
-      closeButton
-      position="top-right"
-    />
-  );
-}
+export { toast, Toaster } from "sonner"

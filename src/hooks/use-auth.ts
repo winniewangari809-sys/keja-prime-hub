@@ -21,23 +21,6 @@ interface AuthState {
   loading: boolean;
 }
 
-const roleDefaultDashboards: Record<AppRole, string> = {
-  buyer: "/dashboard/buyer",
-  tenant: "/dashboard/tenant",
-  seller: "/dashboard/seller",
-  landlord: "/dashboard/landlord",
-  agent: "/dashboard/agent",
-  airbnb: "/dashboard/airbnb",
-  commercial: "/dashboard/commercial",
-  hq: "/dashboard/admin",
-  admin: "/dashboard/admin",
-};
-
-export function dashboardForRole(role: AppRole | null): string {
-  if (!role) return "/login";
-  return roleDefaultDashboards[role];
-}
-
 async function loadUserData(user: User) {
   let role: AppRole | null = null;
   let firstName: string | null = null;

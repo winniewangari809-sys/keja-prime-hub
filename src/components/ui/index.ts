@@ -1,13 +1,21 @@
-// Button
-export { Button, buttonVariants } from "./button";
+export { Button, buttonVariants } from "./button"
+export type { ButtonProps } from "./button"
 
-// Input
-export { Input } from "./input";
+export { Input } from "./input"
+export type { InputProps } from "./input"
 
-// Textarea
-export { Textarea } from "./textarea";
+export { Textarea } from "./textarea"
+export type { TextareaProps } from "./textarea"
 
-// Dialog
+export {
+  Card,
+  CardHeader,
+  CardFooter,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "./card"
+
 export {
   Dialog,
   DialogPortal,
@@ -19,21 +27,17 @@ export {
   DialogFooter,
   DialogTitle,
   DialogDescription,
-} from "./dialog";
+} from "./dialog"
 
-// Tabs
-export { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs";
+export { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs"
 
-// Progress
-export { Progress } from "./progress";
+export { Progress } from "./progress"
 
-// Label
-export { Label } from "./label";
+export { Label } from "./label"
 
-// Badge
-export { Badge, badgeVariants } from "./badge";
+export { Badge, badgeVariants } from "./badge"
+export type { BadgeProps } from "./badge"
 
-// Select
 export {
   Select,
   SelectGroup,
@@ -41,37 +45,22 @@ export {
   SelectTrigger,
   SelectContent,
   SelectItem,
+  SelectLabel,
   SelectSeparator,
   SelectScrollUpButton,
   SelectScrollDownButton,
-} from "./select";
+} from "./select"
 
-// Checkbox
-export { Checkbox } from "./checkbox";
+export { Checkbox } from "./checkbox"
 
-// Card
-export {
-  Card,
-  CardHeader,
-  CardFooter,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "./card";
+export { Separator } from "./separator"
 
-// Separator
-export { Separator } from "./separator";
+export { Switch } from "./switch"
 
-// Switch
-export { Switch } from "./switch";
+export { ScrollArea, ScrollBar } from "./scroll-area"
 
-// ScrollArea
-export { ScrollArea, ScrollBar } from "./scroll-area";
+export { Avatar, AvatarImage, AvatarFallback } from "./avatar"
 
-// Avatar
-export { Avatar, AvatarImage, AvatarFallback } from "./avatar";
-
-// DropdownMenu
 export {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -88,13 +77,10 @@ export {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuRadioGroup,
-} from "./dropdown-menu";
+} from "./dropdown-menu"
 
-// Tooltip
-export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "./tooltip";
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "./tooltip"
 
-// Popover
-export { Popover, PopoverTrigger, PopoverContent } from "./popover";
+export { Popover, PopoverTrigger, PopoverContent, PopoverAnchor } from "./popover"
 
-// Sonner
-export { SonnerToaster } from "./sonner";
+export { toast, Toaster } from "./sonner"
