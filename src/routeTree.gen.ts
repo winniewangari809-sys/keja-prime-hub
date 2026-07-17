@@ -20,6 +20,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as HomesForSaleRouteImport } from './routes/homes-for-sale'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as ConciergeRouteImport } from './routes/concierge'
+import { Route as CompareRouteImport } from './routes/compare'
 import { Route as CommercialPropertyRouteImport } from './routes/commercial-property'
 import { Route as AirbnbsRouteImport } from './routes/airbnbs'
 import { Route as AboutRouteImport } from './routes/about'
@@ -110,6 +111,11 @@ const ContactRoute = ContactRouteImport.update({
 const ConciergeRoute = ConciergeRouteImport.update({
   id: '/concierge',
   path: '/concierge',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareRoute = CompareRouteImport.update({
+  id: '/compare',
+  path: '/compare',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CommercialPropertyRoute = CommercialPropertyRouteImport.update({
@@ -298,6 +304,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/airbnbs': typeof AirbnbsRoute
   '/commercial-property': typeof CommercialPropertyRoute
+  '/compare': typeof CompareRoute
   '/concierge': typeof ConciergeRoute
   '/contact': typeof ContactRoute
   '/homes-for-sale': typeof HomesForSaleRoute
@@ -347,6 +354,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/airbnbs': typeof AirbnbsRoute
   '/commercial-property': typeof CommercialPropertyRoute
+  '/compare': typeof CompareRoute
   '/concierge': typeof ConciergeRoute
   '/contact': typeof ContactRoute
   '/homes-for-sale': typeof HomesForSaleRoute
@@ -397,6 +405,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/airbnbs': typeof AirbnbsRoute
   '/commercial-property': typeof CommercialPropertyRoute
+  '/compare': typeof CompareRoute
   '/concierge': typeof ConciergeRoute
   '/contact': typeof ContactRoute
   '/homes-for-sale': typeof HomesForSaleRoute
@@ -448,6 +457,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/airbnbs'
     | '/commercial-property'
+    | '/compare'
     | '/concierge'
     | '/contact'
     | '/homes-for-sale'
@@ -497,6 +507,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/airbnbs'
     | '/commercial-property'
+    | '/compare'
     | '/concierge'
     | '/contact'
     | '/homes-for-sale'
@@ -546,6 +557,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/airbnbs'
     | '/commercial-property'
+    | '/compare'
     | '/concierge'
     | '/contact'
     | '/homes-for-sale'
@@ -596,6 +608,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   AirbnbsRoute: typeof AirbnbsRoute
   CommercialPropertyRoute: typeof CommercialPropertyRoute
+  CompareRoute: typeof CompareRoute
   ConciergeRoute: typeof ConciergeRoute
   ContactRoute: typeof ContactRoute
   HomesForSaleRoute: typeof HomesForSaleRoute
@@ -718,6 +731,13 @@ declare module '@tanstack/react-router' {
       path: '/concierge'
       fullPath: '/concierge'
       preLoaderRoute: typeof ConciergeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare': {
+      id: '/compare'
+      path: '/compare'
+      fullPath: '/compare'
+      preLoaderRoute: typeof CompareRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/commercial-property': {
@@ -980,6 +1000,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   AirbnbsRoute: AirbnbsRoute,
   CommercialPropertyRoute: CommercialPropertyRoute,
+  CompareRoute: CompareRoute,
   ConciergeRoute: ConciergeRoute,
   ContactRoute: ContactRoute,
   HomesForSaleRoute: HomesForSaleRoute,
