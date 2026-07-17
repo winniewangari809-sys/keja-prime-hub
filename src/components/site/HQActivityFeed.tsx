@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Activity, User, Home, Calendar, MessageSquare } from "lucide-react";
+import { Activity, User, Hop as Home, Calendar, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ActivityItem {

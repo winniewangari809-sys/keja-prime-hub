@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { Building2, Phone, MapPin, CheckCircle2, Clock } from "lucide-react";
+import { Building2, Phone, MapPin, CircleCheck as CheckCircle2, Clock } from "lucide-react";
 import { useRequireRole } from "@/hooks/use-require-role";
 import { HQPage } from "@/components/site";
 import {

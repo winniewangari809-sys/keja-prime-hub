@@ -1,4 +1,4 @@
-import { CheckCircle } from "lucide-react";
+import { CircleCheck as CheckCircle } from "lucide-react";
 import { WhatsAppButton } from "./WhatsAppButton";
 import { cn } from "@/lib/utils";
 

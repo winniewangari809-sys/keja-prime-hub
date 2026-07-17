@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { Calendar, MapPin, Clock, Home } from "lucide-react";
+import { Calendar, MapPin, Clock, Hop as Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ViewingRecord {

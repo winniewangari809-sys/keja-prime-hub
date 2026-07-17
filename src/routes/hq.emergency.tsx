@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { AlertTriangle, Power, Info } from "lucide-react";
+import { TriangleAlert as AlertTriangle, Power, Info } from "lucide-react";
 import { useRequireRole } from "@/hooks/use-require-role";
 import { HQPage } from "@/components/site";
 import { Button } from "@/components/ui";

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { CheckCircle2, XCircle, FileText, User } from "lucide-react";
+import { CircleCheck as CheckCircle2, Circle as XCircle, FileText, User } from "lucide-react";
 import { useRequireRole } from "@/hooks/use-require-role";
 import { HQPage } from "@/components/site";
 import { Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui";

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Home, Search } from "lucide-react";
+import { Hop as Home, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ROLES = [

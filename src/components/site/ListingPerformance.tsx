@@ -1,4 +1,4 @@
-import { Eye, Heart, MessageSquare, Home, TrendingUp } from "lucide-react";
+import { Eye, Heart, MessageSquare, Hop as Home, TrendingUp } from "lucide-react";
 import { properties } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { Shield, AlertTriangle, Lock } from "lucide-react";
+import { Shield, TriangleAlert as AlertTriangle, Lock } from "lucide-react";
 import { useRequireRole } from "@/hooks/use-require-role";
 import { HQPage } from "@/components/site";
 import { supabase } from "@/integrations/supabase/client";

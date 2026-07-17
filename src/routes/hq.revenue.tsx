@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { DollarSign, TrendingUp, BarChart3 } from "lucide-react";
+import { DollarSign, TrendingUp, ChartBar as BarChart3 } from "lucide-react";
 import { useRequireRole } from "@/hooks/use-require-role";
 import { HQPage } from "@/components/site";
 import { supabase } from "@/integrations/supabase/client";

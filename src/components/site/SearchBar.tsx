@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Search, MapPin, Home, DollarSign } from "lucide-react";
+import { Search, MapPin, Hop as Home, DollarSign } from "lucide-react";
 
 const CATEGORIES = [
   { value: "rental", label: "Rentals" },

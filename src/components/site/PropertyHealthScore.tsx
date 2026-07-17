@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle, Circle } from "lucide-react";
+import { CircleAlert as AlertCircle, CircleCheck as CheckCircle, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface HealthItem {

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Home, MapPin, Users } from "lucide-react";
+import { ArrowRight, Hop as Home, MapPin, Users } from "lucide-react";
 import { GoldenHero, PropertyCard } from "@/components/site";
 import { Button } from "@/components/ui/button";
 import { properties, formatKES, priceLabel } from "@/lib/mock-data";

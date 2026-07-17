@@ -1,15 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import {
-  Home,
-  Calendar,
-  Users,
-  CheckCircle2,
-  XCircle,
-  LogIn,
-  LogOut,
-  MoreVertical,
-} from "lucide-react";
+import { Hop as Home, Calendar, Users, CircleCheck as CheckCircle2, Circle as XCircle, LogIn, LogOut, MoveVertical as MoreVertical } from "lucide-react";
 import { useRequireRole } from "@/hooks/use-require-role";
 import { HQPage } from "@/components/site";
 import {

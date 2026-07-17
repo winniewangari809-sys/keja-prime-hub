@@ -1,14 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import {
-  Building2,
-  Plus,
-  Eye,
-  BarChart3,
-  Calendar,
-  Star,
-  CheckCircle2,
-} from "lucide-react";
+import { Building2, Plus, Eye, ChartBar as BarChart3, Calendar, Star, CircleCheck as CheckCircle2 } from "lucide-react";
 import { useRequireRole } from "@/hooks/use-require-role";
 import {
   WelcomeSection,

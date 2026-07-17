@@ -1,12 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import {
-  ShoppingCart,
-  Home,
-  Users,
-  Building2,
-  Zap,
-} from "lucide-react";
+import { ShoppingCart, Hop as Home, Users, Building2, Zap } from "lucide-react";
 import { WelcomeSection, RoleBadge } from "@/components/site";
 import { Button } from "@/components/ui/button";
 import type { AppRole } from "@/hooks/use-auth";

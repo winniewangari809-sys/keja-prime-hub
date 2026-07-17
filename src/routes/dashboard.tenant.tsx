@@ -1,16 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import {
-  Home,
-  Heart,
-  MessageSquare,
-  Building2,
-  Store,
-  Eye,
-  Clock,
-  Bell,
-  Wifi,
-} from "lucide-react";
+import { Hop as Home, Heart, MessageSquare, Building2, Store, Eye, Clock, Bell, Wifi } from "lucide-react";
 import { useRequireRole } from "@/hooks/use-require-role";
 import {
   WelcomeSection,

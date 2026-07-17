@@ -1,13 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import {
-  Home,
-  Flame,
-  TrendingUp,
-  Zap,
-  Clock,
-  CheckCircle2,
-} from "lucide-react";
+import { Hop as Home, Flame, TrendingUp, Zap, Clock, CircleCheck as CheckCircle2 } from "lucide-react";
 import { useRequireRole } from "@/hooks/use-require-role";
 import { HQPage } from "@/components/site";
 import {

@@ -1,18 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import {
-  Users,
-  Home,
-  AlertCircle,
-  CheckCircle2,
-  TrendingUp,
-  Image,
-  Bell,
-  AlertTriangle,
-  BarChart3,
-  Settings,
-  Activity,
-} from "lucide-react";
+import { Users, Hop as Home, CircleAlert as AlertCircle, CircleCheck as CheckCircle2, TrendingUp, Image, Bell, TriangleAlert as AlertTriangle, ChartBar as BarChart3, Settings, Activity } from "lucide-react";
 import { useRequireRole } from "@/hooks/use-require-role";
 import {
   WelcomeSection,

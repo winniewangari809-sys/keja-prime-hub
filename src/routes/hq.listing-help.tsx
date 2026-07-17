@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { HelpCircle, BookOpen, Video, CheckCircle2 } from "lucide-react";
+import { Circle as HelpCircle, BookOpen, Video, CircleCheck as CheckCircle2 } from "lucide-react";
 import { useRequireRole } from "@/hooks/use-require-role";
 import { HQPage } from "@/components/site";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui";

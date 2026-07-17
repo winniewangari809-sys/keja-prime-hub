@@ -1,4 +1,4 @@
-import { CheckCircle, Circle } from "lucide-react";
+import { CircleCheck as CheckCircle, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Stage {

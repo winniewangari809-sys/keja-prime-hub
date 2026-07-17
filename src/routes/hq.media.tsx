@@ -1,12 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import {
-  Image,
-  CheckCircle2,
-  XCircle,
-  Trash2,
-  AlertCircle,
-} from "lucide-react";
+import { Image, CircleCheck as CheckCircle2, Circle as XCircle, Trash2, CircleAlert as AlertCircle } from "lucide-react";
 import { useRequireRole } from "@/hooks/use-require-role";
 import { HQPage } from "@/components/site";
 import { Button } from "@/components/ui";

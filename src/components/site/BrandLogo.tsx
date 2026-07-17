@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Home } from "lucide-react";
+import { Hop as Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BrandLogoProps {

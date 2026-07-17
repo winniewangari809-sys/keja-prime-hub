@@ -1,4 +1,4 @@
-import { TrendingUp, CheckCircle } from "lucide-react";
+import { TrendingUp, CircleCheck as CheckCircle } from "lucide-react";
 import { WhatsAppButton } from "./WhatsAppButton";
 
 interface PromotionPlan {

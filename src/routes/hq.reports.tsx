@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { AlertTriangle, CheckCircle2, Ban, Eye } from "lucide-react";
+import { TriangleAlert as AlertTriangle, CircleCheck as CheckCircle2, Ban, Eye } from "lucide-react";
 import { useRequireRole } from "@/hooks/use-require-role";
 import { HQPage } from "@/components/site";
 import { Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui";
