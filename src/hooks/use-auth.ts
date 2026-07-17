@@ -1,156 +1,134 @@
-import { useEffect, useState, useCallback } from "react";
-import type { Session, User } from "@supabase/supabase-js";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { User } from "@supabase/supabase-js";
 
-export type AppRole = "buyer" | "tenant" | "seller" | "landlord" | "agent" | "airbnb" | "commercial" | "hq" | "admin";
+export type AppRole =
+  | "buyer"
+  | "tenant"
+  | "seller"
+  | "landlord"
+  | "agent"
+  | "airbnb"
+  | "commercial"
+  | "hq"
+  | "admin";
 
-export interface AuthState {
-  loading: boolean;
-  session: Session | null;
+interface AuthState {
   user: User | null;
   role: AppRole | null;
   firstName: string | null;
   fullName: string | null;
+  loading: boolean;
 }
 
-const roleHome: Record<AppRole, string> = {
+const roleDefaultDashboards: Record<AppRole, string> = {
   buyer: "/dashboard/buyer",
   tenant: "/dashboard/tenant",
   seller: "/dashboard/seller",
   landlord: "/dashboard/landlord",
   agent: "/dashboard/agent",
-  airbnb: "/dashboard/landlord",
-  commercial: "/dashboard/seller",
+  airbnb: "/dashboard/airbnb",
+  commercial: "/dashboard/commercial",
   hq: "/dashboard/admin",
   admin: "/dashboard/admin",
 };
 
 export function dashboardForRole(role: AppRole | null): string {
-  return role ? roleHome[role] : "/dashboard/buyer";
+  if (!role) return "/login";
+  return roleDefaultDashboards[role];
 }
 
-async function loadRoleAndProfile(
-  user: User | null,
-  retries = 2,
-): Promise<{ role: AppRole | null; firstName: string | null; fullName: string | null }> {
-  if (!user) return { role: null, firstName: null, fullName: null };
+async function loadUserData(user: User) {
+  let role: AppRole | null = null;
+  let firstName: string | null = null;
+  let fullName: string | null = null;
 
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    const [{ data: roleRow, error: roleError }, { data: profile }] = await Promise.all([
-      supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .maybeSingle(),
-      supabase
-        .from("profiles")
-        .select("first_name, full_name")
-        .eq("id", user.id)
-        .maybeSingle(),
-    ]);
+  const { data: roleData } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", user.id)
+    .maybeSingle();
 
-    if (roleRow?.role) {
-      return {
-        role: roleRow.role as AppRole,
-        firstName: profile?.first_name ?? null,
-        fullName: profile?.full_name ?? null,
-      };
-    }
+  if (roleData) role = roleData.role as AppRole;
 
-    if (roleError && attempt < retries) {
-      await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
-      continue;
-    }
+  const { data: profileData } = await supabase
+    .from("profiles")
+    .select("first_name, full_name")
+    .eq("id", user.id)
+    .maybeSingle();
 
-    if (!roleRow && attempt < retries) {
-      await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
-      continue;
-    }
+  if (profileData) {
+    firstName = profileData.first_name;
+    fullName = profileData.full_name;
   }
 
-  return { role: null, firstName: null, fullName: null };
+  return { role, firstName, fullName };
 }
 
-export function useAuth(): AuthState & { signOut: () => Promise<void> } {
-  const [state, setState] = useState<AuthState>({
-    loading: true,
-    session: null,
+export function useAuth() {
+  const [auth, setAuth] = useState<AuthState>({
     user: null,
     role: null,
     firstName: null,
     fullName: null,
+    loading: true,
   });
 
-  const [userId, setUserId] = useState<string | null>(null);
-
   useEffect(() => {
-    let cancelled = false;
-
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (cancelled) return;
-      const user = session?.user ?? null;
-      setState((s) => ({
-        ...s,
-        session,
-        user,
-        loading: true,
-      }));
-      setUserId(user?.id ?? null);
-    });
-
-    supabase.auth.getSession().then(({ data }) => {
-      if (cancelled) return;
-      const user = data.session?.user ?? null;
-      setState((s) => ({
-        ...s,
-        session: data.session,
-        user,
-        loading: !!user,
-      }));
-      setUserId(user?.id ?? null);
-    });
-
-    return () => {
-      cancelled = true;
-      sub.subscription.unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!userId) {
-      setState((s) => ({
-        ...s,
-        role: null,
-        firstName: null,
-        fullName: null,
-        loading: false,
-      }));
-      return;
-    }
-
-    let cancelled = false;
+    let isMounted = true;
 
     (async () => {
-      const extras = await loadRoleAndProfile(state.user ?? null);
-      if (cancelled) return;
-      setState((s) => ({
-        ...s,
-        role: extras.role,
-        firstName: extras.firstName,
-        fullName: extras.fullName,
-        loading: false,
-      }));
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!isMounted) return;
+        const currentUser = sessionData?.session?.user || null;
+
+        if (currentUser) {
+          const { role, firstName, fullName } = await loadUserData(currentUser);
+          if (!isMounted) return;
+          setAuth({ user: currentUser, role, firstName, fullName, loading: false });
+        } else {
+          setAuth({ user: null, role: null, firstName: null, fullName: null, loading: false });
+        }
+      } catch {
+        if (isMounted) {
+          setAuth({ user: null, role: null, firstName: null, fullName: null, loading: false });
+        }
+      }
     })();
 
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) return;
+      const currentUser = session?.user || null;
 
-  const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+      if (currentUser) {
+        (async () => {
+          const { role, firstName, fullName } = await loadUserData(currentUser);
+          if (!isMounted) return;
+          setAuth({ user: currentUser, role, firstName, fullName, loading: false });
+        })();
+      } else {
+        setAuth({ user: null, role: null, firstName: null, fullName: null, loading: false });
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      listener?.subscription.unsubscribe();
+    };
   }, []);
 
-  return { ...state, signOut };
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setAuth({ user: null, role: null, firstName: null, fullName: null, loading: false });
+  };
+
+  return {
+    user: auth.user,
+    role: auth.role,
+    firstName: auth.firstName,
+    fullName: auth.fullName,
+    loading: auth.loading,
+    signOut,
+  };
 }

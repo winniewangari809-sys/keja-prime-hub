@@ -1,305 +1,181 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Handshake, Calendar, ShieldCheck, Loader as Loader2, Phone, Mail, MessageSquare } from "lucide-react";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { cn } from "@/lib/utils";
-import { WhatsAppButton } from "@/components/site/WhatsAppButton";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { WhatsAppButton } from "./WhatsAppButton";
+import { MessageSquare, Calendar } from "lucide-react";
 
-export function ConciergeInquiryPanel({ listing, propertyId, ownerId }: {
-  listing: string;
-  propertyId?: string;
-  ownerId?: string;
-}) {
-  const [inquiryOpen, setInquiryOpen] = useState(false);
-  const [viewingOpen, setViewingOpen] = useState(false);
-  const auth = useAuth();
+interface ConciergeInquiryPanelProps {
+  propertyId: string;
+  propertyTitle: string;
+}
+
+export function ConciergeInquiryPanel({
+  propertyId,
+  propertyTitle,
+}: ConciergeInquiryPanelProps) {
+  const { user, loading } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
+  const [scheduleData, setScheduleData] = useState({
+    preferredDate: "",
+    preferredTime: "",
+  });
+
+  const handleInterestedClick = async () => {
+    if (!user) {
+      toast.error("Please sign in to express interest");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await supabase.from("concierge_requests").insert({
+        user_id: user.id,
+        property_id: propertyId,
+        request_type: "interested",
+        status: "pending",
+      });
+      toast.success("We've noted your interest! Our team will contact you soon.");
+    } catch (error) {
+      toast.error("Failed to save your interest");
+      console.error(error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleScheduleViewing = async () => {
+    if (!user) {
+      toast.error("Please sign in to schedule a viewing");
+      return;
+    }
+
+    if (!scheduleData.preferredDate || !scheduleData.preferredTime) {
+      toast.error("Please select both date and time");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const viewingDateTime = new Date(
+        `${scheduleData.preferredDate}T${scheduleData.preferredTime}`
+      );
+
+      await supabase.from("viewings").insert({
+        user_id: user.id,
+        property_id: propertyId,
+        scheduled_at: viewingDateTime.toISOString(),
+        status: "scheduled",
+      });
+
+      toast.success("Viewing scheduled successfully!");
+      setShowScheduleDialog(false);
+      setScheduleData({ preferredDate: "", preferredTime: "" });
+    } catch (error) {
+      toast.error("Failed to schedule viewing");
+      console.error(error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse">
+        <div className="h-10 bg-gray-300 dark:bg-gray-700 rounded w-full" />
+      </div>
+    );
+  }
 
   return (
-    <div className="rounded-xl border border-border p-4 space-y-3">
-      <div className="flex items-center gap-2 rounded-lg bg-primary/5 p-3">
-        <ShieldCheck className="h-5 w-5 text-primary shrink-0" />
-        <div>
-          <p className="text-sm font-semibold">KejaHub Concierge</p>
-          <p className="text-xs text-muted-foreground">All inquiries are handled by our HQ team. Your contact info stays private.</p>
+    <div className="space-y-4">
+      <div className="bg-gradient-primary text-white rounded-lg p-6">
+        <h3 className="font-display font-bold text-xl mb-2">Interested In This Property?</h3>
+        <p className="opacity-90 mb-4">Let our concierge team help you find your perfect home.</p>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            onClick={handleInterestedClick}
+            disabled={submitting}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-white text-primary rounded-lg font-semibold hover:bg-gray-100 transition-colors disabled:opacity-50"
+          >
+            <MessageSquare className="w-4 h-4" />
+            Express Interest
+          </button>
+          <button
+            onClick={() => setShowScheduleDialog(true)}
+            disabled={submitting}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg font-semibold transition-colors disabled:opacity-50"
+          >
+            <Calendar className="w-4 h-4" />
+            Schedule Viewing
+          </button>
         </div>
       </div>
 
-      <Button
-        size="lg"
-        className="w-full gradient-primary text-primary-foreground"
-        onClick={() => {
-          if (!auth.user) {
-            toast.error("Please sign in to submit an inquiry.");
-            return;
-          }
-          setInquiryOpen(true);
-        }}
-      >
-        <Handshake className="h-4 w-4" /> Interested In Property
-      </Button>
+      {/* Schedule Viewing Dialog */}
+      {showScheduleDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg max-w-md w-full p-6">
+            <h3 className="font-display font-bold text-xl mb-4">Schedule a Viewing</h3>
 
-      <Button
-        size="lg"
-        variant="outline"
-        className="w-full"
-        onClick={() => {
-          if (!auth.user) {
-            toast.error("Please sign in to schedule a viewing.");
-            return;
-          }
-          setViewingOpen(true);
-        }}
-      >
-        <Calendar className="h-4 w-4" /> Schedule Viewing
-      </Button>
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-semibold mb-2">Preferred Date</label>
+                <input
+                  type="date"
+                  value={scheduleData.preferredDate}
+                  onChange={(e) =>
+                    setScheduleData({
+                      ...scheduleData,
+                      preferredDate: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
+                />
+              </div>
 
+              <div>
+                <label className="block text-sm font-semibold mb-2">Preferred Time</label>
+                <input
+                  type="time"
+                  value={scheduleData.preferredTime}
+                  onChange={(e) =>
+                    setScheduleData({
+                      ...scheduleData,
+                      preferredTime: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowScheduleDialog(false)}
+                className="flex-1 px-4 py-2 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleScheduleViewing}
+                disabled={submitting}
+                className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {submitting ? "Scheduling..." : "Schedule"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* WhatsApp Button */}
       <WhatsAppButton
         variant="card"
-        label="WhatsApp KejaHub Concierge"
-        message={`Hello KejaHub, I am interested in "${listing}".`}
-        className="w-full"
-      />
-
-      <p className="text-[11px] leading-relaxed text-muted-foreground text-center">
-        All communication flows through KejaHub HQ. We coordinate viewings and inquiries on your behalf.
-      </p>
-
-      <InquiryDialog
-        open={inquiryOpen}
-        onOpenChange={setInquiryOpen}
-        listing={listing}
-        propertyId={propertyId}
-        ownerId={ownerId}
-        userId={auth.user?.id}
-      />
-      <ViewingDialog
-        open={viewingOpen}
-        onOpenChange={setViewingOpen}
-        listing={listing}
-        propertyId={propertyId}
-        ownerId={ownerId}
-        userId={auth.user?.id}
+        message={`Hi! I'm interested in ${propertyTitle}. Can you provide more details?`}
+        label="Chat on WhatsApp"
       />
     </div>
-  );
-}
-
-function InquiryDialog({ open, onOpenChange, listing, propertyId, ownerId, userId }: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  listing: string;
-  propertyId?: string;
-  ownerId?: string;
-  userId?: string;
-}) {
-  const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [contactMethod, setContactMethod] = useState("phone");
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const submit = async () => {
-    if (!fullName || !phone) {
-      toast.error("Please fill in your name and phone number.");
-      return;
-    }
-    setLoading(true);
-    const { error } = await supabase.from("concierge_requests").insert({
-      requester_id: userId,
-      type: "inquiry",
-      property_id: propertyId ?? null,
-      full_name: fullName,
-      phone_number: phone,
-      email: email || null,
-      preferred_contact: contactMethod,
-      message: message || `Inquiry about ${listing}`,
-    });
-    setLoading(false);
-    if (error) {
-      toast.error("Failed to submit inquiry. Please try again.");
-      return;
-    }
-    toast.success("Your inquiry has been sent to KejaHub HQ. We'll be in touch soon.");
-    onOpenChange(false);
-    setFullName(""); setPhone(""); setEmail(""); setMessage("");
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogTitle>Interested In Property</DialogTitle>
-        <DialogDescription>Submit your details — KejaHub HQ will coordinate with the property owner on your behalf.</DialogDescription>
-        <div className="mt-4 space-y-4">
-          <div>
-            <label className="text-sm font-semibold">Full Name</label>
-            <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Jane Doe" className="mt-1" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm font-semibold">Phone Number</label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+254 7XX XXX XXX" className="mt-1" />
-            </div>
-            <div>
-              <label className="text-sm font-semibold">Email (optional)</label>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="mt-1" />
-            </div>
-          </div>
-          <div>
-            <label className="text-sm font-semibold">Preferred Contact Method</label>
-            <div className="mt-2 flex gap-2">
-              {[
-                { key: "phone", label: "Phone", icon: Phone },
-                { key: "email", label: "Email", icon: Mail },
-                { key: "whatsapp", label: "WhatsApp", icon: MessageSquare },
-              ].map((m) => (
-                <button
-                  key={m.key}
-                  type="button"
-                  onClick={() => setContactMethod(m.key)}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-lg border-2 px-3 py-2 text-sm font-medium transition-colors",
-                    contactMethod === m.key ? "border-primary bg-primary/5 text-primary" : "border-border hover:border-primary/40"
-                  )}
-                >
-                  <m.icon className="h-3.5 w-3.5" /> {m.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label className="text-sm font-semibold">Message</label>
-            <Textarea rows={3} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="I'd like to know more about this property..." className="mt-1" />
-          </div>
-          <Button onClick={submit} disabled={loading} className="w-full gradient-primary text-primary-foreground">
-            {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting…</> : "Submit Inquiry"}
-          </Button>
-        </div>
-        <p className="text-xs text-muted-foreground text-center mt-2">
-          Your contact information is visible only to KejaHub HQ Admin — not to the property owner.
-        </p>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function ViewingDialog({ open, onOpenChange, listing, propertyId, ownerId, userId }: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  listing: string;
-  propertyId?: string;
-  ownerId?: string;
-  userId?: string;
-}) {
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [phone, setPhone] = useState("");
-  const [notes, setNotes] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const submit = async () => {
-    if (!date || !time || !phone) {
-      toast.error("Please fill in date, time, and phone number.");
-      return;
-    }
-    setLoading(true);
-
-    // Insert the viewing
-    const { data: viewingData, error: viewingError } = await supabase.from("viewings").insert({
-      requester_id: userId,
-      property_id: propertyId ?? null,
-      owner_id: ownerId ?? null,
-      property_title: listing,
-      preferred_date: date,
-      preferred_time: time,
-      phone_number: phone,
-      notes: notes || null,
-      status: "pending",
-    }).select().single();
-
-    if (viewingError) {
-      setLoading(false);
-      toast.error("Failed to schedule viewing. Please try again.");
-      return;
-    }
-
-    // Create notifications: buyer gets confirmation, admin gets alert, seller gets notified (without buyer info)
-    const notifications = [
-      // Buyer notification
-      {
-        user_id: userId,
-        title: "Viewing request submitted",
-        body: `Your viewing request for "${listing}" on ${date} at ${time} has been submitted. KejaHub HQ will confirm shortly.`,
-        kind: "viewing",
-      },
-      // Admin notification
-      {
-        role: "hq" as const,
-        title: "Viewing request awaiting action",
-        body: `New viewing request for "${listing}" on ${date} at ${time}. Review and coordinate.`,
-        kind: "viewing",
-      },
-    ];
-
-    // If there's an owner, notify them too (without buyer contact info)
-    if (ownerId) {
-      notifications.push({
-        user_id: ownerId,
-        title: "New viewing request",
-        body: `A viewing request has been submitted for "${listing}" on ${date} at ${time}. KejaHub HQ will coordinate the details.`,
-        kind: "viewing",
-      } as any);
-    }
-
-    await supabase.from("notifications").insert(notifications);
-
-    setLoading(false);
-    toast.success("Viewing request submitted! KejaHub HQ will coordinate and confirm with you soon.");
-    onOpenChange(false);
-    setDate(""); setTime(""); setPhone(""); setNotes("");
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogTitle>Schedule Viewing</DialogTitle>
-        <DialogDescription>Request a viewing — KejaHub HQ will coordinate with the property owner and confirm with you.</DialogDescription>
-        <div className="mt-4 space-y-4">
-          <div className="rounded-lg bg-secondary/60 p-3">
-            <p className="text-xs text-muted-foreground">Property</p>
-            <p className="font-semibold text-sm">{listing}</p>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm font-semibold">Preferred Date</label>
-              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="mt-1" />
-            </div>
-            <div>
-              <label className="text-sm font-semibold">Preferred Time</label>
-              <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="mt-1" />
-            </div>
-          </div>
-          <div>
-            <label className="text-sm font-semibold">Phone Number</label>
-            <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+254 7XX XXX XXX" className="mt-1" />
-          </div>
-          <div>
-            <label className="text-sm font-semibold">Additional Notes (optional)</label>
-            <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Any special requests..." className="mt-1" />
-          </div>
-          <Button onClick={submit} disabled={loading} className="w-full gradient-primary text-primary-foreground">
-            {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting…</> : "Submit Viewing Request"}
-          </Button>
-        </div>
-        <p className="text-xs text-muted-foreground text-center mt-2">
-          Your phone number is visible only to KejaHub HQ Admin. The property owner will not see your contact details.
-        </p>
-      </DialogContent>
-    </Dialog>
   );
 }

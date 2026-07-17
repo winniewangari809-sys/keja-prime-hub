@@ -1,63 +1,148 @@
-import { Send, Eye, Calendar, CircleCheck as CheckCircle2, Handshake, Trophy } from "lucide-react";
+import { CheckCircle, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const stages = [
-  { key: "request_sent", label: "Request Sent", icon: Send, desc: "Your inquiry has been submitted to KejaHub HQ" },
-  { key: "reviewing", label: "KejaHub Reviewing", icon: Eye, desc: "Our team is reviewing your request" },
-  { key: "viewing_scheduled", label: "Viewing Scheduled", icon: Calendar, desc: "A viewing has been arranged" },
-  { key: "viewing_completed", label: "Viewing Completed", icon: CheckCircle2, desc: "You've visited the property" },
-  { key: "negotiation", label: "Negotiation", icon: Handshake, desc: "KejaHub is negotiating on your behalf" },
-  { key: "deal_closed", label: "Deal Closed", icon: Trophy, desc: "Congratulations! The deal is complete" },
+interface Stage {
+  id: string;
+  label: string;
+  description: string;
+}
+
+const STAGES: Stage[] = [
+  {
+    id: "request-sent",
+    label: "Request Sent",
+    description: "Your interest has been registered",
+  },
+  {
+    id: "reviewing",
+    label: "KejaHub Reviewing",
+    description: "Our team is reviewing your request",
+  },
+  {
+    id: "viewing-scheduled",
+    label: "Viewing Scheduled",
+    description: "Property viewing has been arranged",
+  },
+  {
+    id: "viewing-completed",
+    label: "Viewing Completed",
+    description: "You've completed the property viewing",
+  },
+  {
+    id: "negotiation",
+    label: "Negotiation",
+    description: "Price and terms being negotiated",
+  },
+  {
+    id: "deal-closed",
+    label: "Deal Closed",
+    description: "Congratulations! Transaction complete",
+  },
 ];
 
-const stageOrder = ["request_sent", "reviewing", "viewing_scheduled", "viewing_completed", "negotiation", "deal_closed"];
+interface BuyerStatusTrackerProps {
+  currentStage: "request-sent" | "reviewing" | "viewing-scheduled" | "viewing-completed" | "negotiation" | "deal-closed";
+}
 
-export function BuyerStatusTracker({ currentStage }: { currentStage?: string }) {
-  const activeIndex = currentStage ? stageOrder.indexOf(currentStage) : 0;
+export function BuyerStatusTracker({ currentStage }: BuyerStatusTrackerProps) {
+  const currentIndex = STAGES.findIndex(s => s.id === currentStage);
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
-      <h3 className="font-display text-xl font-semibold mb-2">Your Journey</h3>
-      <p className="text-sm text-muted-foreground mb-6">Track your property journey from request to deal closure.</p>
+    <div className="space-y-6">
+      <div>
+        <h3 className="font-display font-bold text-2xl mb-2">Purchase Progress</h3>
+        <p className="text-gray-600 dark:text-gray-400">
+          Track your journey to securing your new property
+        </p>
+      </div>
 
-      <div className="relative">
-        {/* Vertical line */}
-        <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-border" />
+      <div className="space-y-4">
+        {STAGES.map((stage, idx) => {
+          const isCompleted = idx < currentIndex;
+          const isCurrent = idx === currentIndex;
 
-        <div className="space-y-6">
-          {stages.map((stage, i) => {
-            const isComplete = i < activeIndex;
-            const isActive = i === activeIndex;
-            const Icon = stage.icon;
-
-            return (
-              <div key={stage.key} className="relative flex items-start gap-4">
+          return (
+            <div key={stage.id} className="flex gap-4">
+              {/* Timeline dot and line */}
+              <div className="flex flex-col items-center">
                 <div
                   className={cn(
-                    "relative z-10 grid h-10 w-10 place-items-center rounded-full border-2 transition-colors shrink-0",
-                    isComplete
-                      ? "border-success bg-success text-white"
-                      : isActive
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-card text-muted-foreground",
+                    "w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-200",
+                    isCompleted
+                      ? "bg-success text-white"
+                      : isCurrent
+                        ? "bg-primary text-white ring-4 ring-primary/30"
+                        : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
                   )}
                 >
-                  <Icon className="h-4 w-4" />
+                  {isCompleted ? (
+                    <CheckCircle className="w-6 h-6" />
+                  ) : (
+                    <span>{idx + 1}</span>
+                  )}
                 </div>
-                <div className="pt-1.5">
-                  <p
+
+                {idx < STAGES.length - 1 && (
+                  <div
                     className={cn(
-                      "font-semibold text-sm",
-                      isActive ? "text-primary" : isComplete ? "text-foreground" : "text-muted-foreground",
+                      "w-1 h-12 transition-colors duration-200",
+                      isCompleted || isCurrent
+                        ? "bg-primary"
+                        : "bg-gray-200 dark:bg-gray-700"
                     )}
-                  >
-                    {stage.label}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{stage.desc}</p>
-                </div>
+                  />
+                )}
               </div>
-            );
-          })}
+
+              {/* Content */}
+              <div className={cn(
+                "pb-8 flex-1",
+                isCurrent && "pt-1"
+              )}>
+                <h4 className={cn(
+                  "font-semibold text-lg transition-colors duration-200",
+                  isCompleted
+                    ? "text-success"
+                    : isCurrent
+                      ? "text-primary"
+                      : "text-gray-500 dark:text-gray-500"
+                )}>
+                  {stage.label}
+                </h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  {stage.description}
+                </p>
+
+                {isCurrent && (
+                  <div className="mt-3 p-3 bg-primary/10 dark:bg-primary/20 rounded-lg border border-primary/30 dark:border-primary/40">
+                    <p className="text-sm font-semibold text-primary dark:text-primary">
+                      You are here
+                    </p>
+                    <p className="text-xs text-primary/70 dark:text-primary/60 mt-1">
+                      Our team is working to move you to the next stage
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Progress Summary */}
+      <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            Progress: {currentIndex + 1} of {STAGES.length} stages
+          </span>
+          <div className="flex-1 ml-4 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-primary transition-all duration-300"
+              style={{
+                width: `${((currentIndex + 1) / STAGES.length) * 100}%`,
+              }}
+            />
+          </div>
         </div>
       </div>
     </div>

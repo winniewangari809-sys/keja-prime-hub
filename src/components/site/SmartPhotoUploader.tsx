@@ -1,582 +1,306 @@
-import { useRef, useState, useCallback, useEffect } from "react";
-import { Camera, Image as ImageIcon, Trash2, Star, GripVertical, Plus, Loader as Loader2, CircleAlert as AlertCircle, CircleCheck as CheckCircle2, Film, Video } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { useState } from "react";
+import { Camera, ImagePlus, Video, Upload, Trash2, Star } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
 
-export type PhotoCategory =
-  | "Cover Photo"
-  | "Living Room"
-  | "Kitchen"
-  | "Bedroom"
-  | "Bathroom"
-  | "Toilet"
-  | "Dining Area"
-  | "Compound"
-  | "Parking"
-  | "Entrance"
-  | "Security Gate"
-  | "Office Area"
-  | "Shop Front"
-  | "Airbnb Amenities"
-  | "Exterior"
-  | "Pool"
-  | "Balcony"
-  | "Reception"
-  | "Open Space"
-  | "Floor Plan";
+interface MediaItem {
+  id: string;
+  url: string;
+  type: "photo" | "video";
+  category: string;
+  isCover: boolean;
+}
 
-export const ALL_PHOTO_CATEGORIES: PhotoCategory[] = [
-  "Cover Photo", "Living Room", "Kitchen", "Bedroom", "Bathroom", "Toilet",
-  "Dining Area", "Compound", "Parking", "Entrance", "Security Gate",
-  "Office Area", "Shop Front", "Airbnb Amenities", "Exterior", "Pool",
-  "Balcony", "Reception", "Open Space", "Floor Plan",
+const MEDIA_CATEGORIES = [
+  "Front View",
+  "Living Room",
+  "Bedroom",
+  "Kitchen",
+  "Bathroom",
+  "Garden/Balcony",
+  "Parking",
+  "Other",
 ];
 
-export const CATEGORY_ICONS: Record<PhotoCategory, string> = {
-  "Cover Photo": "🏠",
-  "Living Room": "🛋",
-  Kitchen: "🍳",
-  Bedroom: "🛏",
-  Bathroom: "🚿",
-  Toilet: "🚽",
-  "Dining Area": "🍽",
-  Compound: "🌳",
-  Parking: "🚗",
-  Entrance: "🚪",
-  "Security Gate": "🛡",
-  "Office Area": "🏢",
-  "Shop Front": "🏬",
-  "Airbnb Amenities": "🏨",
-  Exterior: "🏡",
-  Pool: "🏊",
-  Balcony: "🌅",
-  Reception: "🛎",
-  "Open Space": "📐",
-  "Floor Plan": "📋",
-};
-
-export interface UploadedPhoto {
-  id?: string;
-  url: string;
-  category: PhotoCategory;
-  file?: File;
-  progress: number;
-  uploading: boolean;
-  error?: string;
-  storage_path?: string;
-  is_cover: boolean;
-  display_order: number;
-}
-
 interface SmartPhotoUploaderProps {
-  propertyId?: string;
-  photos: UploadedPhoto[];
-  onPhotosChange: (photos: UploadedPhoto[]) => void;
-  requiredCategories?: PhotoCategory[];
+  propertyId: string;
+  onMediaAdded?: (media: MediaItem) => void;
 }
 
-export function SmartPhotoUploader({
-  propertyId,
-  photos,
-  onPhotosChange,
-  requiredCategories = [],
-}: SmartPhotoUploaderProps) {
+export function SmartPhotoUploader({ propertyId, onMediaAdded }: SmartPhotoUploaderProps) {
+  const [media, setMedia] = useState<MediaItem[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [pendingFileIndex, setPendingFileIndex] = useState(0);
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const cameraInputRef = useRef<HTMLInputElement | null>(null);
-  const galleryInputRef = useRef<HTMLInputElement | null>(null);
-  const videoCameraInputRef = useRef<HTMLInputElement | null>(null);
-  const videoGalleryInputRef = useRef<HTMLInputElement | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState("Front View");
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
 
-  const takePhoto = () => {
-    cameraInputRef.current?.click();
-  };
+  const handleFileSelect = async (file: File, isVideo: boolean) => {
+    if (isVideo && !file.type.startsWith("video/")) {
+      toast.error("Please select a video file");
+      return;
+    }
 
-  const chooseFromGallery = () => {
-    galleryInputRef.current?.click();
-  };
+    if (!isVideo && !file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
 
-  const recordVideo = () => {
-    videoCameraInputRef.current?.click();
-  };
-
-  const chooseVideo = () => {
-    videoGalleryInputRef.current?.click();
-  };
-
-  const handleFilesSelected = (files: FileList | null, source: "camera" | "gallery") => {
-    if (!files || files.length === 0) return;
-    const validFiles = Array.from(files).filter((f) => {
-      if (!f.type.startsWith("image/")) {
-        toast.error(`${f.name} is not an image`);
-        return false;
-      }
-      if (f.size > 10 * 1024 * 1024) {
-        toast.error(`${f.name} is too large (max 10MB)`);
-        return false;
-      }
-      return true;
-    });
-    if (validFiles.length === 0) return;
-    setPendingFiles(validFiles);
-    setPendingFileIndex(0);
+    setPendingFile(file);
     setShowCategoryDialog(true);
   };
 
-  const handleVideoSelected = (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    const validFiles = Array.from(files).filter((f) => {
-      if (!f.type.startsWith("video/")) {
-        toast.error(`${f.name} is not a video`);
-        return false;
-      }
-      if (f.size > 50 * 1024 * 1024) {
-        toast.error(`${f.name} is too large (max 50MB)`);
-        return false;
-      }
-      return true;
-    });
-    if (validFiles.length === 0) return;
-    setPendingFiles(validFiles);
-    setPendingFileIndex(0);
-    setShowCategoryDialog(true);
-  };
-
-  const assignCategory = async (category: PhotoCategory) => {
-    const file = pendingFiles[pendingFileIndex];
-    if (!file) return;
-
-    const isCover = category === "Cover Photo" || photos.length === 0;
-    const photo: UploadedPhoto = {
-      url: URL.createObjectURL(file),
-      category,
-      file,
-      progress: 0,
-      uploading: true,
-      is_cover: isCover,
-      display_order: photos.length,
-    };
-    onPhotosChange([...photos, photo]);
-
-    // Start upload
-    uploadFile(file, category, photos.length, isCover);
-
-    // Move to next file or close dialog
-    if (pendingFileIndex + 1 < pendingFiles.length) {
-      setPendingFileIndex(pendingFileIndex + 1);
-    } else {
-      setShowCategoryDialog(false);
-      setPendingFiles([]);
-      setPendingFileIndex(0);
+  const handleTakePhoto = async () => {
+    try {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.capture = "environment";
+      input.onchange = (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) handleFileSelect(file, false);
+      };
+      input.click();
+    } catch (error) {
+      toast.error("Camera not available");
     }
   };
 
-  const uploadFile = async (
-    file: File,
-    category: PhotoCategory,
-    order: number,
-    isCover: boolean,
-  ) => {
-    const fileExt = file.name.split(".").pop() || "jpg";
-    const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
-    const basePath = propertyId || "temp";
-    const storagePath = `${basePath}/${fileName}`;
-
+  const handleChooseFromGallery = async () => {
     try {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.onchange = (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) handleFileSelect(file, false);
+      };
+      input.click();
+    } catch (error) {
+      toast.error("Failed to open gallery");
+    }
+  };
+
+  const handleRecordVideo = async () => {
+    try {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "video/*";
+      input.capture = "environment";
+      input.onchange = (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) handleFileSelect(file, true);
+      };
+      input.click();
+    } catch (error) {
+      toast.error("Video recording not available");
+    }
+  };
+
+  const handleChooseVideo = async () => {
+    try {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "video/*";
+      input.onchange = (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) handleFileSelect(file, true);
+      };
+      input.click();
+    } catch (error) {
+      toast.error("Failed to open gallery");
+    }
+  };
+
+  const uploadFile = async () => {
+    if (!pendingFile) return;
+
+    setUploading(true);
+    try {
+      const fileExt = pendingFile.name.split(".").pop();
+      const fileName = `${propertyId}/${Date.now()}.${fileExt}`;
+
       const { data, error } = await supabase.storage
         .from("property-media")
-        .upload(storagePath, file, {
-          cacheControl: "3600",
-          upsert: false,
-          onUploadProgress: (event) => {
-            const pct = event.total ? Math.round((event.loaded / event.total) * 100) : 0;
-            onPhotosChange(
-              photos.map((p, i) =>
-                i === order ? { ...p, progress: pct } : p,
-              ),
-            );
-          },
-        });
+        .upload(fileName, pendingFile);
 
       if (error) throw error;
 
-      const { data: urlData } = supabase.storage
+      const { data: publicData } = supabase.storage
         .from("property-media")
-        .getPublicUrl(storagePath);
+        .getPublicUrl(data.path);
 
-      onPhotosChange(
-        photos.map((p, i) =>
-          i === order
-            ? {
-                ...p,
-                url: urlData.publicUrl,
-                storage_path: storagePath,
-                uploading: false,
-                progress: 100,
-              }
-            : p,
-        ),
-      );
+      const isVideo = pendingFile.type.startsWith("video/");
+      const newMedia: MediaItem = {
+        id: `${propertyId}-${Date.now()}`,
+        url: publicData.publicUrl,
+        type: isVideo ? "video" : "photo",
+        category: selectedCategory,
+        isCover: media.length === 0,
+      };
 
-      // If we have a propertyId, insert into property_media table
-      if (propertyId) {
-        const { data: userData } = await supabase.auth.getUser();
-        if (userData.user) {
-          await supabase.from("property_media").insert({
-            property_id: propertyId,
-            owner_id: userData.user.id,
-            kind: "photo",
-            category,
-            storage_path: storagePath,
-            public_url: urlData.publicUrl,
-            file_size: file.size,
-            mime_type: file.type,
-            display_order: order,
-            is_cover: isCover,
-            review_status: "pending",
-          });
-        }
-      }
+      setMedia([...media, newMedia]);
+      onMediaAdded?.(newMedia);
 
-      toast.success(`${category} photo uploaded`);
-    } catch (err: any) {
-      onPhotosChange(
-        photos.map((p, i) =>
-          i === order ? { ...p, uploading: false, error: err.message || "Upload failed" } : p,
-        ),
-      );
-      toast.error(`Upload failed: ${err.message || "Unknown error"}`);
+      toast.success(`${isVideo ? "Video" : "Photo"} uploaded successfully`);
+      setShowCategoryDialog(false);
+      setPendingFile(null);
+    } catch (error) {
+      toast.error("Failed to upload file");
+      console.error(error);
+    } finally {
+      setUploading(false);
     }
   };
 
-  const removePhoto = (index: number) => {
-    const photo = photos[index];
-    if (photo.storage_path) {
-      supabase.storage.from("property-media").remove([photo.storage_path]);
-    }
-    if (photo.id) {
-      supabase.from("property_media").delete().eq("id", photo.id);
-    }
-    const newPhotos = photos.filter((_, i) => i !== index);
-    // Reassign cover if we removed the cover
-    if (photo.is_cover && newPhotos.length > 0) {
-      newPhotos[0] = { ...newPhotos[0], is_cover: true, category: "Cover Photo" as PhotoCategory };
-    }
-    onPhotosChange(newPhotos);
-    toast.success("Photo removed");
+  const handleDelete = (id: string) => {
+    setMedia(media.filter(m => m.id !== id));
+    toast.success("Media removed");
   };
 
-  const setCover = (index: number) => {
-    onPhotosChange(
-      photos.map((p, i) => ({
-        ...p,
-        is_cover: i === index,
-        category: i === index ? ("Cover Photo" as PhotoCategory) : p.category === "Cover Photo" ? ("Living Room" as PhotoCategory) : p.category,
-      })),
-    );
-    toast.success("Cover photo updated");
+  const handleSetCover = (id: string) => {
+    setMedia(media.map(m => ({ ...m, isCover: m.id === id })));
   };
-
-  const changeCategory = (index: number, category: PhotoCategory) => {
-    onPhotosChange(
-      photos.map((p, i) => (i === index ? { ...p, category } : p)),
-    );
-    if (photos[index].id) {
-      supabase
-        .from("property_media")
-        .update({ category })
-        .eq("id", photos[index].id!);
-    }
-  };
-
-  // Drag and drop reordering
-  const handleDragStart = (index: number) => {
-    setDraggedIndex(index);
-  };
-
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    setDragOverIndex(index);
-  };
-
-  const handleDrop = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    if (draggedIndex === null || draggedIndex === index) return;
-    const newPhotos = [...photos];
-    const [moved] = newPhotos.splice(draggedIndex, 1);
-    newPhotos.splice(index, 0, moved);
-    // Reassign display_order and cover
-    const reordered = newPhotos.map((p, i) => ({
-      ...p,
-      display_order: i,
-      is_cover: i === 0,
-    }));
-    onPhotosChange(reordered);
-    setDraggedIndex(null);
-    setDragOverIndex(null);
-    toast.success("Photos reordered");
-  };
-
-  const handleDragEnd = () => {
-    setDraggedIndex(null);
-    setDragOverIndex(null);
-  };
-
-  // Required photos check
-  const missingCategories = requiredCategories.filter(
-    (cat) => !photos.some((p) => p.category === cat && !p.error),
-  );
-
-  const uploadCount = photos.filter((p) => p.uploading).length;
-  const overallProgress =
-    photos.length > 0
-      ? Math.round(photos.reduce((sum, p) => sum + p.progress, 0) / photos.length)
-      : 0;
 
   return (
-    <div>
-      {/* Hidden file inputs */}
-      <input
-        ref={cameraInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={(e) => handleFilesSelected(e.target.files, "camera")}
-      />
-      <input
-        ref={galleryInputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        className="hidden"
-        onChange={(e) => handleFilesSelected(e.target.files, "gallery")}
-      />
-      <input
-        ref={videoCameraInputRef}
-        type="file"
-        accept="video/*"
-        capture="environment"
-        className="hidden"
-        onChange={(e) => handleVideoSelected(e.target.files)}
-      />
-      <input
-        ref={videoGalleryInputRef}
-        type="file"
-        accept="video/*"
-        multiple
-        className="hidden"
-        onChange={(e) => handleVideoSelected(e.target.files)}
-      />
+    <div className="space-y-6">
+      {/* Upload Buttons */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <button
+          onClick={handleTakePhoto}
+          className="flex flex-col items-center gap-2 p-4 rounded-lg border-2 border-dashed border-primary hover:bg-primary/5 transition-colors"
+        >
+          <Camera className="w-6 h-6 text-primary" />
+          <span className="text-sm font-semibold">Take Picture</span>
+        </button>
 
-      {/* Direct action buttons */}
-      <div className="flex flex-wrap gap-3">
-        <Button type="button" onClick={takePhoto} className="gradient-primary text-primary-foreground">
-          <Camera className="h-4 w-4" /> Take Picture
-        </Button>
-        <Button type="button" onClick={chooseFromGallery} variant="outline">
-          <ImageIcon className="h-4 w-4" /> Choose From Gallery
-        </Button>
-        <Button type="button" onClick={recordVideo} variant="outline">
-          <Video className="h-4 w-4" /> Record Video
-        </Button>
-        <Button type="button" onClick={chooseVideo} variant="outline">
-          <Film className="h-4 w-4" /> Choose Video
-        </Button>
+        <button
+          onClick={handleChooseFromGallery}
+          className="flex flex-col items-center gap-2 p-4 rounded-lg border-2 border-dashed border-primary hover:bg-primary/5 transition-colors"
+        >
+          <ImagePlus className="w-6 h-6 text-primary" />
+          <span className="text-sm font-semibold">Choose Image</span>
+        </button>
+
+        <button
+          onClick={handleRecordVideo}
+          className="flex flex-col items-center gap-2 p-4 rounded-lg border-2 border-dashed border-primary hover:bg-primary/5 transition-colors"
+        >
+          <Video className="w-6 h-6 text-primary" />
+          <span className="text-sm font-semibold">Record Video</span>
+        </button>
+
+        <button
+          onClick={handleChooseVideo}
+          className="flex flex-col items-center gap-2 p-4 rounded-lg border-2 border-dashed border-primary hover:bg-primary/5 transition-colors"
+        >
+          <Upload className="w-6 h-6 text-primary" />
+          <span className="text-sm font-semibold">Choose Video</span>
+        </button>
       </div>
 
-      {/* Upload progress */}
-      {uploadCount > 0 && (
-        <div className="mt-4 rounded-xl border border-border bg-primary/5 p-4">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            Uploading {uploadCount} photo{uploadCount > 1 ? "s" : ""}... {overallProgress}%
+      {/* Category Dialog */}
+      {showCategoryDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg max-w-md w-full p-6">
+            <h3 className="font-display font-bold text-xl mb-4">Select Category</h3>
+
+            <div className="space-y-2 mb-6">
+              {MEDIA_CATEGORIES.map(category => (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={cn(
+                    "w-full px-4 py-2 text-left rounded-lg font-semibold transition-colors",
+                    selectedCategory === category
+                      ? "bg-primary text-white"
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700"
+                  )}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowCategoryDialog(false)}
+                className="flex-1 px-4 py-2 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={uploadFile}
+                disabled={uploading}
+                className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {uploading ? "Uploading..." : "Upload"}
+              </button>
+            </div>
           </div>
-          <Progress value={overallProgress} className="mt-2" />
         </div>
       )}
 
-      {/* Photo gallery grid with drag-and-drop */}
-      {photos.length > 0 && (
-        <div className="mt-6">
-          <p className="text-sm text-muted-foreground mb-3">
-            Drag to rearrange. The first photo is your cover. Click the star to change cover.
-          </p>
-          <div className="grid gap-3 sm:grid-cols-3 md:grid-cols-4">
-            {photos.map((photo, index) => (
+      {/* Media Gallery */}
+      {media.length > 0 && (
+        <div>
+          <h3 className="font-semibold text-lg mb-4">
+            Uploaded Media ({media.length})
+          </h3>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {media.map(item => (
               <div
-                key={index}
-                draggable
-                onDragStart={() => handleDragStart(index)}
-                onDragOver={(e) => handleDragOver(e, index)}
-                onDrop={(e) => handleDrop(e, index)}
-                onDragEnd={handleDragEnd}
-                className={cn(
-                  "group relative aspect-square rounded-xl overflow-hidden border-2 transition-all cursor-move",
-                  photo.is_cover ? "border-primary ring-2 ring-primary/30" : "border-border",
-                  draggedIndex === index && "opacity-50",
-                  dragOverIndex === index && draggedIndex !== index && "border-primary border-dashed",
-                )}
+                key={item.id}
+                className="relative group rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 aspect-square"
               >
-                <img
-                  src={photo.url}
-                  alt={photo.category}
-                  className={cn(
-                    "h-full w-full object-cover",
-                    photo.uploading && "opacity-50",
-                  )}
-                />
-
-                {/* Cover badge */}
-                {photo.is_cover && (
-                  <div className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground shadow">
-                    <Star className="h-2.5 w-2.5 fill-current" /> COVER
-                  </div>
+                {item.type === "photo" ? (
+                  <img
+                    src={item.url}
+                    alt={item.category}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <video
+                    src={item.url}
+                    className="w-full h-full object-cover"
+                  />
                 )}
 
-                {/* Drag handle */}
-                <div className="absolute top-2 right-2 grid h-6 w-6 place-items-center rounded-md bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                  <GripVertical className="h-3.5 w-3.5" />
+                {/* Overlay */}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                  <button
+                    onClick={() => handleSetCover(item.id)}
+                    className="p-2 bg-white text-primary rounded-lg hover:bg-gray-200 transition-colors"
+                    title="Set as cover"
+                  >
+                    <Star
+                      className={cn(
+                        "w-5 h-5",
+                        item.isCover && "fill-current"
+                      )}
+                    />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(item.id)}
+                    className="p-2 bg-white text-destructive rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
                 </div>
 
-                {/* Upload progress overlay */}
-                {photo.uploading && (
-                  <div className="absolute inset-0 grid place-items-center bg-black/40">
-                    <div className="w-full px-4">
-                      <Progress value={photo.progress} className="h-1.5" />
-                    </div>
-                  </div>
-                )}
-
-                {/* Error overlay */}
-                {photo.error && (
-                  <div className="absolute inset-0 grid place-items-center bg-destructive/80 text-white">
-                    <div className="text-center px-2">
-                      <AlertCircle className="h-5 w-5 mx-auto" />
-                      <p className="text-[10px] mt-1">Failed</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Category label + actions */}
-                {!photo.uploading && !photo.error && (
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <select
-                      value={photo.category}
-                      onChange={(e) => changeCategory(index, e.target.value as PhotoCategory)}
-                      className="w-full rounded-md bg-white/90 px-1.5 py-1 text-[10px] font-semibold text-gray-900 border-0 outline-none"
-                    >
-                      {ALL_PHOTO_CATEGORIES.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {CATEGORY_ICONS[cat]} {cat}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="mt-1.5 flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setCover(index)}
-                        className={cn(
-                          "inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-semibold transition-colors",
-                          photo.is_cover
-                            ? "bg-primary/20 text-primary"
-                            : "bg-white/20 text-white hover:bg-white/30",
-                        )}
-                      >
-                        <Star className={cn("h-2.5 w-2.5", photo.is_cover && "fill-current")} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removePhoto(index)}
-                        className="inline-flex items-center gap-1 rounded-md bg-destructive/80 px-1.5 py-1 text-[10px] font-semibold text-white hover:bg-destructive transition-colors"
-                      >
-                        <Trash2 className="h-2.5 w-2.5" />
-                      </button>
-                    </div>
-                  </div>
-                )}
+                {/* Labels */}
+                <div className="absolute bottom-0 left-0 right-0 bg-black/70 p-2">
+                  <p className="text-xs text-white font-semibold">{item.category}</p>
+                  {item.isCover && (
+                    <p className="text-xs text-yellow-400 font-semibold">Cover Photo</p>
+                  )}
+                </div>
               </div>
             ))}
-
-            {/* Add more tile */}
-            <button
-              type="button"
-              onClick={takePhoto}
-              className="aspect-square rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-2 hover:border-primary hover:bg-primary/5 transition-colors text-muted-foreground hover:text-primary"
-            >
-              <Plus className="h-6 w-6" />
-              <span className="text-xs font-medium">Add More</span>
-            </button>
           </div>
         </div>
       )}
-
-      {/* Required photos warning */}
-      {missingCategories.length > 0 && photos.length > 0 && (
-        <div className="mt-6 rounded-xl border border-warning/30 bg-warning/10 p-4">
-          <div className="flex items-start gap-2">
-            <AlertCircle className="h-4 w-4 text-warning-foreground mt-0.5 shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-warning-foreground">Required photos missing</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Add these before submitting: {missingCategories.map((c) => CATEGORY_ICONS[c] + " " + c).join(", ")}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {photos.length > 0 && missingCategories.length === 0 && requiredCategories.length > 0 && (
-        <div className="mt-6 rounded-xl border border-success/30 bg-success/10 p-4">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-success" />
-            <p className="text-sm font-semibold text-success">All required photos uploaded!</p>
-          </div>
-        </div>
-      )}
-
-      {/* Category selection dialog */}
-      <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
-        <DialogContent className="max-w-lg">
-          <DialogTitle>What does this photo show?</DialogTitle>
-          {pendingFiles[pendingFileIndex] && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 rounded-xl border border-border bg-secondary/40 p-3">
-                <div className="grid h-12 w-12 place-items-center rounded-lg bg-primary/10 text-primary">
-                  <ImageIcon className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold">{pendingFiles[pendingFileIndex].name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {(pendingFiles[pendingFileIndex].size / 1024 / 1024).toFixed(1)} MB
-                    {pendingFiles.length > 1 && ` · ${pendingFileIndex + 1} of ${pendingFiles.length}`}
-                  </p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-64 overflow-y-auto">
-                {ALL_PHOTO_CATEGORIES.map((cat) => (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => assignCategory(cat)}
-                    className="flex items-center gap-2 rounded-lg border-2 border-border p-3 text-left text-sm hover:border-primary hover:bg-primary/5 transition-colors"
-                  >
-                    <span className="text-lg">{CATEGORY_ICONS[cat]}</span>
-                    <span className="font-medium">{cat}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

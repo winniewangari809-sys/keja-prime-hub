@@ -1,210 +1,382 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { PageHeader } from "@/components/site/PageHeader";
-import { conciergeServices, formatKES } from "@/lib/mock-data";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { Mail, Phone, MessageSquare, Shield, Zap, Clock, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, Sparkles, ShieldCheck, Clock, Handshake, Loader as Loader2 } from "lucide-react";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { Select } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/concierge")({
   head: () => ({
     meta: [
-      { title: "KejaHub Concierge — Premium Property Services" },
-      { name: "description", content: "Let the KejaHub team match, view and negotiate properties on your behalf. Premium paid services from KSh 1,999." },
-      { property: "og:title", content: "KejaHub Concierge — Premium Property Services" },
-      { property: "og:description", content: "Property match, assisted viewings and full concierge — done for you." },
+      {
+        title: "KejaHub Concierge — Property Search Service",
+      },
+      {
+        name: "description",
+        content:
+          "Let KejaHub's expert concierge team find your perfect property in Kenya. Personalized service, no direct owner contact.",
+      },
     ],
   }),
-  component: Concierge,
+  component: ConciergePage,
 });
 
-function Concierge() {
-  return (
-    <>
-      <PageHeader
-        eyebrow="✨ Premium paid service"
-        title="KejaHub Concierge — done-for-you property help"
-        description="Our team handles the search, viewings and negotiation so you don't have to. Transparent flat fees, no commission surprises."
-      />
-      <section className="container-app py-10 space-y-12">
-        {/* Let KejaHub Find For Me */}
-        <FindForMeForm />
-
-        {/* Concierge services */}
-        <div className="grid gap-6 md:grid-cols-3">
-          {conciergeServices.map((s, i) => (
-            <div
-              key={s.key}
-              className={cn(
-                "relative rounded-2xl border-2 bg-card p-6 hover-lift animate-fade-up",
-                s.popular ? "border-primary shadow-elegant" : "border-border"
-              )}
-              style={{ animationDelay: `${i*80}ms` }}
-            >
-              {s.popular && (
-                <span className="absolute -top-3 left-6 inline-flex items-center gap-1 rounded-full gradient-primary px-3 py-1 text-[11px] font-semibold text-primary-foreground shadow-soft">
-                  <Sparkles className="h-3 w-3" /> Most popular
-                </span>
-              )}
-              <h3 className="font-display text-xl font-semibold">{s.name}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">{s.tagline}</p>
-              <p className="mt-6">
-                {s.from && <span className="text-xs text-muted-foreground">Starting from </span>}
-                <span className="font-display text-3xl font-bold text-primary">{formatKES(s.price)}</span>
-              </p>
-              <ul className="mt-6 space-y-2 text-sm">
-                {s.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2">
-                    <Check className="mt-0.5 h-4 w-4 text-success shrink-0" /> {f}
-                  </li>
-                ))}
-              </ul>
-              <Button
-                onClick={() => toast.success(`Request submitted for ${s.name} — we'll be in touch within 24h.`)}
-                className={cn("mt-6 w-full", s.popular ? "gradient-primary text-primary-foreground" : "")}
-                variant={s.popular ? "default" : "outline"}
-              >
-                Request {s.name.split(" ")[0]}
-              </Button>
-            </div>
-          ))}
-        </div>
-
-        {/* Trust signals */}
-        <div className="rounded-2xl border border-border bg-secondary/40 p-6 md:p-8 grid gap-6 md:grid-cols-3">
-          {[
-            { i: ShieldCheck, t: "Verified experts", d: "Vetted KejaHub reps with local expertise" },
-            { i: Clock, t: "Fast turnaround", d: "First shortlist within 48 hours" },
-            { i: Sparkles, t: "Transparent pricing", d: "Flat fees. No hidden commissions." },
-          ].map((f) => (
-            <div key={f.t} className="flex items-start gap-3">
-              <span className="grid h-11 w-11 place-items-center rounded-xl gradient-primary text-primary-foreground"><f.i className="h-5 w-5" /></span>
-              <div>
-                <p className="font-semibold">{f.t}</p>
-                <p className="text-sm text-muted-foreground">{f.d}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-        <p className="text-center text-xs text-muted-foreground">
-          Concierge services are premium paid features. See <Link to="/contact" className="text-primary hover:underline">Contact</Link> for enterprise or bulk enquiries.
-        </p>
-      </section>
-    </>
-  );
-}
-
-function FindForMeForm() {
-  const auth = useAuth();
+function ConciergePage() {
   const [budget, setBudget] = useState("");
   const [location, setLocation] = useState("");
   const [propertyType, setPropertyType] = useState("");
   const [bedrooms, setBedrooms] = useState("");
   const [notes, setNotes] = useState("");
   const [phone, setPhone] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const submit = async () => {
-    if (!auth.user) {
-      toast.error("Please sign in to submit a request.");
-      return;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      if (!phone || !location) {
+        setError("Phone and location are required");
+        setIsLoading(false);
+        return;
+      }
+
+      const { error: insertError } = await supabase.from("concierge_requests").insert({
+        budget: budget ? parseInt(budget) : null,
+        location,
+        property_type: propertyType || null,
+        bedrooms: bedrooms ? parseInt(bedrooms) : null,
+        notes,
+        phone,
+      });
+
+      if (insertError) {
+        setError(insertError.message);
+        toast.error("Failed to submit request: " + insertError.message);
+        return;
+      }
+
+      toast.success(
+        "Request submitted! Our concierge team will contact you within 24 hours."
+      );
+
+      // Reset form
+      setBudget("");
+      setLocation("");
+      setPropertyType("");
+      setBedrooms("");
+      setNotes("");
+      setPhone("");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "An error occurred";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
     }
-    if (!phone) {
-      toast.error("Please enter your phone number.");
-      return;
-    }
-    setLoading(true);
-    const { error } = await supabase.from("concierge_requests").insert({
-      requester_id: auth.user.id,
-      type: "find_property",
-      full_name: auth.fullName || auth.firstName || "User",
-      phone_number: phone,
-      budget: budget || null,
-      location: location || null,
-      property_type: propertyType || null,
-      bedrooms: bedrooms || null,
-      message: notes || null,
-    });
-    setLoading(false);
-    if (error) {
-      toast.error("Failed to submit request. Please try again.");
-      return;
-    }
-    toast.success("Your request has been sent to KejaHub HQ! We'll contact you personally within 48 hours.");
-    setBudget(""); setLocation(""); setPropertyType(""); setBedrooms(""); setNotes(""); setPhone("");
   };
 
   return (
-    <div className="rounded-2xl border-2 border-primary/20 bg-primary/5 p-6 md:p-8">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="grid h-12 w-12 place-items-center rounded-xl gradient-primary text-primary-foreground">
-          <Handshake className="h-6 w-6" />
-        </div>
-        <div>
-          <h2 className="font-display text-2xl font-bold">Let KejaHub Find For Me</h2>
-          <p className="text-sm text-muted-foreground">Tell us what you're looking for — our team will search and contact you personally.</p>
-        </div>
-      </div>
-
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="text-sm font-semibold">Budget (KSh)</label>
-          <Input value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="e.g. 50,000/month or 5,000,000 total" className="mt-1" />
-        </div>
-        <div>
-          <label className="text-sm font-semibold">Location</label>
-          <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Kilimani, Westlands" className="mt-1" />
-        </div>
-        <div>
-          <label className="text-sm font-semibold">Property Type</label>
-          <select
-            value={propertyType}
-            onChange={(e) => setPropertyType(e.target.value)}
-            className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-          >
-            <option value="">Select type...</option>
-            <option value="rental">Rental</option>
-            <option value="sale">Home for Sale</option>
-            <option value="airbnb">Airbnb</option>
-            <option value="commercial">Commercial</option>
-          </select>
-        </div>
-        <div>
-          <label className="text-sm font-semibold">Bedrooms</label>
-          <select
-            value={bedrooms}
-            onChange={(e) => setBedrooms(e.target.value)}
-            className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-          >
-            <option value="">Select bedrooms...</option>
-            <option value="studio">Studio</option>
-            <option value="1">1+</option>
-            <option value="2">2+</option>
-            <option value="3">3+</option>
-            <option value="4">4+</option>
-          </select>
-        </div>
-        <div className="sm:col-span-2">
-          <label className="text-sm font-semibold">Notes</label>
-          <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Any special requirements..." className="mt-1" />
-        </div>
-        <div className="sm:col-span-2">
-          <label className="text-sm font-semibold">Phone Number</label>
-          <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+254 7XX XXX XXX" className="mt-1" />
+    <div className="space-y-0">
+      {/* Hero Section */}
+      <div className="bg-gradient-to-br from-primary/10 to-primary/5 dark:from-primary/5 dark:to-transparent py-16">
+        <div className="container-app">
+          <h1 className="text-4xl font-display font-bold text-gray-900 dark:text-white mb-4">
+            KejaHub Concierge Service
+          </h1>
+          <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl">
+            Tell us what you're looking for, and our expert team will find and present the best options to you.
+          </p>
         </div>
       </div>
 
-      <Button onClick={submit} disabled={loading} size="lg" className="mt-6 w-full gradient-primary text-primary-foreground">
-        {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting…</> : <><Handshake className="mr-2 h-4 w-4" /> Submit Request</>}
-      </Button>
-      <p className="mt-3 text-center text-xs text-muted-foreground">
-        Your request goes directly to KejaHub HQ. We'll contact you personally within 48 hours.
-      </p>
+      <div className="container-app py-16">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+          {/* Form */}
+          <div className="lg:col-span-2">
+            <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-8">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+                Let Us Find For You
+              </h2>
+
+              {error && (
+                <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+                  <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label htmlFor="location" className="text-gray-900 dark:text-white">
+                      Preferred Location *
+                    </Label>
+                    <Input
+                      id="location"
+                      placeholder="e.g., Westlands, Karen, CBD"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      disabled={isLoading}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="propertyType" className="text-gray-900 dark:text-white">
+                      Property Type
+                    </Label>
+                    <Select value={propertyType} onValueChange={setPropertyType}>
+                      <option value="">Select type...</option>
+                      <option value="apartment">Apartment</option>
+                      <option value="house">House</option>
+                      <option value="villa">Villa</option>
+                      <option value="townhouse">Townhouse</option>
+                      <option value="commercial">Commercial</option>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="budget" className="text-gray-900 dark:text-white">
+                      Budget (KES)
+                    </Label>
+                    <Input
+                      id="budget"
+                      type="number"
+                      placeholder="e.g., 50000"
+                      value={budget}
+                      onChange={(e) => setBudget(e.target.value)}
+                      disabled={isLoading}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="bedrooms" className="text-gray-900 dark:text-white">
+                      Bedrooms
+                    </Label>
+                    <Select value={bedrooms} onValueChange={setBedrooms}>
+                      <option value="">Select...</option>
+                      <option value="1">1 Bedroom</option>
+                      <option value="2">2 Bedrooms</option>
+                      <option value="3">3 Bedrooms</option>
+                      <option value="4">4+ Bedrooms</option>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="notes" className="text-gray-900 dark:text-white">
+                    Additional Notes
+                  </Label>
+                  <Textarea
+                    id="notes"
+                    placeholder="Tell us anything else about your ideal property..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    disabled={isLoading}
+                    rows={4}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="phone" className="text-gray-900 dark:text-white">
+                    Phone Number *
+                  </Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="+254 700 000 000"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    disabled={isLoading}
+                    required
+                  />
+                </div>
+
+                <Button type="submit" disabled={isLoading} className="w-full">
+                  {isLoading ? "Submitting..." : "Submit Request"}
+                </Button>
+              </form>
+            </div>
+          </div>
+
+          {/* Benefits */}
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+                Why Choose KejaHub?
+              </h2>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Zap className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                      Fast & Efficient
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Get personalized matches within 24 hours
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Shield className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                      Verified Properties
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      All properties are verified by our team
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <MessageSquare className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                      No Direct Contact
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Our team handles all negotiations for you
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Clock className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                      24/7 Support
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Support throughout your entire journey
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="bg-primary/10 dark:bg-primary/5 rounded-lg border border-primary/20 p-6">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
+                Ready to get started?
+              </h3>
+              <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
+                Fill out the form and our team will reach out to you within 24 hours.
+              </p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Questions? Call us at +254 700 000 000
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Pricing Section */}
+      <section className="bg-gray-50 dark:bg-gray-900 py-16">
+        <div className="container-app">
+          <h2 className="text-3xl font-display font-bold text-gray-900 dark:text-white mb-12 text-center">
+            Our Concierge Packages
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                name: "Basic",
+                price: "Free",
+                features: [
+                  "Property search support",
+                  "Viewing coordination",
+                  "Basic documentation",
+                  "Email support",
+                ],
+              },
+              {
+                name: "Premium",
+                price: "KSh 5,000",
+                period: "/property",
+                features: [
+                  "Everything in Basic",
+                  "Negotiation support",
+                  "Legal document review",
+                  "Inspection coordination",
+                  "Priority support",
+                ],
+                highlighted: true,
+              },
+              {
+                name: "VIP",
+                price: "KSh 15,000",
+                period: "/property",
+                features: [
+                  "Everything in Premium",
+                  "Dedicated concierge",
+                  "Full move-in assistance",
+                  "Post-move support (30 days)",
+                  "24/7 phone support",
+                ],
+              },
+            ].map((pkg, idx) => (
+              <div
+                key={idx}
+                className={`rounded-lg border p-8 ${
+                  pkg.highlighted
+                    ? "border-primary bg-primary/5 dark:bg-primary/10 scale-105"
+                    : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800"
+                }`}
+              >
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                  {pkg.name}
+                </h3>
+                <p className="text-3xl font-bold text-primary mb-6">
+                  {pkg.price}
+                  {pkg.period && <span className="text-lg font-normal">{pkg.period}</span>}
+                </p>
+                <ul className="space-y-3 mb-8">
+                  {pkg.features.map((feature, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <span className="text-primary font-bold">✓</span>
+                      <span className="text-gray-700 dark:text-gray-300">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  className="w-full"
+                  variant={pkg.highlighted ? "default" : "outline"}
+                >
+                  Get Started
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

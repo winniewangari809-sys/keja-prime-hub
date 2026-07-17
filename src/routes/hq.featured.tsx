@@ -1,237 +1,224 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { HQPage, EmptyState } from "@/components/site/HQPage";
-import { Button } from "@/components/ui/button";
-import { Star, Loader as Loader2, Pin, Calendar } from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
+import { Star, Calendar, Trash2 } from "lucide-react";
+import { useRequireRole } from "@/hooks/use-require-role";
+import { HQPage } from "@/components/site";
+import { Button, Input } from "@/components/ui";
 import { supabase } from "@/integrations/supabase/client";
-import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/hq/featured")({
-  head: () => ({ meta: [{ title: "Featured Listings — KejaHub HQ" }, { name: "robots", content: "noindex" }] }),
-  component: HQFeatured,
+  head: () => ({
+    meta: [
+      {
+        title: "Featured Listings — KejaHub Command Center",
+      },
+      {
+        name: "robots",
+        content: "noindex",
+      },
+    ],
+  }),
+  component: FeaturedListings,
 });
 
-interface PropertyRow {
+interface FeaturedListing {
   id: string;
   title: string;
-  location: string | null;
-  price: number | null;
-  property_type: string;
-  featured: boolean;
-  featured_until: string | null;
-  admin_status: string;
-  images: any;
+  location: string;
+  price: number;
+  featured_until: string;
+  created_at: string;
 }
 
-function HQFeatured() {
-  const [properties, setProperties] = useState<PropertyRow[]>([]);
+function FeaturedListings() {
+  const { loading: authLoading } = useRequireRole(["hq", "admin"]);
+  const [featured, setFeatured] = useState<FeaturedListing[]>([]);
   const [loading, setLoading] = useState(true);
-  const [featuring, setFeaturing] = useState<string | null>(null);
 
-  const fetchProperties = async () => {
-    setLoading(true);
+  useEffect(() => {
+    if (!authLoading) {
+      fetchFeatured();
+    }
+  }, [authLoading]);
+
+  const fetchFeatured = async () => {
     try {
-      const { data, error } = await supabase
-        .from("properties")
-        .select("id, title, location, price, property_type, featured, featured_until, admin_status, images")
-        .order("created_at", { ascending: false })
-        .limit(100);
+      const { data } = await supabase
+        .from("listings")
+        .select("id, title, location, price, featured_until, created_at")
+        .eq("admin_status", "featured")
+        .order("featured_until", { ascending: true });
 
-      if (error) throw error;
-      setProperties(data ?? []);
-    } catch {
-      setProperties([]);
+      if (data) {
+        setFeatured(
+          data.map((l: any) => ({
+            id: l.id,
+            title: l.title,
+            location: l.location,
+            price: l.price,
+            featured_until: l.featured_until,
+            created_at: l.created_at,
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Failed to fetch featured listings:", error);
+      toast.error("Failed to load featured listings");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchProperties();
-  }, []);
-
-  const toggleFeature = async (prop: PropertyRow, days: number = 7) => {
-    setFeaturing(prop.id);
+  const updateFeaturedUntil = async (listingId: string, newDate: string) => {
     try {
-      const until = new Date();
-      until.setDate(until.getDate() + days);
       const { error } = await supabase
-        .from("properties")
-        .update({
-          featured: !prop.featured,
-          featured_until: !prop.featured ? until.toISOString() : null,
-        })
-        .eq("id", prop.id);
+        .from("listings")
+        .update({ featured_until: newDate })
+        .eq("id", listingId);
 
       if (error) throw error;
-      toast.success(prop.featured ? "Removed from featured" : `Featured for ${days} days`);
-      fetchProperties();
-    } catch (err: any) {
-      toast.error(`Failed: ${err.message || "Unknown error"}`);
-    } finally {
-      setFeaturing(null);
+
+      setFeatured(
+        featured.map((l) =>
+          l.id === listingId ? { ...l, featured_until: newDate } : l
+        )
+      );
+      toast.success("Featured date updated");
+    } catch (error) {
+      console.error("Failed to update featured date:", error);
+      toast.error("Failed to update featured date");
     }
   };
 
-  const pinToHomepage = async (prop: PropertyRow) => {
-    setFeaturing(prop.id);
+  const removeFeatured = async (listingId: string) => {
     try {
-      // Pin = feature with 30 days
-      const until = new Date();
-      until.setDate(until.getDate() + 30);
       const { error } = await supabase
-        .from("properties")
-        .update({
-          featured: true,
-          featured_until: until.toISOString(),
-        })
-        .eq("id", prop.id);
+        .from("listings")
+        .update({ admin_status: "approved" })
+        .eq("id", listingId);
 
       if (error) throw error;
-      toast.success("Pinned to homepage for 30 days");
-      fetchProperties();
-    } catch (err: any) {
-      toast.error(`Failed: ${err.message || "Unknown error"}`);
-    } finally {
-      setFeaturing(null);
+
+      setFeatured(featured.filter((l) => l.id !== listingId));
+      toast.success("Removed from featured");
+    } catch (error) {
+      console.error("Failed to remove featured:", error);
+      toast.error("Failed to remove featured");
     }
   };
 
-  const featured = properties.filter((p) => p.featured);
-  const available = properties.filter((p) => !p.featured && p.admin_status !== "hidden" && p.admin_status !== "rejected");
+  if (authLoading || loading) {
+    return (
+      <HQPage title="Featured Listings" description="Manage featured property listings">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border border-gray-300 border-t-primary mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        </div>
+      </HQPage>
+    );
+  }
 
   return (
-    <HQPage title="Featured Listings" description="Promote, feature, and pin listings to the homepage.">
-      {/* Featured section */}
-      <div className="mb-8">
-        <h2 className="font-display text-lg font-semibold mb-4 flex items-center gap-2">
-          <Star className="h-5 w-5 text-warning fill-warning" />
-          Currently Featured ({featured.length})
-        </h2>
-        {featured.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-            No featured listings yet. Promote listings below to pin them to the homepage.
+    <HQPage title="Featured Listings" description="Manage featured property listings">
+      <div className="space-y-6">
+        {/* Stats */}
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 p-6 rounded-lg border border-amber-200 dark:border-amber-800">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-amber-100 dark:bg-amber-900/40 rounded-lg">
+              <Star className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                Currently Featured
+              </h3>
+              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                {featured.length} listings
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                Featured listings get premium visibility and appear at the top of search results
+              </p>
+            </div>
           </div>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {featured.map((prop) => {
-              const images = (prop.images as string[]) ?? [];
-              const until = prop.featured_until ? new Date(prop.featured_until) : null;
-              const daysLeft = until ? Math.ceil((until.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+        </div>
+
+        {/* Featured Listings */}
+        <div className="space-y-4">
+          {featured.length === 0 ? (
+            <div className="text-center py-12 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
+              <Star className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+              <p className="text-gray-600 dark:text-gray-400">No featured listings</p>
+              <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+                Featured listings will appear here
+              </p>
+            </div>
+          ) : (
+            featured.map((listing) => {
+              const daysRemaining = Math.ceil(
+                (new Date(listing.featured_until).getTime() - new Date().getTime()) /
+                  (1000 * 60 * 60 * 24)
+              );
+
               return (
-                <div key={prop.id} className="rounded-xl border-2 border-warning/40 bg-warning/5 p-4">
-                  <div className="flex items-start gap-3">
-                    {images[0] && <img src={images[0]} alt="" className="h-16 w-20 rounded-lg object-cover" />}
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-sm truncate">{prop.title}</p>
-                      <p className="text-xs text-muted-foreground truncate">{prop.location ?? "—"}</p>
-                      <p className="text-xs font-semibold text-primary mt-0.5">
-                        KSh {prop.price?.toLocaleString() ?? "—"}
-                      </p>
+                <div
+                  key={listing.id}
+                  className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 hover:shadow-soft transition-shadow"
+                >
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-start gap-3">
+                        <Star className="w-5 h-5 text-amber-500 flex-shrink-0 mt-1" />
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                            {listing.title}
+                          </h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                            {listing.location}
+                          </p>
+                          <p className="text-lg font-bold text-primary">
+                            KES {listing.price.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  {daysLeft !== null && (
-                    <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Calendar className="h-3.5 w-3.5" />
-                      {daysLeft > 0 ? `${daysLeft} days left` : "Expired"}
+
+                    <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+                      <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                          Featured Until
+                        </p>
+                        <input
+                          type="date"
+                          value={listing.featured_until.split("T")[0]}
+                          onChange={(e) =>
+                            updateFeaturedUntil(listing.id, e.target.value)
+                          }
+                          className="px-2 py-1 border border-amber-300 dark:border-amber-700 rounded bg-white dark:bg-gray-900 text-sm"
+                        />
+                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 font-semibold">
+                          {daysRemaining > 0
+                            ? `${daysRemaining} days remaining`
+                            : "Expired"}
+                        </p>
+                      </div>
+
+                      <Button
+                        onClick={() => removeFeatured(listing.id)}
+                        variant="destructive"
+                        size="sm"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Remove
+                      </Button>
                     </div>
-                  )}
-                  <div className="mt-3 flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs"
-                      disabled={featuring === prop.id}
-                      onClick={() => toggleFeature(prop)}
-                    >
-                      {featuring === prop.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Unfeature"}
-                    </Button>
-                    <Button asChild size="sm" variant="ghost" className="h-7 text-xs">
-                      <Link to="/property/$slug" params={{ slug: prop.id }}>View</Link>
-                    </Button>
                   </div>
                 </div>
               );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Available to feature */}
-      <div>
-        <h2 className="font-display text-lg font-semibold mb-4">
-          Available to Feature ({available.length})
-        </h2>
-        {loading ? (
-          <div className="grid min-h-[30vh] place-items-center text-muted-foreground"><Loader2 className="h-6 w-6 animate-spin" /></div>
-        ) : available.length === 0 ? (
-          <EmptyState label="No approved listings available to feature." />
-        ) : (
-          <div className="rounded-2xl border border-border bg-card overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-secondary/60 text-left text-xs uppercase text-muted-foreground">
-                <tr>
-                  <th className="p-4">Property</th>
-                  <th className="p-4">Type</th>
-                  <th className="p-4">Price</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {available.map((prop) => {
-                  const images = (prop.images as string[]) ?? [];
-                  return (
-                    <tr key={prop.id} className="border-t border-border">
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          {images[0] && <img src={images[0]} alt="" className="h-10 w-14 rounded object-cover" />}
-                          <div className="min-w-0">
-                            <p className="font-semibold line-clamp-1">{prop.title}</p>
-                            <p className="text-xs text-muted-foreground">{prop.location ?? "—"}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-4 capitalize">{prop.property_type}</td>
-                      <td className="p-4 font-semibold">KSh {prop.price?.toLocaleString() ?? "—"}</td>
-                      <td className="p-4">
-                        <span className={cn(
-                          "rounded-full px-2 py-1 text-xs font-semibold capitalize",
-                          prop.admin_status === "approved" ? "bg-success/15 text-success" : "bg-warning/15 text-warning-foreground"
-                        )}>
-                          {prop.admin_status}
-                        </span>
-                      </td>
-                      <td className="p-4 text-right">
-                        <div className="inline-flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-xs"
-                            disabled={featuring === prop.id}
-                            onClick={() => toggleFeature(prop, 7)}
-                          >
-                            {featuring === prop.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Star className="h-3 w-3" /> Feature 7d</>}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 text-xs"
-                            disabled={featuring === prop.id}
-                            onClick={() => pinToHomepage(prop)}
-                          >
-                            <Pin className="h-3 w-3" /> Pin 30d
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+            })
+          )}
+        </div>
       </div>
     </HQPage>
   );

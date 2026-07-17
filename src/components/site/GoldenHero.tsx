@@ -1,201 +1,203 @@
-import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { ArrowRight, Hop as Home, Search, Sparkles, X, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { useAuth } from "@/hooks/use-auth";
+import { useNavigate } from "@tanstack/react-router";
+import { Home, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const ROLES = [
+  {
+    id: "buyer",
+    label: "Buyer",
+    description: "Looking to purchase a property",
+    group: "find",
+  },
+  {
+    id: "tenant",
+    label: "Tenant",
+    description: "Looking to rent a property",
+    group: "find",
+  },
+  {
+    id: "seller",
+    label: "Seller",
+    description: "Selling your property",
+    group: "list",
+  },
+  {
+    id: "landlord",
+    label: "Landlord",
+    description: "Renting out your property",
+    group: "list",
+  },
+  {
+    id: "agent",
+    label: "Real Estate Agent",
+    description: "Professional property broker",
+    group: "list",
+  },
+  {
+    id: "airbnb",
+    label: "Airbnb Host",
+    description: "Short-term rental host",
+    group: "list",
+  },
+  {
+    id: "commercial",
+    label: "Commercial",
+    description: "Commercial property owner",
+    group: "list",
+  },
+];
+
 export function GoldenHero() {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<"find" | "list">("find");
-
-  const openModal = (mode: "find" | "list") => {
-    setModalMode(mode);
-    setModalOpen(true);
-  };
-
-  return (
-    <section className="relative overflow-hidden border-b border-border hero-premium">
-      <div
-        className="absolute inset-0 opacity-[0.07] pointer-events-none"
-        style={{
-          backgroundImage: `radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)`,
-          backgroundSize: "32px 32px",
-        }}
-        aria-hidden
-      />
-      <div className="container-app relative py-14 md:py-20">
-        <div className="max-w-2xl">
-          <span className="inline-flex items-center gap-2 rounded-full glass-card px-3 py-1 text-xs font-semibold text-primary">
-            <Sparkles className="h-3.5 w-3.5" /> Kenya's simplest property app
-          </span>
-          <h1 className="mt-5 font-display text-4xl md:text-6xl font-bold text-balance leading-[1.05]">
-            What would you like to do today?
-          </h1>
-          <p className="mt-4 text-base md:text-lg text-muted-foreground">
-            Two taps and you're on your way — list a home you own, or find a home you'll love.
-          </p>
-        </div>
-
-        <div className="mt-8 grid gap-3 md:grid-cols-2 max-w-3xl">
-          <GoldenCard
-            onClick={() => openModal("find")}
-            title="Find a Property"
-            body="Rentals · Airbnbs · Homes for sale"
-            accent="from-emerald-500 to-cyan-500"
-            icon={<Search className="h-4 w-4" />}
-          />
-          <GoldenCard
-            onClick={() => openModal("list")}
-            title="List a Property"
-            body="Free · Takes about 2 minutes"
-            accent="from-primary to-primary-glow"
-            icon={<Home className="h-4 w-4" />}
-          />
-        </div>
-
-        <div className="mt-6 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span className="font-medium">Popular areas:</span>
-          {["Kilimani", "Ruiru", "Diani", "Runda", "Nakuru", "Westlands"].map((c) => (
-            <Link key={c} to="/rentals" className="rounded-full glass-card px-3 py-1 hover:text-primary transition-colors">
-              {c}
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      <RoleSignupModal open={modalOpen} onOpenChange={setModalOpen} mode={modalMode} />
-    </section>
-  );
-}
-
-function GoldenCard({ onClick, title, body, accent, icon }: {
-  onClick: () => void; title: string; body: string; accent: string; icon: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br ${accent} p-4 md:p-5 text-white shadow-elegant hover-lift block text-left w-full`}
-    >
-      <div className="absolute -right-8 -bottom-8 h-28 w-28 rounded-full bg-white/10 blur-2xl transition-all duration-500 group-hover:scale-125" />
-      <div className="relative flex items-center gap-3">
-        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/20 backdrop-blur">
-          {icon}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="font-display text-lg md:text-xl font-bold">{title}</h2>
-          <p className="text-xs md:text-sm text-white/85">{body}</p>
-        </div>
-        <ArrowRight className="h-4 w-4 shrink-0 transition-all group-hover:translate-x-1" />
-      </div>
-    </button>
-  );
-}
-
-const findRoles = [
-  { key: "buyer", label: "Buyer", emoji: "🏠", desc: "Find a home to buy" },
-  { key: "tenant", label: "Tenant", emoji: "🔑", desc: "Find a place to rent" },
-] as const;
-
-const listRoles = [
-  { key: "landlord", label: "Landlord", emoji: "🏘", desc: "List and manage rentals" },
-  { key: "agent", label: "Agent", emoji: "💼", desc: "Represent multiple listings" },
-  { key: "seller", label: "Seller", emoji: "🏢", desc: "Sell your property" },
-  { key: "airbnb", label: "Airbnb Owner", emoji: "🏨", desc: "List short-stay properties" },
-  { key: "commercial", label: "Commercial Owner", emoji: "🏬", desc: "List offices, shops, warehouses" },
-] as const;
-
-function RoleSignupModal({ open, onOpenChange, mode }: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  mode: "find" | "list";
-}) {
-  const auth = useAuth();
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [selectedIntent, setSelectedIntent] = useState<"find" | "list" | null>(null);
   const navigate = useNavigate();
-  const roles = mode === "find" ? findRoles : listRoles;
-  const [selectedRole, setSelectedRole] = useState<string | null>(null);
 
-  const handleCreateAccount = () => {
-    const roleParam = selectedRole ?? roles[0].key;
-    onOpenChange(false);
-    navigate({ to: "/signup", search: { role: roleParam } as any });
+  const handleGetStarted = (intent: "find" | "list") => {
+    setSelectedIntent(intent);
+    setShowRoleModal(true);
   };
 
-  const handleLogin = () => {
-    onOpenChange(false);
-    navigate({ to: "/login" });
+  const handleRoleSelect = (roleId: string) => {
+    navigate({
+      to: "/signup",
+      search: { role: roleId, intent: selectedIntent },
+    });
   };
 
-  // If user is already logged in, skip the modal and go to browse/listing
-  if (auth.user && open) {
-    onOpenChange(false);
-    if (mode === "find") {
-      navigate({ to: "/rentals" });
-    } else {
-      navigate({ to: "/post-listing" });
-    }
-  }
+  const filteredRoles = selectedIntent
+    ? ROLES.filter(role => role.group === selectedIntent)
+    : [];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogTitle className="font-display text-2xl font-bold">
-          {mode === "find" ? "Welcome to KejaHub" : "How would you like to list?"}
-        </DialogTitle>
-        <DialogDescription>
-          {mode === "find" ? "How would you like to use KejaHub?" : "Choose your account type to get started."}
-        </DialogDescription>
+    <div className="relative overflow-hidden">
+      {/* Background */}
+      <div className="absolute inset-0 gradient-primary opacity-10" />
+      <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent" />
 
-        <button
-          onClick={() => onOpenChange(false)}
-          className="absolute top-4 right-4 grid h-8 w-8 place-items-center rounded-md hover:bg-accent"
-          aria-label="Close"
-        >
-          <X className="h-4 w-4" />
-        </button>
+      {/* Decorative elements */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full -mr-48 -mt-48" />
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary/5 rounded-full -ml-48 -mb-48" />
 
-        <div className="mt-4 space-y-2">
-          {roles.map((r) => (
-            <button
-              key={r.key}
-              type="button"
-              onClick={() => setSelectedRole(r.key)}
-              className={cn(
-                "flex items-center gap-3 rounded-2xl border-2 p-4 text-left transition-all w-full",
-                selectedRole === r.key ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
-              )}
-            >
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-xl">{r.emoji}</span>
-              <div className="flex-1 min-w-0">
-                <span className="block font-semibold text-sm">{r.label}</span>
-                <span className="block text-xs text-muted-foreground">{r.desc}</span>
-              </div>
-              <span className={cn(
-                "grid h-6 w-6 place-items-center rounded-full border-2",
-                selectedRole === r.key ? "border-primary bg-primary text-primary-foreground" : "border-border"
-              )}>
-                {selectedRole === r.key && <Check className="h-3.5 w-3.5" />}
-              </span>
-            </button>
-          ))}
-        </div>
+      {/* Content */}
+      <div className="relative container-app py-20 md:py-32">
+        <div className="max-w-4xl mx-auto text-center">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 dark:bg-primary/20 rounded-full mb-6 border border-primary/30">
+            <Home className="w-4 h-4 text-primary" />
+            <span className="text-sm font-semibold text-primary">
+              Welcome to KejaHub
+            </span>
+          </div>
 
-        <div className="mt-6 space-y-3">
-          <Button onClick={handleCreateAccount} size="lg" className="w-full gradient-primary text-primary-foreground">
-            Create Account
-          </Button>
-          <Button onClick={handleLogin} variant="outline" size="lg" className="w-full">
-            Already Have Account? Login
-          </Button>
-        </div>
+          {/* Heading */}
+          <h1 className="font-display font-bold text-5xl md:text-6xl lg:text-7xl mb-6 animate-fade-up">
+            <span className="text-gray-900 dark:text-white">Find Your Perfect</span>
+            <br />
+            <span className="gradient-primary bg-clip-text text-transparent">
+              Property in Kenya
+            </span>
+          </h1>
 
-        {mode === "find" && (
-          <p className="mt-3 text-center text-xs text-muted-foreground">
-            Buyer and Tenant registration only.
+          {/* Description */}
+          <p className="text-xl text-gray-600 dark:text-gray-400 mb-12 max-w-2xl mx-auto leading-relaxed animate-fade-up animation-delay-100">
+            Whether you're looking for a home, listing a property, or running a business, KejaHub connects you with the right opportunities.
           </p>
-        )}
-      </DialogContent>
-    </Dialog>
+
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16 animate-fade-up animation-delay-200">
+            <button
+              onClick={() => handleGetStarted("find")}
+              className="group inline-flex items-center justify-center gap-3 px-8 py-4 bg-primary hover:bg-primary/90 text-white rounded-lg font-semibold transition-all duration-200 hover-lift shadow-soft hover:shadow-elegant"
+            >
+              <Search className="w-5 h-5 group-hover:scale-110 transition-transform" />
+              Find a Property
+            </button>
+
+            <button
+              onClick={() => handleGetStarted("list")}
+              className="group inline-flex items-center justify-center gap-3 px-8 py-4 border-2 border-primary text-primary hover:bg-primary/5 dark:hover:bg-primary/10 rounded-lg font-semibold transition-all duration-200 hover-lift"
+            >
+              <Home className="w-5 h-5 group-hover:scale-110 transition-transform" />
+              List a Property
+            </button>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-6 md:gap-8 animate-fade-up animation-delay-300">
+            {[
+              { label: "Active Listings", value: "5,000+" },
+              { label: "Happy Users", value: "50,000+" },
+              { label: "Transactions", value: "10,000+" },
+            ].map((stat, idx) => (
+              <div key={idx} className="text-center">
+                <p className="font-display font-bold text-2xl md:text-3xl text-primary mb-1">
+                  {stat.value}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {stat.label}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Role Selection Modal */}
+      {showRoleModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg max-w-2xl w-full p-8">
+            <h2 className="font-display font-bold text-2xl mb-4">
+              {selectedIntent === "find"
+                ? "What are you looking for?"
+                : "How will you use KejaHub?"}
+            </h2>
+
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              {selectedIntent === "find"
+                ? "Select your profile to find the right property"
+                : "Choose your profile to list and manage properties"}
+            </p>
+
+            {/* Role Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              {filteredRoles.map(role => (
+                <button
+                  key={role.id}
+                  onClick={() => handleRoleSelect(role.id)}
+                  className="p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all duration-200 text-left hover-lift"
+                >
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+                    {role.label}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {role.description}
+                  </p>
+                </button>
+              ))}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setShowRoleModal(false)}
+                className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-semibold transition-colors"
+              >
+                Back
+              </button>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Already have an account?{" "}
+                <button
+                  onClick={() => navigate({ to: "/login" })}
+                  className="text-primary hover:text-primary/90 font-semibold"
+                >
+                  Sign in
+                </button>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

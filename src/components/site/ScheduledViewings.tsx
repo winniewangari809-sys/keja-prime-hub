@@ -1,177 +1,227 @@
-import { Calendar, Clock, Check, X, RotateCw, Eye, MapPin } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-
-const statusMeta: Record<string, { label: string; color: string; dot: string }> = {
-  pending: { label: "Pending", color: "bg-warning/15 text-warning-foreground", dot: "bg-warning" },
-  approved: { label: "Approved", color: "bg-success/15 text-success", dot: "bg-success" },
-  rejected: { label: "Rejected", color: "bg-destructive/15 text-destructive", dot: "bg-destructive" },
-  rescheduled: { label: "Rescheduled", color: "bg-primary/15 text-primary", dot: "bg-primary" },
-  completed: { label: "Completed", color: "bg-secondary text-muted-foreground", dot: "bg-muted-foreground" },
-  cancelled: { label: "Cancelled", color: "bg-destructive/15 text-destructive", dot: "bg-destructive" },
-};
+import { Calendar, Clock, MapPin, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Viewing {
   id: string;
-  property_title?: string;
-  property_id?: string;
-  preferred_date: string;
-  preferred_time: string;
-  status: string;
-  notes?: string;
-  created_at: string;
+  property_id: string;
+  scheduled_at: string;
+  status: "scheduled" | "completed" | "cancelled";
+  property?: {
+    title: string;
+    location: string;
+  };
 }
 
-export function ScheduledViewings({ viewings, viewerRole }: {
-  viewings: Viewing[];
-  viewerRole: "buyer" | "seller" | "admin";
-}) {
-  const [detailView, setDetailView] = useState<Viewing | null>(null);
-  const [loading, setLoading] = useState(false);
+export function ScheduledViewings() {
+  const [viewings, setViewings] = useState<Viewing[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const [selectedViewing, setSelectedViewing] = useState<Viewing | null>(null);
 
-  const cancelViewing = async (id: string) => {
-    setLoading(true);
-    const { error } = await supabase
-      .from("viewings")
-      .update({ status: "cancelled", updated_at: new Date().toISOString() })
-      .eq("id", id);
-    setLoading(false);
-    if (error) {
-      toast.error("Failed to cancel viewing");
-    } else {
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchViewings = async () => {
+      const { data } = await supabase
+        .from("viewings")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("scheduled_at", { ascending: false });
+
+      if (data) {
+        setViewings(data as Viewing[]);
+      }
+      setLoading(false);
+    };
+
+    fetchViewings();
+
+    const subscription = supabase
+      .channel("viewings")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "viewings",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          fetchViewings();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [user]);
+
+  const handleCancelViewing = async (viewingId: string) => {
+    try {
+      await supabase
+        .from("viewings")
+        .update({ status: "cancelled" })
+        .eq("id", viewingId);
       toast.success("Viewing cancelled");
-      setDetailView(null);
-      window.location.reload();
+      setViewings(viewings.map(v => v.id === viewingId ? { ...v, status: "cancelled" } : v));
+      setSelectedViewing(null);
+    } catch (error) {
+      toast.error("Failed to cancel viewing");
+      console.error(error);
     }
   };
 
-  if (viewings.length === 0) {
+  if (loading) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <h3 className="font-display text-xl font-semibold flex items-center gap-2 mb-2">
-          <Calendar className="h-5 w-5 text-primary" /> Scheduled Viewings
-        </h3>
-        <p className="text-sm text-muted-foreground">No viewings scheduled yet. Browse properties and schedule a viewing to see it here.</p>
+      <div className="space-y-4">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+        ))}
       </div>
     );
   }
 
-  return (
-    <div className="rounded-2xl border border-border bg-card p-6">
-      <h3 className="font-display text-xl font-semibold flex items-center gap-2 mb-4">
-        <Calendar className="h-5 w-5 text-primary" /> Scheduled Viewings
-      </h3>
-      <div className="space-y-3">
-        {viewings.map((v) => {
-          const sm = statusMeta[v.status] ?? statusMeta.pending;
-          return (
-            <div key={v.id} className="flex items-center gap-4 rounded-xl border border-border p-4 hover:bg-accent transition-colors">
-              <div className="grid h-12 w-12 place-items-center rounded-lg bg-primary/10 text-primary shrink-0">
-                <Calendar className="h-5 w-5" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm truncate">{v.property_title || "Property viewing"}</p>
-                <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    {new Date(v.preferred_date).toLocaleDateString("en-KE", { day: "numeric", month: "short", year: "numeric" })}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    {v.preferred_time}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold", sm.color)}>
-                  <span className={cn("h-1.5 w-1.5 rounded-full", sm.dot)} />
-                  {sm.label}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setDetailView(v)}
-                >
-                  <Eye className="h-3.5 w-3.5" /> Details
-                </Button>
-              </div>
-            </div>
-          );
-        })}
+  if (viewings.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <Calendar className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+        <p className="text-gray-600 dark:text-gray-400">No scheduled viewings yet</p>
       </div>
+    );
+  }
 
-      {/* Detail dialog */}
-      <Dialog open={!!detailView} onOpenChange={(v) => !v && setDetailView(null)}>
-        <DialogContent className="max-w-md">
-          <DialogTitle>Viewing Details</DialogTitle>
-          <DialogDescription>Information about your scheduled viewing.</DialogDescription>
-          {detailView && (
-            <div className="mt-4 space-y-4">
-              <div className="rounded-xl border border-border p-4 space-y-3">
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase">Property</p>
-                  <p className="font-semibold">{detailView.property_title || "Property viewing"}</p>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase">Date</p>
-                    <p className="font-semibold">{new Date(detailView.preferred_date).toLocaleDateString("en-KE", { day: "numeric", month: "long", year: "numeric" })}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase">Time</p>
-                    <p className="font-semibold">{detailView.preferred_time}</p>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase">Status</p>
-                  <span className={cn("mt-1 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold", (statusMeta[detailView.status] ?? statusMeta.pending).color)}>
-                    <span className={cn("h-1.5 w-1.5 rounded-full", (statusMeta[detailView.status] ?? statusMeta.pending).dot)} />
-                    {(statusMeta[detailView.status] ?? statusMeta.pending).label}
+  const statusColors: Record<string, string> = {
+    scheduled: "bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200",
+    completed: "bg-success/10 text-success",
+    cancelled: "bg-destructive/10 text-destructive",
+  };
+
+  return (
+    <div className="space-y-4">
+      {viewings.map(viewing => (
+        <div
+          key={viewing.id}
+          className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-soft transition-shadow cursor-pointer"
+          onClick={() => setSelectedViewing(viewing)}
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                {viewing.property?.title || "Property"}
+              </h3>
+              <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  <span>
+                    {new Date(viewing.scheduled_at).toLocaleDateString()}
                   </span>
                 </div>
-                {detailView.notes && (
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase">Notes</p>
-                    <p className="text-sm">{detailView.notes}</p>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  <span>
+                    {new Date(viewing.scheduled_at).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
+                {viewing.property?.location && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4" />
+                    <span>{viewing.property.location}</span>
                   </div>
-                )}
-              </div>
-
-              {/* Buyer contact info is hidden from seller */}
-              {viewerRole === "buyer" && (
-                <p className="text-xs text-muted-foreground">
-                  Your contact information is shared only with KejaHub HQ Admin — not with the property owner.
-                </p>
-              )}
-
-              {/* Seller only sees: "A viewing request has been submitted" */}
-              {viewerRole === "seller" && (
-                <p className="rounded-lg bg-primary/5 p-3 text-xs text-muted-foreground">
-                  A viewing request has been submitted. KejaHub HQ will coordinate the details.
-                </p>
-              )}
-
-              <div className="flex gap-2">
-                {viewerRole === "buyer" && (detailView.status === "pending" || detailView.status === "approved") && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 text-destructive hover:text-destructive"
-                    disabled={loading}
-                    onClick={() => cancelViewing(detailView.id)}
-                  >
-                    <X className="h-4 w-4" /> Cancel
-                  </Button>
                 )}
               </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+
+            <span
+              className={cn(
+                "px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap",
+                statusColors[viewing.status]
+              )}
+            >
+              {viewing.status.charAt(0).toUpperCase() + viewing.status.slice(1)}
+            </span>
+          </div>
+        </div>
+      ))}
+
+      {/* Detail Dialog */}
+      {selectedViewing && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-display font-bold text-xl">Viewing Details</h3>
+              <button
+                onClick={() => setSelectedViewing(null)}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="text-sm text-gray-600 dark:text-gray-400">Property</label>
+                <p className="font-semibold text-gray-900 dark:text-white">
+                  {selectedViewing.property?.title}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-600 dark:text-gray-400">Date & Time</label>
+                <p className="font-semibold text-gray-900 dark:text-white">
+                  {new Date(selectedViewing.scheduled_at).toLocaleString()}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-600 dark:text-gray-400">Location</label>
+                <p className="font-semibold text-gray-900 dark:text-white">
+                  {selectedViewing.property?.location}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-600 dark:text-gray-400">Status</label>
+                <span
+                  className={cn(
+                    "inline-block px-3 py-1 rounded-full text-xs font-semibold mt-1",
+                    statusColors[selectedViewing.status]
+                  )}
+                >
+                  {selectedViewing.status.charAt(0).toUpperCase() +
+                    selectedViewing.status.slice(1)}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setSelectedViewing(null)}
+                className="flex-1 px-4 py-2 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                Close
+              </button>
+              {selectedViewing.status === "scheduled" && (
+                <button
+                  onClick={() => {
+                    handleCancelViewing(selectedViewing.id);
+                  }}
+                  className="flex-1 px-4 py-2 bg-destructive text-white rounded-lg hover:bg-destructive/90 transition-colors"
+                >
+                  Cancel Viewing
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

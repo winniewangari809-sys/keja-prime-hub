@@ -1,84 +1,180 @@
-import { Search, MapPin, Home, Wallet } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { Search, MapPin, Home, DollarSign } from "lucide-react";
 
-const rotating = ["🔍 Search Kilimani…", "🏠 House in Runda", "🏢 Apartment in Ruiru", "🏬 Office in Westlands", "✈️ Airbnb in Diani", "🏠 KejaHub"];
+const CATEGORIES = [
+  { value: "rental", label: "Rentals" },
+  { value: "airbnb", label: "Airbnbs" },
+  { value: "sale", label: "For Sale" },
+  { value: "commercial", label: "Commercial" },
+];
 
-export function SearchBar() {
+const PROPERTY_TYPES = [
+  "Apartment",
+  "House",
+  "Studio",
+  "Land",
+  "Office",
+  "Shop",
+];
+
+interface SearchBarProps {
+  compact?: boolean;
+}
+
+export function SearchBar({ compact = false }: SearchBarProps) {
+  const [location, setLocation] = useState("");
+  const [category, setCategory] = useState("rental");
+  const [propertyType, setPropertyType] = useState("");
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
   const navigate = useNavigate();
-  const [loc, setLoc] = useState("");
-  const [type, setType] = useState("rental");
-  const [budget, setBudget] = useState("");
-  const [phIdx, setPhIdx] = useState(0);
 
-  useEffect(() => {
-    const t = setInterval(() => setPhIdx((i) => (i + 1) % rotating.length), 2200);
-    return () => clearInterval(t);
-  }, []);
-
-  const submit = (e: React.FormEvent) => {
+  const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    const path =
-      type === "rental" ? "/rentals" :
-      type === "airbnb" ? "/airbnbs" :
-      type === "sale" ? "/homes-for-sale" : "/commercial-property";
-    navigate({ to: path, search: { q: loc || undefined, budget: budget || undefined } as any });
+
+    const searchParams = new URLSearchParams();
+    if (location) searchParams.set("location", location);
+    if (category) searchParams.set("category", category);
+    if (propertyType) searchParams.set("type", propertyType);
+    if (priceMin) searchParams.set("priceMin", priceMin);
+    if (priceMax) searchParams.set("priceMax", priceMax);
+
+    navigate({
+      to: "/rentals",
+      search: Object.fromEntries(searchParams),
+    });
   };
 
-  return (
-    <form
-      onSubmit={submit}
-      className="rounded-2xl border border-border bg-card shadow-elegant p-2 sm:p-3 grid gap-2 md:grid-cols-[1.3fr_1fr_1fr_auto]"
-    >
-      <label className="flex items-center gap-3 rounded-xl bg-background px-4 py-3 border border-transparent focus-within:border-primary/40 focus-within:bg-accent/40">
-        <MapPin className="h-5 w-5 text-primary shrink-0" />
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wide">Where</p>
-          <input
-            value={loc}
-            onChange={(e) => setLoc(e.target.value)}
-            placeholder={loc ? "City, area or estate" : rotating[phIdx]}
-            className="w-full bg-transparent outline-none text-sm placeholder:text-muted-foreground/70 transition-all"
-          />
-        </div>
-      </label>
+  if (compact) {
+    return (
+      <form onSubmit={handleSearch} className="w-full">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex-1 relative">
+            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="Location"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+            />
+          </div>
 
-      <label className="flex items-center gap-3 rounded-xl bg-background px-4 py-3 border border-transparent focus-within:border-primary/40">
-        <Home className="h-5 w-5 text-primary shrink-0" />
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wide">Property Type</p>
           <select
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-            className="w-full bg-transparent outline-none text-sm"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
           >
-            <option value="rental">Rental</option>
-            <option value="airbnb">Airbnb</option>
-            <option value="sale">Home for Sale</option>
-            <option value="commercial">Commercial</option>
+            {CATEGORIES.map(cat => (
+              <option key={cat.value} value={cat.value}>
+                {cat.label}
+              </option>
+            ))}
+          </select>
+
+          <button
+            type="submit"
+            className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-semibold flex items-center justify-center gap-2 whitespace-nowrap"
+          >
+            <Search className="w-5 h-5" />
+            Search
+          </button>
+        </div>
+      </form>
+    );
+  }
+
+  // Full search bar
+  return (
+    <form onSubmit={handleSearch} className="bg-white dark:bg-gray-900 rounded-lg shadow-elegant p-6 border border-gray-200 dark:border-gray-800">
+      <h3 className="font-display font-bold text-2xl mb-6">Find Your Property</h3>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        {/* Location */}
+        <div>
+          <label className="block text-sm font-semibold mb-2">Location</label>
+          <div className="relative">
+            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="e.g., Kilimani, Nairobi"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+            />
+          </div>
+        </div>
+
+        {/* Category */}
+        <div>
+          <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
+            <Home className="w-4 h-4" />
+            Category
+          </label>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+          >
+            {CATEGORIES.map(cat => (
+              <option key={cat.value} value={cat.value}>
+                {cat.label}
+              </option>
+            ))}
           </select>
         </div>
-      </label>
 
-      <label className="flex items-center gap-3 rounded-xl bg-background px-4 py-3 border border-transparent focus-within:border-primary/40">
-        <Wallet className="h-5 w-5 text-primary shrink-0" />
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wide">Budget</p>
+        {/* Property Type */}
+        <div>
+          <label className="block text-sm font-semibold mb-2">Property Type</label>
+          <select
+            value={propertyType}
+            onChange={(e) => setPropertyType(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+          >
+            <option value="">All Types</option>
+            {PROPERTY_TYPES.map(type => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Price Range */}
+      <div className="mb-6">
+        <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
+          <DollarSign className="w-4 h-4" />
+          Price Range (KSh)
+        </label>
+        <div className="flex gap-3">
           <input
-            value={budget}
-            onChange={(e) => setBudget(e.target.value)}
-            placeholder="Max KSh"
-            inputMode="numeric"
-            className="w-full bg-transparent outline-none text-sm placeholder:text-muted-foreground/60"
+            type="number"
+            value={priceMin}
+            onChange={(e) => setPriceMin(e.target.value)}
+            placeholder="Minimum"
+            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+          />
+          <input
+            type="number"
+            value={priceMax}
+            onChange={(e) => setPriceMax(e.target.value)}
+            placeholder="Maximum"
+            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
           />
         </div>
-      </label>
+      </div>
 
-      <Button type="submit" size="lg" className="gradient-primary text-primary-foreground h-full min-h-14 rounded-xl shadow-soft">
-        <Search className="h-5 w-5" />
-        <span className="ml-1">Search</span>
-      </Button>
+      {/* Submit Button */}
+      <button
+        type="submit"
+        className="w-full px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+      >
+        <Search className="w-5 h-5" />
+        Search Properties
+      </button>
     </form>
   );
 }

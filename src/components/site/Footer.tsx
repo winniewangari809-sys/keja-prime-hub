@@ -1,62 +1,122 @@
 import { Link } from "@tanstack/react-router";
-import { Building2, Facebook, Instagram, Twitter, Mail, Phone } from "lucide-react";
+import { Phone, Mail, MapPin, Globe, MessageCircle, Link as LinkIcon, Send } from "lucide-react";
+import { BrandLogo } from "./BrandLogo";
 
 export function Footer() {
+  const currentYear = new Date().getFullYear();
+
   return (
-    <footer className="mt-24 border-t border-border bg-secondary/40">
-      <div className="container-app py-14 grid gap-10 md:grid-cols-2 lg:grid-cols-5">
-        <div className="lg:col-span-2">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="grid h-9 w-9 place-items-center rounded-xl gradient-primary text-primary-foreground">
-              <Building2 className="h-5 w-5" />
-            </span>
-            <span className="font-display text-xl font-bold">Keja<span className="text-primary">Hub</span></span>
-          </Link>
-          <p className="mt-4 max-w-sm text-sm text-muted-foreground">
-            Kenya's most trusted property marketplace. Find. Rent. Buy. Lease — all in one place.
-          </p>
-          <div className="mt-5 flex gap-2">
-            {[Facebook, Instagram, Twitter].map((I, i) => (
-              <a key={i} href="#" className="grid h-9 w-9 place-items-center rounded-full border border-border hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors">
-                <I className="h-4 w-4" />
-              </a>
-            ))}
+    <footer className="bg-gray-900 dark:bg-gray-950 text-white">
+      <div className="container-app py-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+          {/* Brand */}
+          <div>
+            <div className="mb-4">
+              <BrandLogo className="text-white" />
+            </div>
+            <p className="text-gray-400 text-sm leading-relaxed">
+              Your trusted platform for finding and listing properties in Kenya. Making property ownership accessible to everyone.
+            </p>
+          </div>
+
+          {/* Quick Links */}
+          <div>
+            <h3 className="font-display font-bold text-lg mb-4">Quick Links</h3>
+            <ul className="space-y-2 text-sm text-gray-400">
+              <li>
+                <Link to="/" className="hover:text-white transition-colors">
+                  Home
+                </Link>
+              </li>
+              <li>
+                <Link to="/rentals?category=rental" className="hover:text-white transition-colors">
+                  Rentals
+                </Link>
+              </li>
+              <li>
+                <Link to="/rentals?category=airbnb" className="hover:text-white transition-colors">
+                  Airbnbs
+                </Link>
+              </li>
+              <li>
+                <Link to="/rentals?category=sale" className="hover:text-white transition-colors">
+                  Properties for Sale
+                </Link>
+              </li>
+              <li>
+                <Link to="/concierge" className="hover:text-white transition-colors">
+                  Concierge
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Support */}
+          <div>
+            <h3 className="font-display font-bold text-lg mb-4">Support</h3>
+            <ul className="space-y-2 text-sm text-gray-400">
+              <li>
+                <Link to="/about" className="hover:text-white transition-colors">
+                  About Us
+                </Link>
+              </li>
+              <li>
+                <Link to="/contact" className="hover:text-white transition-colors">
+                  Contact
+                </Link>
+              </li>
+              <li>
+                <a href="#" className="hover:text-white transition-colors">
+                  Privacy Policy
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:text-white transition-colors">
+                  Terms & Conditions
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Contact Info */}
+          <div>
+            <h3 className="font-display font-bold text-lg mb-4">Contact Us</h3>
+            <ul className="space-y-3 text-sm">
+              <li className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
+                <Phone className="w-4 h-4 flex-shrink-0" />
+                <a href="tel:+254700000000">+254 700 000 000</a>
+              </li>
+              <li className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
+                <Mail className="w-4 h-4 flex-shrink-0" />
+                <a href="mailto:hello@kejahub.com">hello@kejahub.com</a>
+              </li>
+              <li className="flex items-start gap-2 text-gray-400">
+                <MapPin className="w-4 h-4 flex-shrink-0 mt-1" />
+                <span>Nairobi, Kenya</span>
+              </li>
+            </ul>
           </div>
         </div>
 
-        <div>
-          <h4 className="font-semibold text-sm">Browse</h4>
-          <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-            <li><Link to="/rentals" className="hover:text-foreground">Rentals</Link></li>
-            <li><Link to="/airbnbs" className="hover:text-foreground">Airbnbs</Link></li>
-            <li><Link to="/homes-for-sale" className="hover:text-foreground">Homes for Sale</Link></li>
-            
-            <li><Link to="/commercial-property" className="hover:text-foreground">Commercial</Link></li>
-          </ul>
-        </div>
-
-        <div>
-          <h4 className="font-semibold text-sm">Company</h4>
-          <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-            <li><Link to="/about" className="hover:text-foreground">About Us</Link></li>
-            <li><Link to="/contact" className="hover:text-foreground">Contact</Link></li>
-            <li><Link to="/post-listing" className="hover:text-foreground">Post a Listing</Link></li>
-            <li><Link to="/property-requests" className="hover:text-foreground">Property Requests</Link></li>
-          </ul>
-        </div>
-
-        <div>
-          <h4 className="font-semibold text-sm">Get in touch</h4>
-          <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-            <li className="flex items-center gap-2"><Mail className="h-4 w-4" /> hello@kejahub.co.ke</li>
-            <li className="flex items-center gap-2"><Phone className="h-4 w-4" /> +254 700 000 000</li>
-          </ul>
-        </div>
-      </div>
-      <div className="border-t border-border">
-        <div className="container-app py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
-          <p>© {new Date().getFullYear()} KejaHub. All rights reserved.</p>
-          <p>Made with care in Nairobi 🇰🇪</p>
+        {/* Social Links */}
+        <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+          <p className="text-gray-400 text-sm">
+            &copy; {currentYear} KejaHub. All rights reserved.
+          </p>
+          <div className="flex items-center gap-4">
+            <a href="#" className="text-gray-400 hover:text-white transition-colors">
+              <Globe className="w-5 h-5" />
+            </a>
+            <a href="#" className="text-gray-400 hover:text-white transition-colors">
+              <MessageCircle className="w-5 h-5" />
+            </a>
+            <a href="#" className="text-gray-400 hover:text-white transition-colors">
+              <LinkIcon className="w-5 h-5" />
+            </a>
+            <a href="#" className="text-gray-400 hover:text-white transition-colors">
+              <Send className="w-5 h-5" />
+            </a>
+          </div>
         </div>
       </div>
     </footer>

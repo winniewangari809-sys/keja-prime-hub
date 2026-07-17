@@ -1,210 +1,206 @@
-import { ShieldCheck, FileText, Award, CreditCard, Info, Loader as Loader2, CircleCheck as CheckCircle2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { CheckCircle } from "lucide-react";
+import { WhatsAppButton } from "./WhatsAppButton";
 import { cn } from "@/lib/utils";
-import { WhatsAppButton } from "@/components/site/WhatsAppButton";
 
-const verificationTiers = [
+interface VerificationTier {
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+  features: string[];
+  documents: string[];
+  popular?: boolean;
+}
+
+const VERIFICATION_TIERS: VerificationTier[] = [
   {
-    tier: "Basic Listing",
-    fee: "Free",
-    color: "text-slate-700 bg-slate-100",
-    perks: ["Standard listing exposure", "Basic search visibility", "Self-service support"],
-    popularity: "Entry level",
-    reach: "Low",
+    id: "basic",
+    name: "Basic Listing",
+    price: 0,
+    description: "Get started with a free listing",
+    features: [
+      "Free property listing",
+      "Up to 5 photos",
+      "Basic details",
+      "Contact form",
+    ],
+    documents: [],
   },
   {
-    tier: "Verified Property",
-    fee: "KSh 1,500",
-    color: "text-blue-800 bg-blue-100",
-    perks: ["Verified badge on listing", "Priority in search results", "ID & ownership verified", "Email support"],
-    popularity: "Most popular",
-    reach: "Medium",
+    id: "verified",
+    name: "Verified Property",
+    price: 1500,
+    description: "Build trust with verification",
+    features: [
+      "Everything in Basic",
+      "Blue verified badge",
+      "Higher search ranking",
+      "Verification seal",
+      "Priority support",
+    ],
+    documents: ["National ID", "Property deed/lease", "Proof of ownership"],
+    popular: true,
   },
   {
-    tier: "Featured Property",
-    fee: "KSh 3,000",
-    color: "text-amber-800 bg-amber-100",
-    perks: ["Featured badge", "Homepage placement", "Higher search ranking", "Concierge priority", "Phone support"],
-    popularity: "High conversion",
-    reach: "High",
+    id: "featured",
+    name: "Featured Property",
+    price: 3000,
+    description: "Stand out from the crowd",
+    features: [
+      "Everything in Verified",
+      "Featured badge & placement",
+      "Top search results",
+      "Highlighted listing",
+      "Social media promotion",
+    ],
+    documents: [
+      "National ID",
+      "Property deed/lease",
+      "Proof of ownership",
+      "Recent photos",
+    ],
   },
   {
-    tier: "Premium Property",
-    fee: "KSh 5,000",
-    color: "text-primary bg-primary/10",
-    perks: ["Premium badge", "Top of search results", "Homepage spotlight", "VIP concierge support", "Analytics dashboard", "Social media promotion"],
-    popularity: "Maximum exposure",
-    reach: "Maximum",
+    id: "premium",
+    name: "Premium Property",
+    price: 5000,
+    description: "Maximum visibility",
+    features: [
+      "Everything in Featured",
+      "Premium placement",
+      "Homepage featured",
+      "Concierge support",
+      "Virtual tour hosting",
+      "Monthly reports",
+    ],
+    documents: [
+      "National ID",
+      "Property deed/lease",
+      "Proof of ownership",
+      "Professional photos",
+      "Property inspection report",
+    ],
   },
 ];
 
-const requiredDocuments = [
-  "National ID or Passport (front and back)",
-  "KRA PIN certificate",
-  "Proof of property ownership (title deed, lease agreement, or letter of administration)",
-  "Recent utility bill matching the property address",
-  "One passport-size photo",
-];
-
-const verificationSteps = [
-  "Choose a verification tier below",
-  "Submit the required documents",
-  "Pay the verification fee via M-Pesa to Paybill 400200, Account: KEJAHUB-VERIFY",
-  "Our team reviews your documents within 48 hours",
-  "Once approved, your verified badge appears on all your listings",
-];
-
-export function VerificationCenter({ userId }: { userId?: string }) {
-  const [status, setStatus] = useState<string>("unverified");
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (userId) {
-      supabase
-        .from("profiles")
-        .select("avatar_url")
-        .eq("id", userId)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (data?.avatar_url?.startsWith("verified:")) {
-            setStatus(data.avatar_url.replace("verified:", ""));
-          }
-        });
-    }
-  }, [userId]);
-
-  const requestVerification = async (tier: string) => {
-    setLoading(true);
-    // Store verification request in admin_settings as a key-value pair
-    if (userId) {
-      await supabase.from("concierge_requests").insert({
-        requester_id: userId,
-        type: "inquiry",
-        full_name: "Verification Request",
-        phone_number: "N/A",
-        message: `Verification request for ${tier} tier. Documents pending submission.`,
-      });
-    }
-    setLoading(false);
-    toast.success(`${tier} verification request submitted! Upload your documents and pay the fee to complete verification.`);
-  };
-
+export function VerificationCenter() {
   return (
-    <div className="space-y-6">
-      {/* Verification Status */}
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-          <ShieldCheck className="h-5 w-5 text-primary" /> Verification Status
-        </h3>
-        <div className="mt-4 flex items-center gap-4">
-          <div className={cn(
-            "grid h-14 w-14 place-items-center rounded-full",
-            status !== "unverified" ? "bg-success/15 text-success" : "bg-secondary text-muted-foreground"
-          )}>
-            {status !== "unverified" ? <CheckCircle2 className="h-7 w-7" /> : <ShieldCheck className="h-7 w-7" />}
-          </div>
-          <div>
-            <p className="font-semibold capitalize">
-              {status === "unverified" ? "Not Verified" : `${status} Verified`}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {status === "unverified"
-                ? "Get verified to earn trust badges and higher visibility."
-                : "Your account is verified. Enjoy premium benefits."}
-            </p>
-          </div>
-        </div>
+    <div className="space-y-12">
+      {/* Header */}
+      <div className="text-center max-w-3xl mx-auto">
+        <h1 className="font-display font-bold text-4xl mb-4">
+          Verification Center
+        </h1>
+        <p className="text-lg text-gray-600 dark:text-gray-400">
+          Increase your credibility and visibility with our verification tiers
+        </p>
       </div>
 
-      {/* Required Documents */}
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-          <FileText className="h-5 w-5 text-primary" /> Required Documents
-        </h3>
-        <ul className="mt-4 space-y-2 text-sm">
-          {requiredDocuments.map((doc, i) => (
-            <li key={i} className="flex items-start gap-2">
-              <span className="grid h-5 w-5 place-items-center rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0 mt-0.5">{i + 1}</span>
-              {doc}
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {/* Verification Benefits */}
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-          <Award className="h-5 w-5 text-primary" /> Verification Benefits & Tiers
-        </h3>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {verificationTiers.map((t) => (
-            <div key={t.tier} className="rounded-xl border border-border p-4 hover-lift">
-              <span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold", t.color)}>
-                <ShieldCheck className="h-3.5 w-3.5" /> {t.tier}
-              </span>
-              <div className="mt-3 space-y-1 text-xs">
-                <p className="text-muted-foreground"><span className="font-semibold text-foreground">Popularity:</span> {t.popularity}</p>
-                <p className="text-muted-foreground"><span className="font-semibold text-foreground">Expected Reach:</span> {t.reach}</p>
+      {/* Tiers */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {VERIFICATION_TIERS.map(tier => (
+          <div
+            key={tier.id}
+            className={cn(
+              "relative rounded-lg border transition-all duration-200",
+              tier.popular
+                ? "border-primary shadow-elegant lg:scale-105 bg-primary/5 dark:bg-primary/10"
+                : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
+            )}
+          >
+            {tier.popular && (
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white px-4 py-1 rounded-full text-xs font-semibold">
+                Most Popular
               </div>
-              <ul className="mt-3 space-y-1 text-xs">
-                {t.perks.map((p) => <li key={p} className="flex gap-1.5"><span className="text-primary">•</span>{p}</li>)}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </div>
+            )}
 
-      {/* Verification Fee */}
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-          <CreditCard className="h-5 w-5 text-primary" /> Verification Fee
-        </h3>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {verificationTiers.map((t) => (
-            <div key={t.tier} className="rounded-xl border-2 border-border p-4 text-center hover:border-primary/40 transition-colors">
-              <p className="font-display text-2xl font-bold text-primary">{t.fee}</p>
-              <p className="text-xs text-muted-foreground mt-1">{t.tier} tier</p>
-              <Button
-                size="sm"
-                className="mt-3 w-full gradient-primary text-primary-foreground"
-                disabled={loading}
-                onClick={() => requestVerification(t.tier)}
+            <div className="p-6">
+              <h3 className="font-display font-bold text-xl mb-2">
+                {tier.name}
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                {tier.description}
+              </p>
+
+              <div className="mb-6">
+                <span className="font-display font-bold text-3xl">
+                  KSh {tier.price.toLocaleString()}
+                </span>
+                {tier.price > 0 && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    one-time fee
+                  </p>
+                )}
+              </div>
+
+              <button
+                className={cn(
+                  "w-full px-4 py-2 rounded-lg font-semibold transition-colors mb-6",
+                  tier.popular
+                    ? "bg-primary text-white hover:bg-primary/90"
+                    : "border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800"
+                )}
               >
-                {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : `Get ${t.tier}`}
-              </Button>
+                Get {tier.name}
+              </button>
+
+              <div className="space-y-3 mb-6 border-t border-gray-200 dark:border-gray-700 pt-6">
+                {tier.features.map((feature, idx) => (
+                  <div key={idx} className="flex items-start gap-3">
+                    <CheckCircle className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                      {feature}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {tier.documents.length > 0 && (
+                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                  <h4 className="font-semibold text-sm mb-3">Required Documents</h4>
+                  <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                    {tier.documents.map((doc, idx) => (
+                      <li key={idx}>• {doc}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
-          ))}
-        </div>
-        <div className="mt-4 rounded-lg bg-primary/5 p-3 text-xs text-muted-foreground">
-          <p className="font-semibold text-foreground">Payment Instructions:</p>
-          <p className="mt-1">Pay via M-Pesa to Paybill <span className="font-mono font-semibold">400200</span>, Account: <span className="font-mono font-semibold">KEJAHUB-VERIFY</span></p>
-          <p className="mt-1">Or pay via bank transfer: Equity Bank, Account <span className="font-mono font-semibold">0110XXXXXXX</span>, Branch: Westlands</p>
-        </div>
+          </div>
+        ))}
       </div>
 
-      {/* Verification Instructions */}
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-          <Info className="h-5 w-5 text-primary" /> Verification Instructions
-        </h3>
-        <ol className="mt-4 space-y-3 text-sm">
-          {verificationSteps.map((step, i) => (
-            <li key={i} className="flex items-start gap-3">
-              <span className="grid h-6 w-6 place-items-center rounded-full gradient-primary text-primary-foreground text-xs font-bold shrink-0">{i + 1}</span>
-              <span className="pt-0.5">{step}</span>
-            </li>
-          ))}
-        </ol>
-        <div className="mt-4">
-          <WhatsAppButton
-            variant="card"
-            label="Questions About Verification?"
-            message="Hello KejaHub, I have questions about the verification process."
-          />
+      {/* Payment Instructions */}
+      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-8 border border-blue-200 dark:border-blue-800">
+        <h2 className="font-display font-bold text-2xl mb-4 text-blue-900 dark:text-blue-100">
+          Payment Instructions
+        </h2>
+
+        <div className="space-y-4 text-blue-900 dark:text-blue-100 mb-6">
+          <div>
+            <h3 className="font-semibold mb-2">M-Pesa Paybill:</h3>
+            <p className="text-lg font-mono font-bold">400200</p>
+            <p className="text-sm mt-1">Account: Your Property ID</p>
+          </div>
+
+          <div className="bg-white dark:bg-gray-900 p-4 rounded mt-4">
+            <h4 className="font-semibold mb-2">Steps:</h4>
+            <ol className="space-y-2 text-sm list-decimal list-inside">
+              <li>Go to M-Pesa menu and select "Lipa na M-Pesa Online"</li>
+              <li>Enter Business Code: 400200</li>
+              <li>Enter Account Reference: Your Property ID</li>
+              <li>Enter the amount for your selected tier</li>
+              <li>Complete the transaction</li>
+              <li>Your verification will be activated within 24 hours</li>
+            </ol>
+          </div>
         </div>
+
+        <WhatsAppButton
+          message="Hi! I need help with the verification process for my property."
+          label="Get Help with Verification"
+          variant="card"
+        />
       </div>
     </div>
   );

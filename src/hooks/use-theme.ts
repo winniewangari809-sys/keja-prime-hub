@@ -1,32 +1,46 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState, useEffect } from "react";
 
 export type Theme = "light" | "dark";
 
 const STORAGE_KEY = "kejahub-theme";
 
-function getInitialTheme(): Theme {
-  if (typeof window === "undefined") return "light";
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored === "light" || stored === "dark") return stored;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
-
-export function useTheme() {
-  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+export function useTheme(): {
+  theme: Theme | null;
+  setTheme: (theme: Theme) => void;
+  toggleTheme: () => void;
+} {
+  const [theme, setThemeState] = useState<Theme | null>(null);
 
   useEffect(() => {
-    const root = document.documentElement;
-    root.classList.add("theme-transition");
-    if (theme === "dark") root.classList.add("dark");
-    else root.classList.remove("dark");
-    localStorage.setItem(STORAGE_KEY, theme);
-    const timer = setTimeout(() => root.classList.remove("theme-transition"), 400);
-    return () => clearTimeout(timer);
-  }, [theme]);
-
-  const toggle = useCallback(() => {
-    setTheme((t) => (t === "dark" ? "light" : "dark"));
+    const storedTheme = localStorage.getItem(STORAGE_KEY) as Theme | null;
+    const prefersDark =
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const initialTheme = storedTheme || (prefersDark ? "dark" : "light");
+    setThemeState(initialTheme);
+    applyTheme(initialTheme);
   }, []);
 
-  return { theme, toggle };
+  const setTheme = (newTheme: Theme) => {
+    setThemeState(newTheme);
+    localStorage.setItem(STORAGE_KEY, newTheme);
+    applyTheme(newTheme);
+  };
+
+  const toggleTheme = () => {
+    if (theme) {
+      setTheme(theme === "light" ? "dark" : "light");
+    }
+  };
+
+  return { theme, setTheme, toggleTheme };
+}
+
+function applyTheme(theme: Theme) {
+  const root = document.documentElement;
+  if (theme === "dark") {
+    root.classList.add("dark");
+  } else {
+    root.classList.remove("dark");
+  }
 }

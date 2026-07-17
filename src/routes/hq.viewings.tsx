@@ -1,335 +1,446 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { HQPage } from "@/components/site/HQPage";
-import { HQInternalNotes } from "@/components/site/HQInternalNotes";
-import { Calendar, Phone, Mail, Check, X, RotateCw, Eye, Loader as Loader2, Flag, Ban, EyeOff, TriangleAlert as AlertTriangle } from "lucide-react";
 import { useState, useEffect } from "react";
+import {
+  Calendar,
+  Phone,
+  MapPin,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  MoreVertical,
+  MessageSquare,
+  AlertTriangle,
+  Ban,
+  Eye,
+  Trash2,
+  Flag,
+} from "lucide-react";
+import { useRequireRole } from "@/hooks/use-require-role";
+import { HQPage, HQInternalNotes } from "@/components/site";
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/hq/viewings")({
-  head: () => ({ meta: [{ title: "Viewing Requests — KejaHub HQ" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({
+    meta: [
+      {
+        title: "Viewing Requests — KejaHub Command Center",
+      },
+      {
+        name: "robots",
+        content: "noindex",
+      },
+    ],
+  }),
   component: ViewingRequests,
 });
 
-const statusMeta: Record<string, { label: string; color: string; dot: string }> = {
-  pending: { label: "Pending", color: "bg-warning/15 text-warning-foreground", dot: "bg-warning" },
-  approved: { label: "Approved", color: "bg-success/15 text-success", dot: "bg-success" },
-  rejected: { label: "Rejected", color: "bg-destructive/15 text-destructive", dot: "bg-destructive" },
-  rescheduled: { label: "Rescheduled", color: "bg-primary/15 text-primary", dot: "bg-primary" },
-  completed: { label: "Completed", color: "bg-secondary text-muted-foreground", dot: "bg-muted-foreground" },
-  cancelled: { label: "Cancelled", color: "bg-destructive/15 text-destructive", dot: "bg-destructive" },
-};
-
-interface Viewing {
+interface ViewingRecord {
   id: string;
-  property_title: string | null;
-  preferred_date: string;
-  preferred_time: string;
-  phone_number: string;
-  notes: string | null;
+  property_id: string;
+  buyer_id: string;
+  buyer_phone: string;
+  viewing_date: string;
+  viewing_time: string;
+  notes: string;
   status: string;
-  admin_notes: string | null;
+  property_title?: string;
   created_at: string;
-  requester_id: string;
 }
 
-interface ConciergeReq {
+interface ConciergeRequest {
   id: string;
-  type: string;
-  full_name: string;
-  phone_number: string;
-  email: string | null;
-  preferred_contact: string | null;
-  message: string | null;
-  budget: string | null;
-  location: string | null;
-  property_type: string | null;
-  bedrooms: string | null;
+  requester_name: string;
+  requester_phone: string;
+  request_type: string;
+  details: string;
   status: string;
   created_at: string;
 }
 
 function ViewingRequests() {
-  const [viewings, setViewings] = useState<Viewing[]>([]);
-  const [conciergeReqs, setConciergeReqs] = useState<ConciergeReq[]>([]);
+  const { loading: authLoading } = useRequireRole(["hq", "admin"]);
+  const [viewings, setViewings] = useState<ViewingRecord[]>([]);
+  const [conciergeRequests, setConciergeRequests] = useState<ConciergeRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [detailView, setDetailView] = useState<Viewing | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [selectedViewing, setSelectedViewing] = useState<ViewingRecord | null>(null);
+  const [selectedConcierge, setSelectedConcierge] = useState<ConciergeRequest | null>(null);
 
   useEffect(() => {
-    async function fetchData() {
-      const [vRes, cRes] = await Promise.all([
-        supabase.from("viewings").select("*").order("created_at", { ascending: false }),
-        supabase.from("concierge_requests").select("*").order("created_at", { ascending: false }),
-      ]);
-      setViewings((vRes.data as Viewing[]) ?? []);
-      setConciergeReqs((cRes.data as ConciergeReq[]) ?? []);
+    if (!authLoading) {
+      fetchViewings();
+      fetchConciergeRequests();
+    }
+  }, [authLoading]);
+
+  const fetchViewings = async () => {
+    try {
+      const { data } = await supabase
+        .from("viewings")
+        .select("id, property_id, buyer_id, buyer_phone, viewing_date, viewing_time, notes, status, created_at")
+        .order("viewing_date", { ascending: true });
+
+      if (data) {
+        setViewings(
+          data.map((v: any) => ({
+            id: v.id,
+            property_id: v.property_id,
+            buyer_id: v.buyer_id,
+            buyer_phone: v.buyer_phone,
+            viewing_date: v.viewing_date,
+            viewing_time: v.viewing_time,
+            notes: v.notes,
+            status: v.status || "pending",
+            created_at: v.created_at,
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Failed to fetch viewings:", error);
+    }
+  };
+
+  const fetchConciergeRequests = async () => {
+    try {
+      const { data } = await supabase
+        .from("concierge_requests")
+        .select("id, requester_name, requester_phone, request_type, details, status, created_at")
+        .order("created_at", { ascending: false });
+
+      if (data) {
+        setConciergeRequests(
+          data.map((c: any) => ({
+            id: c.id,
+            requester_name: c.requester_name,
+            requester_phone: c.requester_phone,
+            request_type: c.request_type,
+            details: c.details,
+            status: c.status || "pending",
+            created_at: c.created_at,
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Failed to fetch concierge requests:", error);
+    } finally {
       setLoading(false);
     }
-    fetchData();
-  }, []);
+  };
 
-  const updateViewingStatus = async (id: string, status: string) => {
-    setActionLoading(true);
-    const { error } = await supabase
-      .from("viewings")
-      .update({ status, updated_at: new Date().toISOString() })
-      .eq("id", id);
-    setActionLoading(false);
-    if (error) {
-      toast.error("Failed to update viewing status");
-    } else {
-      toast.success(`Viewing ${status}`);
-      setViewings(viewings.map((v) => v.id === id ? { ...v, status } : v));
-      setDetailView(null);
+  const updateViewingStatus = async (viewingId: string, status: string) => {
+    try {
+      const { error } = await supabase
+        .from("viewings")
+        .update({ status })
+        .eq("id", viewingId);
+
+      if (error) throw error;
+
+      setViewings(
+        viewings.map((v) =>
+          v.id === viewingId ? { ...v, status } : v
+        )
+      );
+      toast.success("Viewing updated");
+      setSelectedViewing(null);
+    } catch (error) {
+      console.error("Failed to update viewing:", error);
+      toast.error("Failed to update viewing");
     }
   };
 
-  const updateConciergeStatus = async (id: string, status: string) => {
-    setActionLoading(true);
-    const { error } = await supabase
-      .from("concierge_requests")
-      .update({ status, updated_at: new Date().toISOString() })
-      .eq("id", id);
-    setActionLoading(false);
-    if (error) {
-      toast.error("Failed to update request status");
-    } else {
-      toast.success(`Request ${status}`);
-      setConciergeReqs(conciergeReqs.map((r) => r.id === id ? { ...r, status } : r));
+  const updateConciergeStatus = async (requestId: string, status: string) => {
+    try {
+      const { error } = await supabase
+        .from("concierge_requests")
+        .update({ status })
+        .eq("id", requestId);
+
+      if (error) throw error;
+
+      setConciergeRequests(
+        conciergeRequests.map((c) =>
+          c.id === requestId ? { ...c, status } : c
+        )
+      );
+      toast.success("Request updated");
+      setSelectedConcierge(null);
+    } catch (error) {
+      console.error("Failed to update request:", error);
+      toast.error("Failed to update request");
     }
   };
 
-  return (
-    <HQPage
-      title="Viewing Requests"
-      subtitle="Manage property viewings and concierge inquiries — all buyer contact info is visible only to HQ."
-    >
-      <div className="space-y-8">
-        {/* Viewings */}
-        <div>
-          <h2 className="font-display text-xl font-semibold mb-4 flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-primary" /> Scheduled Viewings ({viewings.length})
-          </h2>
-          {loading ? (
-            <div className="grid h-40 place-items-center text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /></div>
-          ) : viewings.length === 0 ? (
-            <p className="text-sm text-muted-foreground rounded-xl border border-border p-6 text-center">No viewing requests yet.</p>
-          ) : (
-            <div className="space-y-3">
-              {viewings.map((v) => {
-                const sm = statusMeta[v.status] ?? statusMeta.pending;
-                return (
-                  <div key={v.id} className="rounded-xl border border-border bg-card p-4">
-                    <div className="flex flex-wrap items-start gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-semibold text-sm">{v.property_title || "Property viewing"}</p>
-                          <span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold", sm.color)}>
-                            <span className={cn("h-1.5 w-1.5 rounded-full", sm.dot)} /> {sm.label}
-                          </span>
-                        </div>
-                        <div className="mt-2 grid gap-2 sm:grid-cols-3 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {new Date(v.preferred_date).toLocaleDateString("en-KE", { day: "numeric", month: "short", year: "numeric" })}</span>
-                          <span className="flex items-center gap-1"><span className="font-mono">⏰</span> {v.preferred_time}</span>
-                          <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {v.phone_number}</span>
-                        </div>
-                        {v.notes && <p className="mt-2 text-xs text-muted-foreground">Notes: {v.notes}</p>}
-                      </div>
-                      <div className="flex flex-wrap gap-2 shrink-0">
-                        <Button size="sm" variant="outline" onClick={() => setDetailView(v)}>
-                          <Eye className="h-3.5 w-3.5" /> Details
-                        </Button>
-                        {v.status === "pending" && (
-                          <>
-                            <Button size="sm" className="bg-success text-white hover:bg-success/90" disabled={actionLoading} onClick={() => updateViewingStatus(v.id, "approved")}>
-                              <Check className="h-3.5 w-3.5" /> Approve
-                            </Button>
-                            <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" disabled={actionLoading} onClick={() => updateViewingStatus(v.id, "rejected")}>
-                              <X className="h-3.5 w-3.5" /> Reject
-                            </Button>
-                          </>
-                        )}
-                        {v.status === "approved" && (
-                          <Button size="sm" variant="outline" disabled={actionLoading} onClick={() => updateViewingStatus(v.id, "completed")}>
-                            <Check className="h-3.5 w-3.5" /> Mark Completed
-                          </Button>
-                        )}
-                        <Button size="sm" variant="outline" disabled={actionLoading} onClick={() => updateViewingStatus(v.id, "rescheduled")}>
-                          <RotateCw className="h-3.5 w-3.5" /> Reschedule
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "completed":
+        return "bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200";
+      case "cancelled":
+      case "closed":
+        return "bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200";
+      case "approved":
+      case "resolved":
+        return "bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200";
+      case "pending":
+        return "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-200";
+      default:
+        return "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200";
+    }
+  };
 
-        {/* Concierge Requests */}
-        <div>
-          <h2 className="font-display text-xl font-semibold mb-4 flex items-center gap-2">
-            <Phone className="h-5 w-5 text-primary" /> Concierge Inquiries & Find Requests ({conciergeReqs.length})
-          </h2>
-          {conciergeReqs.length === 0 ? (
-            <p className="text-sm text-muted-foreground rounded-xl border border-border p-6 text-center">No concierge requests yet.</p>
-          ) : (
-            <div className="space-y-3">
-              {conciergeReqs.map((r) => (
-                <div key={r.id} className="rounded-xl border border-border bg-card p-4">
-                  <div className="flex flex-wrap items-start gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className={cn(
-                          "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
-                          r.type === "find_property" ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"
-                        )}>
-                          {r.type === "find_property" ? "Find Property" : "Inquiry"}
-                        </span>
-                        <span className={cn(
-                          "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
-                          r.status === "pending" ? "bg-warning/15 text-warning-foreground" :
-                          r.status === "contacted" ? "bg-primary/15 text-primary" :
-                          r.status === "resolved" ? "bg-success/15 text-success" :
-                          "bg-secondary text-muted-foreground"
-                        )}>
-                          {r.status}
-                        </span>
-                      </div>
-                      <div className="mt-2 grid gap-2 sm:grid-cols-2 text-xs text-muted-foreground">
-                        <span><span className="font-semibold text-foreground">{r.full_name}</span></span>
-                        <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {r.phone_number}</span>
-                        {r.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" /> {r.email}</span>}
-                        {r.preferred_contact && <span>Contact via: {r.preferred_contact}</span>}
-                        {r.budget && <span>Budget: <span className="font-semibold text-foreground">{r.budget}</span></span>}
-                        {r.location && <span>Location: {r.location}</span>}
-                        {r.property_type && <span>Type: {r.property_type}</span>}
-                        {r.bedrooms && <span>Bedrooms: {r.bedrooms}</span>}
-                      </div>
-                      {r.message && <p className="mt-2 text-xs text-muted-foreground">Message: {r.message}</p>}
-                    </div>
-                    <div className="flex flex-wrap gap-2 shrink-0">
-                      {r.status === "pending" && (
-                        <Button size="sm" className="bg-primary text-primary-foreground" disabled={actionLoading} onClick={() => updateConciergeStatus(r.id, "contacted")}>
-                          <Phone className="h-3.5 w-3.5" /> Contact Buyer
-                        </Button>
-                      )}
-                      {r.status === "contacted" && (
-                        <Button size="sm" className="bg-success text-white hover:bg-success/90" disabled={actionLoading} onClick={() => updateConciergeStatus(r.id, "resolved")}>
-                          <Check className="h-3.5 w-3.5" /> Mark Resolved
-                        </Button>
-                      )}
-                      <Button size="sm" variant="outline" disabled={actionLoading} onClick={() => updateConciergeStatus(r.id, "closed")}>
-                        Close
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Internal Notes & Anti-scam Controls */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <HQInternalNotes />
-
-        <div className="rounded-2xl border border-border bg-card p-6">
-          <h3 className="font-display text-xl font-semibold flex items-center gap-2 mb-4">
-            <AlertTriangle className="h-5 w-5 text-destructive" /> Anti-Scam Controls
-          </h3>
-          <p className="text-sm text-muted-foreground mb-4">Take action against suspicious listings or users.</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Button
-              variant="outline"
-              className="justify-start"
-              onClick={() => toast.success("Listing hidden. It will no longer appear in search results.")}
-            >
-              <EyeOff className="h-4 w-4 text-amber-500" /> Hide Listing
-            </Button>
-            <Button
-              variant="outline"
-              className="justify-start"
-              onClick={() => toast.success("Listing suspended. Owner has been notified.")}
-            >
-              <AlertTriangle className="h-4 w-4 text-amber-600" /> Suspend Listing
-            </Button>
-            <Button
-              variant="outline"
-              className="justify-start"
-              onClick={() => toast.success("Listing removed. This action has been logged.")}
-            >
-              <X className="h-4 w-4 text-destructive" /> Remove Listing
-            </Button>
-            <Button
-              variant="outline"
-              className="justify-start"
-              onClick={() => toast.success("Listing flagged as scam. Investigation started.")}
-            >
-              <Flag className="h-4 w-4 text-red-500" /> Flag Scam
-            </Button>
-            <Button
-              variant="outline"
-              className="justify-start sm:col-span-2"
-              onClick={() => toast.success("User banned. All their listings have been hidden.")}
-            >
-              <Ban className="h-4 w-4 text-destructive" /> Ban User
-            </Button>
+  if (authLoading || loading) {
+    return (
+      <HQPage title="Viewing Requests" description="Manage property viewings and concierge requests">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border border-gray-300 border-t-primary mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading data...</p>
           </div>
         </div>
-      </div>
+      </HQPage>
+    );
+  }
 
-      {/* Detail dialog */}
-      <Dialog open={!!detailView} onOpenChange={(v) => !v && setDetailView(null)}>
-        <DialogContent className="max-w-md">
-          <DialogTitle>Viewing Details</DialogTitle>
-          <DialogDescription>Full viewing information — visible only to HQ Admin.</DialogDescription>
-          {detailView && (
-            <div className="mt-4 space-y-3 text-sm">
-              <div className="rounded-lg border border-border p-3">
-                <p className="text-xs text-muted-foreground uppercase">Property</p>
-                <p className="font-semibold">{detailView.property_title || "Property viewing"}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-lg border border-border p-3">
-                  <p className="text-xs text-muted-foreground uppercase">Date</p>
-                  <p className="font-semibold">{new Date(detailView.preferred_date).toLocaleDateString("en-KE", { day: "numeric", month: "long", year: "numeric" })}</p>
-                </div>
-                <div className="rounded-lg border border-border p-3">
-                  <p className="text-xs text-muted-foreground uppercase">Time</p>
-                  <p className="font-semibold">{detailView.preferred_time}</p>
-                </div>
-              </div>
-              <div className="rounded-lg border border-border p-3">
-                <p className="text-xs text-muted-foreground uppercase">Buyer Phone (HQ only)</p>
-                <p className="font-mono font-semibold">{detailView.phone_number}</p>
-              </div>
-              {detailView.notes && (
-                <div className="rounded-lg border border-border p-3">
-                  <p className="text-xs text-muted-foreground uppercase">Notes</p>
-                  <p>{detailView.notes}</p>
-                </div>
-              )}
-              <div className="flex gap-2 pt-2">
-                <Button size="sm" className="flex-1 bg-success text-white hover:bg-success/90" disabled={actionLoading} onClick={() => updateViewingStatus(detailView.id, "approved")}>
-                  <Check className="h-4 w-4" /> Approve
-                </Button>
-                <Button size="sm" variant="outline" className="flex-1 text-destructive" disabled={actionLoading} onClick={() => updateViewingStatus(detailView.id, "rejected")}>
-                  <X className="h-4 w-4" /> Reject
-                </Button>
-                <Button size="sm" variant="outline" className="flex-1" disabled={actionLoading} onClick={() => updateViewingStatus(detailView.id, "rescheduled")}>
-                  <RotateCw className="h-4 w-4" /> Reschedule
-                </Button>
-              </div>
+  return (
+    <HQPage title="Viewing Requests" description="Manage property viewings and concierge requests">
+      <div className="space-y-6">
+        <Tabs defaultValue="viewings" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="viewings">
+              Viewing Requests ({viewings.length})
+            </TabsTrigger>
+            <TabsTrigger value="concierge">
+              Concierge Requests ({conciergeRequests.length})
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Viewings Tab */}
+          <TabsContent value="viewings" className="space-y-6">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                  <tr>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-gray-100">
+                      Date & Time
+                    </th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-gray-100">
+                      Buyer Phone
+                    </th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-gray-100">
+                      Notes
+                    </th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-gray-100">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-gray-100">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {viewings.map((viewing) => (
+                    <tr
+                      key={viewing.id}
+                      className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                    >
+                      <td className="px-6 py-4 text-gray-900 dark:text-gray-100">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-gray-500" />
+                          <div>
+                            <p className="font-semibold">{new Date(viewing.viewing_date).toLocaleDateString()}</p>
+                            <p className="text-xs text-gray-500">{viewing.viewing_time}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-gray-900 dark:text-gray-100 font-mono text-sm">
+                        {viewing.buyer_phone}
+                      </td>
+                      <td className="px-6 py-4 text-gray-600 dark:text-gray-400 max-w-xs truncate">
+                        {viewing.notes || "—"}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={cn("px-3 py-1 rounded-full text-xs font-semibold", getStatusColor(viewing.status))}>
+                          {viewing.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <Dialog
+                          open={selectedViewing?.id === viewing.id}
+                          onOpenChange={(open) =>
+                            setSelectedViewing(open ? viewing : null)
+                          }
+                        >
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Viewing Actions</DialogTitle>
+                              <DialogDescription>
+                                {new Date(viewing.viewing_date).toLocaleDateString()} at {viewing.viewing_time}
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-2">
+                              <Button
+                                onClick={() => updateViewingStatus(viewing.id, "approved")}
+                                className="w-full"
+                              >
+                                <CheckCircle2 className="w-4 h-4 mr-2" />
+                                Approve
+                              </Button>
+                              <Button
+                                onClick={() => updateViewingStatus(viewing.id, "cancelled")}
+                                className="w-full"
+                                variant="destructive"
+                              >
+                                <XCircle className="w-4 h-4 mr-2" />
+                                Reject
+                              </Button>
+                              <Button
+                                onClick={() => updateViewingStatus(viewing.id, "completed")}
+                                className="w-full"
+                                variant="outline"
+                              >
+                                Mark Completed
+                              </Button>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+
+            {viewings.length === 0 && (
+              <div className="text-center py-12">
+                <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                <p className="text-gray-600 dark:text-gray-400">No viewing requests</p>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Concierge Tab */}
+          <TabsContent value="concierge" className="space-y-6">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                  <tr>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-gray-100">
+                      Requester
+                    </th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-gray-100">
+                      Phone
+                    </th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-gray-100">
+                      Type
+                    </th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-gray-100">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-gray-100">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {conciergeRequests.map((request) => (
+                    <tr
+                      key={request.id}
+                      className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                    >
+                      <td className="px-6 py-4 text-gray-900 dark:text-gray-100 font-semibold">
+                        {request.requester_name}
+                      </td>
+                      <td className="px-6 py-4 text-gray-900 dark:text-gray-100 font-mono text-sm">
+                        {request.requester_phone}
+                      </td>
+                      <td className="px-6 py-4 text-gray-600 dark:text-gray-400">
+                        {request.request_type}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={cn("px-3 py-1 rounded-full text-xs font-semibold", getStatusColor(request.status))}>
+                          {request.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <Dialog
+                          open={selectedConcierge?.id === request.id}
+                          onOpenChange={(open) =>
+                            setSelectedConcierge(open ? request : null)
+                          }
+                        >
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-md">
+                            <DialogHeader>
+                              <DialogTitle>Request Details</DialogTitle>
+                              <DialogDescription>
+                                {request.requester_name}
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <div>
+                                <label className="text-sm font-semibold">Details</label>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{request.details}</p>
+                              </div>
+                              <Button
+                                onClick={() => updateConciergeStatus(request.id, "resolved")}
+                                className="w-full"
+                              >
+                                Mark Resolved
+                              </Button>
+                              <Button
+                                onClick={() => updateConciergeStatus(request.id, "closed")}
+                                className="w-full"
+                                variant="outline"
+                              >
+                                Close
+                              </Button>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {conciergeRequests.length === 0 && (
+              <div className="text-center py-12">
+                <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                <p className="text-gray-600 dark:text-gray-400">No concierge requests</p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+
+        {/* Internal Notes Section */}
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6">
+          <HQInternalNotes />
+        </div>
+      </div>
     </HQPage>
   );
 }

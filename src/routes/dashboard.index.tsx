@@ -1,43 +1,42 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { Loader as Loader2 } from "lucide-react";
 import { useAuth, dashboardForRole } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/dashboard/")({
-  head: () => ({ meta: [{ title: "Dashboard — KejaHub" }, { name: "robots", content: "noindex" }] }),
-  component: DashboardRouter,
+  head: () => ({
+    meta: [
+      {
+        title: "Dashboard — KejaHub",
+      },
+      {
+        name: "robots",
+        content: "noindex",
+      },
+    ],
+  }),
+  component: DashboardIndex,
 });
 
-function DashboardRouter() {
-  const auth = useAuth();
+function DashboardIndex() {
   const navigate = useNavigate();
+  const { user, role, loading } = useAuth();
 
   useEffect(() => {
-    if (auth.loading) return;
-    if (!auth.user) { navigate({ to: "/login" }); return; }
-    if (!auth.role) {
-      // Authenticated but role missing — don't silently default, show error
-      return;
+    if (!loading) {
+      if (!user) {
+        navigate({ to: "/login" });
+      } else {
+        navigate({ to: dashboardForRole(role) });
+      }
     }
-    navigate({ to: dashboardForRole(auth.role) as any, replace: true });
-  }, [auth.loading, auth.user, auth.role, navigate]);
-
-  if (!auth.loading && auth.user && !auth.role) {
-    return (
-      <div className="grid min-h-[60vh] place-items-center text-center px-4">
-        <div className="space-y-2">
-          <p className="text-lg font-semibold text-foreground">No role assigned</p>
-          <p className="text-muted-foreground">
-            Your account doesn't have a role yet. Please contact support to get access.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  }, [loading, user, role, navigate]);
 
   return (
-    <div className="grid min-h-[60vh] place-items-center text-muted-foreground">
-      <div className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading your dashboard…</div>
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border border-gray-300 border-t-primary mx-auto mb-4"></div>
+        <p className="text-gray-600 dark:text-gray-400">Loading your dashboard...</p>
+      </div>
     </div>
   );
 }

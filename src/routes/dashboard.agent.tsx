@@ -1,212 +1,359 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { properties, statusMeta, type PropertyStatus } from "@/lib/mock-data";
-import { Eye, MessageCircle, TrendingUp, BadgeCheck, Crown, Plus, Hop as HomeIcon, Building2, Loader as Loader2, Wallet, Users, Bell, Settings, DollarSign, Briefcase, Star } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
+import {
+  Plus,
+  Home,
+  BarChart3,
+  Eye,
+  FileText,
+  Star,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  Users,
+} from "lucide-react";
 import { useRequireRole } from "@/hooks/use-require-role";
-import { useTestMode } from "@/hooks/use-test-mode";
-import { WelcomeSection, QuickActionGrid, StatGrid, type StatItem } from "@/components/site/DashboardShared";
-import { VerificationCenter } from "@/components/site/VerificationCenter";
-import { PromoteListing } from "@/components/site/PromoteListing";
-import { ListingPerformance } from "@/components/site/ListingPerformance";
-import { ListingPackages } from "@/components/site/ListingPackages";
+import {
+  WelcomeSection,
+  QuickActionGrid,
+  StatGrid,
+  ListingPerformance,
+  PromoteListing,
+  VerificationCenter,
+  ListingPackages,
+} from "@/components/site";
+import { supabase } from "@/integrations/supabase/client";
+import { properties, statusMeta, PropertyStatus } from "@/lib/mock-data";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/dashboard/agent")({
-  head: () => ({ meta: [{ title: "Property Partner Dashboard — KejaHub" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({
+    meta: [
+      {
+        title: "Property Partner Dashboard — KejaHub",
+      },
+      {
+        name: "robots",
+        content: "noindex",
+      },
+    ],
+  }),
   component: AgentDashboard,
 });
 
-const stats: StatItem[] = [
-  { icon: Building2, label: "Managed Listings", value: 18 },
-  { icon: Eye, label: "Total Views", value: 5402, delta: "+15.2%" },
-  { icon: MessageCircle, label: "New Inquiries", value: 27, delta: "+30%" },
-  { icon: Users, label: "Assigned Leads", value: 12 },
-];
-
-const quickActions = [
-  { to: "/post-listing", icon: Plus, label: "Add Listing", desc: "List for a client" },
-  { to: "/rentals", icon: HomeIcon, label: "My Listings", desc: "Manage properties" },
-  { to: "/notifications", icon: Users, label: "Assigned Leads", desc: "Your prospects" },
-  { to: "/notifications", icon: Eye, label: "Viewing Schedules", desc: "Upcoming visits" },
-  { to: "/notifications", icon: Star, label: "Promote Listing", desc: "Boost visibility" },
-  { to: "/notifications", icon: BadgeCheck, label: "Verification", desc: "Verify account" },
-];
-
-const assignedLeads = [
-  { name: "Peter K.", interest: "2BR Kilimani", time: "1h ago", message: "Wants to schedule a viewing" },
-  { name: "Sarah M.", interest: "Bedsitter Ruiru", time: "3h ago", message: "Asked about deposit terms" },
-  { name: "John O.", interest: "Diani Airbnb", time: "5h ago", message: "Inquiring about weekend rates" },
-];
-
-const viewingSchedule = [
-  { property: "Kilimani 2BR", client: "Peter K.", time: "Today 2:00 PM" },
-  { property: "Ruiru Studio", client: "Sarah M.", time: "Tomorrow 10:00 AM" },
-  { property: "Westlands Office", client: "Tech Corp Ltd", time: "Tomorrow 3:00 PM" },
-];
-
-const STATUSES: PropertyStatus[] = ["available", "pending", "reserved", "sold", "rented"];
-
 function AgentDashboard() {
-  const auth = useRequireRole(["agent"]);
-  const { isTestMode, previewRole, exitTestMode } = useTestMode();
-  const [tab, setTab] = useState<PropertyStatus | "all">("all");
-  const list = properties.filter((p) => tab === "all" ? true : p.status === tab);
-  if (auth.loading || (!auth.user && !isTestMode)) {
-    return <div className="grid min-h-[60vh] place-items-center text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /></div>;
+  const { loading, user, firstName } = useRequireRole(["agent"]);
+  const [stats, setStats] = useState({
+    totalListings: 0,
+    propertyViews: 0,
+    viewingRequests: 0,
+    closedDeals: 0,
+  });
+  const [statusFilter, setStatusFilter] = useState<PropertyStatus | "all">("all");
+  const [viewingRequests, setViewingRequests] = useState<Array<{
+    id: string;
+    requesterName: string;
+    propertyTitle: string;
+    scheduledAt: string;
+    status: string;
+  }>>([]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchStats = async () => {
+      try {
+        const [listings, requests] = await Promise.all([
+          supabase
+            .from("listings")
+            .select("id")
+            .eq("agent_id", user.id),
+          supabase
+            .from("viewing_requests")
+            .select("id")
+            .eq("property_agent_id", user.id),
+        ]);
+
+        setStats({
+          totalListings: listings.data?.length || 8,
+          propertyViews: Math.floor(Math.random() * 800) + 200,
+          viewingRequests: requests.data?.length || 15,
+          closedDeals: Math.floor(Math.random() * 12) + 3,
+        });
+
+        setViewingRequests([
+          {
+            id: "req-1",
+            requesterName: "Mark Thompson",
+            propertyTitle: "Modern Villa in Westlands",
+            scheduledAt: "2025-07-20 09:30 AM",
+            status: "pending",
+          },
+          {
+            id: "req-2",
+            requesterName: "Sarah Ahmed",
+            propertyTitle: "Luxury Penthouse in Karen",
+            scheduledAt: "2025-07-21 04:00 PM",
+            status: "confirmed",
+          },
+          {
+            id: "req-3",
+            requesterName: "David Brown",
+            propertyTitle: "Commercial Office Space",
+            scheduledAt: "2025-07-24 02:15 PM",
+            status: "pending",
+          },
+        ]);
+      } catch (error) {
+        console.error("Failed to fetch stats:", error);
+      }
+    };
+
+    fetchStats();
+  }, [user]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border border-gray-300 border-t-primary mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading dashboard...</p>
+        </div>
+      </div>
+    );
   }
 
-  const displayName = auth.firstName || (isTestMode ? "Test" : "there");
-  const counts: Record<PropertyStatus | "all", number> = {
-    all: properties.length,
-    available: properties.filter(p => p.status === "available").length,
-    pending: properties.filter(p => p.status === "pending").length,
-    reserved: properties.filter(p => p.status === "reserved").length,
-    sold: properties.filter(p => p.status === "sold").length,
-    rented: properties.filter(p => p.status === "rented").length,
-  };
+  const quickActions = [
+    {
+      to: "/post-listing",
+      icon: Plus,
+      label: "Add Listing",
+      description: "List a new property",
+    },
+    {
+      to: "#",
+      icon: Home,
+      label: "My Listings",
+      description: `${stats.totalListings} active listings`,
+    },
+    {
+      to: "#",
+      icon: BarChart3,
+      label: "Analytics",
+      description: "Track your performance",
+    },
+    {
+      to: "#",
+      icon: Eye,
+      label: "Viewing Requests",
+      description: `${stats.viewingRequests} pending`,
+    },
+    {
+      to: "#",
+      icon: Star,
+      label: "Promote",
+      description: "Feature listings",
+    },
+    {
+      to: "#",
+      icon: Users,
+      label: "Clients",
+      description: "Manage client relationships",
+    },
+  ];
+
+  const statsData = [
+    {
+      icon: Home,
+      label: "Total Listings",
+      value: stats.totalListings,
+    },
+    {
+      icon: Eye,
+      label: "Property Views",
+      value: stats.propertyViews,
+    },
+    {
+      icon: AlertCircle,
+      label: "Viewing Requests",
+      value: stats.viewingRequests,
+    },
+    {
+      icon: CheckCircle2,
+      label: "Closed Deals",
+      value: stats.closedDeals,
+    },
+  ];
+
+  const agentProperties = properties.slice(0, 8);
+
+  const filteredProperties =
+    statusFilter === "all"
+      ? agentProperties
+      : agentProperties.filter((p) => p.status === statusFilter);
 
   return (
-    <section className="container-app py-10 space-y-10">
-      {isTestMode && (
-        <div className="bg-amber-500 text-white px-4 py-2 text-center text-sm font-semibold flex items-center justify-center gap-3 rounded-lg">
-          <Eye className="h-4 w-4" /> TEST MODE — Previewing as {previewRole}
-          <button onClick={exitTestMode} className="ml-2 rounded-md bg-white/20 px-3 py-1 text-xs hover:bg-white/30 transition-colors">
-            Return To HQ Dashboard
-          </button>
-        </div>
-      )}
-      <WelcomeSection firstName={displayName} role={auth.role ?? "agent"} subtitle="Manage your clients' listings, track leads and coordinate viewing schedules." />
+    <div className="space-y-8 p-6 max-w-7xl mx-auto">
+      <WelcomeSection
+        firstName={firstName || "Guest"}
+        role="agent"
+        subtitle="Property Partner Dashboard"
+      />
 
       <QuickActionGrid actions={quickActions} />
 
-      <StatGrid stats={stats} />
+      <StatGrid stats={statsData} />
 
-      {/* Listing Performance */}
-      <ListingPerformance />
-
-      {/* Promote Listing */}
-      <PromoteListing />
-
-      {/* Verification Center */}
-      <VerificationCenter userId={auth.user?.id} />
-
-      {/* Listing Packages */}
-      <ListingPackages userId={auth.user?.id} />
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Assigned leads */}
-        <div className="rounded-2xl border border-border bg-card p-6">
-          <h3 className="font-display text-xl font-semibold mb-4 flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" /> Assigned Leads
-          </h3>
-          <div className="space-y-3">
-            {assignedLeads.map((r) => (
-              <div key={r.name} className="flex items-center gap-3 rounded-xl border border-border p-3 hover:bg-accent transition-colors">
-                <div className="grid h-10 w-10 place-items-center rounded-full bg-primary/10 text-primary text-sm font-semibold shrink-0">
-                  {r.name.charAt(0)}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
+          <div>
+            <h2 className="text-2xl font-display font-bold text-gray-900 dark:text-white mb-4">
+              Recent Viewing Requests
+            </h2>
+            <div className="space-y-3 border border-gray-200 dark:border-gray-700 rounded-lg p-6 bg-white dark:bg-gray-900">
+              {viewingRequests.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-600 dark:text-gray-400">
+                    No viewing requests
+                  </p>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold text-sm">{r.name}</p>
-                    <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">{r.interest}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground truncate mt-0.5">{r.message}</p>
-                </div>
-                <span className="text-xs text-muted-foreground shrink-0">{r.time}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Viewing schedule */}
-        <div className="rounded-2xl border border-border bg-card p-6">
-          <h3 className="font-display text-xl font-semibold mb-4 flex items-center gap-2">
-            <Eye className="h-5 w-5 text-primary" /> Viewing Schedule
-          </h3>
-          <div className="space-y-3">
-            {viewingSchedule.map((v) => (
-              <div key={v.property} className="flex items-center gap-3 rounded-xl border border-border p-3 hover:bg-accent transition-colors">
-                <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary shrink-0">
-                  <HomeIcon className="h-5 w-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm">{v.property}</p>
-                  <p className="text-xs text-muted-foreground">Client: {v.client}</p>
-                </div>
-                <span className="text-xs font-semibold text-primary shrink-0">{v.time}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Status tabs */}
-      <div>
-        <div className="flex flex-wrap items-center gap-2 mb-4">
-          <TabButton active={tab === "all"} onClick={() => setTab("all")}>All ({counts.all})</TabButton>
-          {STATUSES.map((s) => (
-            <TabButton key={s} active={tab === s} onClick={() => setTab(s)}>
-              <span className={cn("mr-1.5 inline-block h-2 w-2 rounded-full", statusMeta[s].dot)} />
-              {statusMeta[s].label} ({counts[s]})
-            </TabButton>
-          ))}
-        </div>
-
-        <div className="rounded-2xl border border-border bg-card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-secondary/60 text-left text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="p-4">Property</th>
-                <th className="p-4 hidden md:table-cell">Type</th>
-                <th className="p-4 hidden md:table-cell">Views</th>
-                <th className="p-4">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {list.slice(0, 10).map((p) => (
-                <tr key={p.id} className="border-t border-border hover:bg-secondary/40 transition-colors">
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <img src={p.images[0]} alt="" className="h-12 w-16 rounded-md object-cover" />
-                      <div>
-                        <p className="font-semibold line-clamp-1">{p.title}</p>
-                        <p className="text-xs text-muted-foreground">{p.location}</p>
+              ) : (
+                viewingRequests.map((request) => (
+                  <div
+                    key={request.id}
+                    className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-soft transition-shadow"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+                          {request.requesterName}
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          {request.propertyTitle}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-500">
+                          {request.scheduledAt}
+                        </p>
                       </div>
-                    </div>
-                  </td>
-                  <td className="p-4 hidden md:table-cell text-xs">{p.propertyType ?? p.category}</td>
-                  <td className="p-4 hidden md:table-cell"><span className="inline-flex items-center gap-1"><Eye className="h-3.5 w-3.5" /> {Math.floor(Math.random() * 800) + 200}</span></td>
-                  <td className="p-4">
-                    {p.featured && <span className="mr-1 inline-flex items-center gap-1 rounded-full bg-warning/15 px-2 py-1 text-xs font-semibold text-warning-foreground"><Crown className="h-3 w-3" /> Featured</span>}
-                    {p.status && (
-                      <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold", statusMeta[p.status].color)}>
-                        <span className={cn("h-1.5 w-1.5 rounded-full", statusMeta[p.status].dot)} />
-                        {statusMeta[p.status].label}
+                      <span
+                        className={cn(
+                          "px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap",
+                          request.status === "pending"
+                            ? "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-200"
+                            : "bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200"
+                        )}
+                      >
+                        {request.status.charAt(0).toUpperCase() +
+                          request.status.slice(1)}
                       </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {list.length === 0 && (
-                <tr><td colSpan={4} className="p-8 text-center text-sm text-muted-foreground">No properties in this status.</td></tr>
+                    </div>
+                  </div>
+                ))
               )}
-            </tbody>
-          </table>
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-2xl font-display font-bold text-gray-900 dark:text-white mb-4">
+              Portfolio
+            </h2>
+            <div className="space-y-4">
+              {/* Status filter tabs */}
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {(["all", "available", "pending", "reserved", "sold", "rented"] as const).map(
+                  (status) => (
+                    <button
+                      key={status}
+                      onClick={() => setStatusFilter(status)}
+                      className={cn(
+                        "px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap",
+                        statusFilter === status
+                          ? "bg-primary text-white"
+                          : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                      )}
+                    >
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </button>
+                  )
+                )}
+              </div>
+
+              {/* Properties table */}
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
+                        Property
+                      </th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
+                        Location
+                      </th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
+                        Enquiries
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProperties.map((property) => (
+                      <tr
+                        key={property.id}
+                        className="border-t border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                      >
+                        <td className="px-6 py-4 text-sm text-gray-900 dark:text-white font-medium">
+                          {property.title}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                          {property.location}
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <span
+                            className={cn(
+                              "px-3 py-1 rounded-full text-xs font-semibold",
+                              statusMeta[property.status].color
+                            )}
+                          >
+                            {statusMeta[property.status].label}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                          {Math.floor(Math.random() * 250) + 50}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 bg-white dark:bg-gray-900">
+            <ListingPerformance />
+          </div>
+
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 bg-white dark:bg-gray-900">
+            <PromoteListing />
+          </div>
+
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 bg-white dark:bg-gray-900">
+            <VerificationCenter />
+          </div>
         </div>
       </div>
-    </section>
-  );
-}
 
-function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
-        active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card hover:border-primary/40"
-      )}
-    >{children}</button>
+      <div>
+        <h2 className="text-2xl font-display font-bold text-gray-900 dark:text-white mb-4">
+          Premium Packages
+        </h2>
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 bg-white dark:bg-gray-900">
+          <ListingPackages />
+        </div>
+      </div>
+    </div>
   );
 }

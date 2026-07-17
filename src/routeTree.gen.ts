@@ -20,7 +20,6 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as HomesForSaleRouteImport } from './routes/homes-for-sale'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as ConciergeRouteImport } from './routes/concierge'
-import { Route as CompareRouteImport } from './routes/compare'
 import { Route as CommercialPropertyRouteImport } from './routes/commercial-property'
 import { Route as AirbnbsRouteImport } from './routes/airbnbs'
 import { Route as AboutRouteImport } from './routes/about'
@@ -34,6 +33,7 @@ import { Route as HqSupportRouteImport } from './routes/hq.support'
 import { Route as HqSecurityRouteImport } from './routes/hq.security'
 import { Route as HqRevenueRouteImport } from './routes/hq.revenue'
 import { Route as HqReportsRouteImport } from './routes/hq.reports'
+import { Route as HqPricingRouteImport } from './routes/hq.pricing'
 import { Route as HqNotificationsRouteImport } from './routes/hq.notifications'
 import { Route as HqMessagesRouteImport } from './routes/hq.messages'
 import { Route as HqMediaRouteImport } from './routes/hq.media'
@@ -43,12 +43,17 @@ import { Route as HqFeaturedRouteImport } from './routes/hq.featured'
 import { Route as HqEmergencyRouteImport } from './routes/hq.emergency'
 import { Route as HqDatabaseRouteImport } from './routes/hq.database'
 import { Route as HqConciergeRequestsRouteImport } from './routes/hq.concierge-requests'
+import { Route as HqCommercialRequestsRouteImport } from './routes/hq.commercial-requests'
+import { Route as HqCalendarRouteImport } from './routes/hq.calendar'
 import { Route as HqAnalyticsRouteImport } from './routes/hq.analytics'
+import { Route as HqAirbnbBookingsRouteImport } from './routes/hq.airbnb-bookings'
 import { Route as DashboardTestModeRouteImport } from './routes/dashboard.test-mode'
 import { Route as DashboardTenantRouteImport } from './routes/dashboard.tenant'
 import { Route as DashboardSellerRouteImport } from './routes/dashboard.seller'
 import { Route as DashboardLandlordRouteImport } from './routes/dashboard.landlord'
+import { Route as DashboardCommercialRouteImport } from './routes/dashboard.commercial'
 import { Route as DashboardBuyerRouteImport } from './routes/dashboard.buyer'
+import { Route as DashboardAirbnbRouteImport } from './routes/dashboard.airbnb'
 import { Route as DashboardAgentRouteImport } from './routes/dashboard.agent'
 import { Route as DashboardAdminRouteImport } from './routes/dashboard.admin'
 
@@ -105,11 +110,6 @@ const ContactRoute = ContactRouteImport.update({
 const ConciergeRoute = ConciergeRouteImport.update({
   id: '/concierge',
   path: '/concierge',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CompareRoute = CompareRouteImport.update({
-  id: '/compare',
-  path: '/compare',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CommercialPropertyRoute = CommercialPropertyRouteImport.update({
@@ -177,6 +177,11 @@ const HqReportsRoute = HqReportsRouteImport.update({
   path: '/hq/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HqPricingRoute = HqPricingRouteImport.update({
+  id: '/hq/pricing',
+  path: '/hq/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HqNotificationsRoute = HqNotificationsRouteImport.update({
   id: '/hq/notifications',
   path: '/hq/notifications',
@@ -222,9 +227,24 @@ const HqConciergeRequestsRoute = HqConciergeRequestsRouteImport.update({
   path: '/hq/concierge-requests',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HqCommercialRequestsRoute = HqCommercialRequestsRouteImport.update({
+  id: '/hq/commercial-requests',
+  path: '/hq/commercial-requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HqCalendarRoute = HqCalendarRouteImport.update({
+  id: '/hq/calendar',
+  path: '/hq/calendar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HqAnalyticsRoute = HqAnalyticsRouteImport.update({
   id: '/hq/analytics',
   path: '/hq/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HqAirbnbBookingsRoute = HqAirbnbBookingsRouteImport.update({
+  id: '/hq/airbnb-bookings',
+  path: '/hq/airbnb-bookings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardTestModeRoute = DashboardTestModeRouteImport.update({
@@ -247,9 +267,19 @@ const DashboardLandlordRoute = DashboardLandlordRouteImport.update({
   path: '/dashboard/landlord',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardCommercialRoute = DashboardCommercialRouteImport.update({
+  id: '/dashboard/commercial',
+  path: '/dashboard/commercial',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardBuyerRoute = DashboardBuyerRouteImport.update({
   id: '/dashboard/buyer',
   path: '/dashboard/buyer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardAirbnbRoute = DashboardAirbnbRouteImport.update({
+  id: '/dashboard/airbnb',
+  path: '/dashboard/airbnb',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardAgentRoute = DashboardAgentRouteImport.update({
@@ -268,7 +298,6 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/airbnbs': typeof AirbnbsRoute
   '/commercial-property': typeof CommercialPropertyRoute
-  '/compare': typeof CompareRoute
   '/concierge': typeof ConciergeRoute
   '/contact': typeof ContactRoute
   '/homes-for-sale': typeof HomesForSaleRoute
@@ -282,12 +311,17 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/dashboard/admin': typeof DashboardAdminRoute
   '/dashboard/agent': typeof DashboardAgentRoute
+  '/dashboard/airbnb': typeof DashboardAirbnbRoute
   '/dashboard/buyer': typeof DashboardBuyerRoute
+  '/dashboard/commercial': typeof DashboardCommercialRoute
   '/dashboard/landlord': typeof DashboardLandlordRoute
   '/dashboard/seller': typeof DashboardSellerRoute
   '/dashboard/tenant': typeof DashboardTenantRoute
   '/dashboard/test-mode': typeof DashboardTestModeRoute
+  '/hq/airbnb-bookings': typeof HqAirbnbBookingsRoute
   '/hq/analytics': typeof HqAnalyticsRoute
+  '/hq/calendar': typeof HqCalendarRoute
+  '/hq/commercial-requests': typeof HqCommercialRequestsRoute
   '/hq/concierge-requests': typeof HqConciergeRequestsRoute
   '/hq/database': typeof HqDatabaseRoute
   '/hq/emergency': typeof HqEmergencyRoute
@@ -297,6 +331,7 @@ export interface FileRoutesByFullPath {
   '/hq/media': typeof HqMediaRoute
   '/hq/messages': typeof HqMessagesRoute
   '/hq/notifications': typeof HqNotificationsRoute
+  '/hq/pricing': typeof HqPricingRoute
   '/hq/reports': typeof HqReportsRoute
   '/hq/revenue': typeof HqRevenueRoute
   '/hq/security': typeof HqSecurityRoute
@@ -312,7 +347,6 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/airbnbs': typeof AirbnbsRoute
   '/commercial-property': typeof CommercialPropertyRoute
-  '/compare': typeof CompareRoute
   '/concierge': typeof ConciergeRoute
   '/contact': typeof ContactRoute
   '/homes-for-sale': typeof HomesForSaleRoute
@@ -326,12 +360,17 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/dashboard/admin': typeof DashboardAdminRoute
   '/dashboard/agent': typeof DashboardAgentRoute
+  '/dashboard/airbnb': typeof DashboardAirbnbRoute
   '/dashboard/buyer': typeof DashboardBuyerRoute
+  '/dashboard/commercial': typeof DashboardCommercialRoute
   '/dashboard/landlord': typeof DashboardLandlordRoute
   '/dashboard/seller': typeof DashboardSellerRoute
   '/dashboard/tenant': typeof DashboardTenantRoute
   '/dashboard/test-mode': typeof DashboardTestModeRoute
+  '/hq/airbnb-bookings': typeof HqAirbnbBookingsRoute
   '/hq/analytics': typeof HqAnalyticsRoute
+  '/hq/calendar': typeof HqCalendarRoute
+  '/hq/commercial-requests': typeof HqCommercialRequestsRoute
   '/hq/concierge-requests': typeof HqConciergeRequestsRoute
   '/hq/database': typeof HqDatabaseRoute
   '/hq/emergency': typeof HqEmergencyRoute
@@ -341,6 +380,7 @@ export interface FileRoutesByTo {
   '/hq/media': typeof HqMediaRoute
   '/hq/messages': typeof HqMessagesRoute
   '/hq/notifications': typeof HqNotificationsRoute
+  '/hq/pricing': typeof HqPricingRoute
   '/hq/reports': typeof HqReportsRoute
   '/hq/revenue': typeof HqRevenueRoute
   '/hq/security': typeof HqSecurityRoute
@@ -357,7 +397,6 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/airbnbs': typeof AirbnbsRoute
   '/commercial-property': typeof CommercialPropertyRoute
-  '/compare': typeof CompareRoute
   '/concierge': typeof ConciergeRoute
   '/contact': typeof ContactRoute
   '/homes-for-sale': typeof HomesForSaleRoute
@@ -371,12 +410,17 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/dashboard/admin': typeof DashboardAdminRoute
   '/dashboard/agent': typeof DashboardAgentRoute
+  '/dashboard/airbnb': typeof DashboardAirbnbRoute
   '/dashboard/buyer': typeof DashboardBuyerRoute
+  '/dashboard/commercial': typeof DashboardCommercialRoute
   '/dashboard/landlord': typeof DashboardLandlordRoute
   '/dashboard/seller': typeof DashboardSellerRoute
   '/dashboard/tenant': typeof DashboardTenantRoute
   '/dashboard/test-mode': typeof DashboardTestModeRoute
+  '/hq/airbnb-bookings': typeof HqAirbnbBookingsRoute
   '/hq/analytics': typeof HqAnalyticsRoute
+  '/hq/calendar': typeof HqCalendarRoute
+  '/hq/commercial-requests': typeof HqCommercialRequestsRoute
   '/hq/concierge-requests': typeof HqConciergeRequestsRoute
   '/hq/database': typeof HqDatabaseRoute
   '/hq/emergency': typeof HqEmergencyRoute
@@ -386,6 +430,7 @@ export interface FileRoutesById {
   '/hq/media': typeof HqMediaRoute
   '/hq/messages': typeof HqMessagesRoute
   '/hq/notifications': typeof HqNotificationsRoute
+  '/hq/pricing': typeof HqPricingRoute
   '/hq/reports': typeof HqReportsRoute
   '/hq/revenue': typeof HqRevenueRoute
   '/hq/security': typeof HqSecurityRoute
@@ -403,7 +448,6 @@ export interface FileRouteTypes {
     | '/about'
     | '/airbnbs'
     | '/commercial-property'
-    | '/compare'
     | '/concierge'
     | '/contact'
     | '/homes-for-sale'
@@ -417,12 +461,17 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/dashboard/admin'
     | '/dashboard/agent'
+    | '/dashboard/airbnb'
     | '/dashboard/buyer'
+    | '/dashboard/commercial'
     | '/dashboard/landlord'
     | '/dashboard/seller'
     | '/dashboard/tenant'
     | '/dashboard/test-mode'
+    | '/hq/airbnb-bookings'
     | '/hq/analytics'
+    | '/hq/calendar'
+    | '/hq/commercial-requests'
     | '/hq/concierge-requests'
     | '/hq/database'
     | '/hq/emergency'
@@ -432,6 +481,7 @@ export interface FileRouteTypes {
     | '/hq/media'
     | '/hq/messages'
     | '/hq/notifications'
+    | '/hq/pricing'
     | '/hq/reports'
     | '/hq/revenue'
     | '/hq/security'
@@ -447,7 +497,6 @@ export interface FileRouteTypes {
     | '/about'
     | '/airbnbs'
     | '/commercial-property'
-    | '/compare'
     | '/concierge'
     | '/contact'
     | '/homes-for-sale'
@@ -461,12 +510,17 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/dashboard/admin'
     | '/dashboard/agent'
+    | '/dashboard/airbnb'
     | '/dashboard/buyer'
+    | '/dashboard/commercial'
     | '/dashboard/landlord'
     | '/dashboard/seller'
     | '/dashboard/tenant'
     | '/dashboard/test-mode'
+    | '/hq/airbnb-bookings'
     | '/hq/analytics'
+    | '/hq/calendar'
+    | '/hq/commercial-requests'
     | '/hq/concierge-requests'
     | '/hq/database'
     | '/hq/emergency'
@@ -476,6 +530,7 @@ export interface FileRouteTypes {
     | '/hq/media'
     | '/hq/messages'
     | '/hq/notifications'
+    | '/hq/pricing'
     | '/hq/reports'
     | '/hq/revenue'
     | '/hq/security'
@@ -491,7 +546,6 @@ export interface FileRouteTypes {
     | '/about'
     | '/airbnbs'
     | '/commercial-property'
-    | '/compare'
     | '/concierge'
     | '/contact'
     | '/homes-for-sale'
@@ -505,12 +559,17 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/dashboard/admin'
     | '/dashboard/agent'
+    | '/dashboard/airbnb'
     | '/dashboard/buyer'
+    | '/dashboard/commercial'
     | '/dashboard/landlord'
     | '/dashboard/seller'
     | '/dashboard/tenant'
     | '/dashboard/test-mode'
+    | '/hq/airbnb-bookings'
     | '/hq/analytics'
+    | '/hq/calendar'
+    | '/hq/commercial-requests'
     | '/hq/concierge-requests'
     | '/hq/database'
     | '/hq/emergency'
@@ -520,6 +579,7 @@ export interface FileRouteTypes {
     | '/hq/media'
     | '/hq/messages'
     | '/hq/notifications'
+    | '/hq/pricing'
     | '/hq/reports'
     | '/hq/revenue'
     | '/hq/security'
@@ -536,7 +596,6 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   AirbnbsRoute: typeof AirbnbsRoute
   CommercialPropertyRoute: typeof CommercialPropertyRoute
-  CompareRoute: typeof CompareRoute
   ConciergeRoute: typeof ConciergeRoute
   ContactRoute: typeof ContactRoute
   HomesForSaleRoute: typeof HomesForSaleRoute
@@ -550,12 +609,17 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   DashboardAdminRoute: typeof DashboardAdminRoute
   DashboardAgentRoute: typeof DashboardAgentRoute
+  DashboardAirbnbRoute: typeof DashboardAirbnbRoute
   DashboardBuyerRoute: typeof DashboardBuyerRoute
+  DashboardCommercialRoute: typeof DashboardCommercialRoute
   DashboardLandlordRoute: typeof DashboardLandlordRoute
   DashboardSellerRoute: typeof DashboardSellerRoute
   DashboardTenantRoute: typeof DashboardTenantRoute
   DashboardTestModeRoute: typeof DashboardTestModeRoute
+  HqAirbnbBookingsRoute: typeof HqAirbnbBookingsRoute
   HqAnalyticsRoute: typeof HqAnalyticsRoute
+  HqCalendarRoute: typeof HqCalendarRoute
+  HqCommercialRequestsRoute: typeof HqCommercialRequestsRoute
   HqConciergeRequestsRoute: typeof HqConciergeRequestsRoute
   HqDatabaseRoute: typeof HqDatabaseRoute
   HqEmergencyRoute: typeof HqEmergencyRoute
@@ -565,6 +629,7 @@ export interface RootRouteChildren {
   HqMediaRoute: typeof HqMediaRoute
   HqMessagesRoute: typeof HqMessagesRoute
   HqNotificationsRoute: typeof HqNotificationsRoute
+  HqPricingRoute: typeof HqPricingRoute
   HqReportsRoute: typeof HqReportsRoute
   HqRevenueRoute: typeof HqRevenueRoute
   HqSecurityRoute: typeof HqSecurityRoute
@@ -653,13 +718,6 @@ declare module '@tanstack/react-router' {
       path: '/concierge'
       fullPath: '/concierge'
       preLoaderRoute: typeof ConciergeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/compare': {
-      id: '/compare'
-      path: '/compare'
-      fullPath: '/compare'
-      preLoaderRoute: typeof CompareRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/commercial-property': {
@@ -753,6 +811,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HqReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/hq/pricing': {
+      id: '/hq/pricing'
+      path: '/hq/pricing'
+      fullPath: '/hq/pricing'
+      preLoaderRoute: typeof HqPricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/hq/notifications': {
       id: '/hq/notifications'
       path: '/hq/notifications'
@@ -816,11 +881,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HqConciergeRequestsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/hq/commercial-requests': {
+      id: '/hq/commercial-requests'
+      path: '/hq/commercial-requests'
+      fullPath: '/hq/commercial-requests'
+      preLoaderRoute: typeof HqCommercialRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hq/calendar': {
+      id: '/hq/calendar'
+      path: '/hq/calendar'
+      fullPath: '/hq/calendar'
+      preLoaderRoute: typeof HqCalendarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/hq/analytics': {
       id: '/hq/analytics'
       path: '/hq/analytics'
       fullPath: '/hq/analytics'
       preLoaderRoute: typeof HqAnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hq/airbnb-bookings': {
+      id: '/hq/airbnb-bookings'
+      path: '/hq/airbnb-bookings'
+      fullPath: '/hq/airbnb-bookings'
+      preLoaderRoute: typeof HqAirbnbBookingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard/test-mode': {
@@ -851,11 +937,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardLandlordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/commercial': {
+      id: '/dashboard/commercial'
+      path: '/dashboard/commercial'
+      fullPath: '/dashboard/commercial'
+      preLoaderRoute: typeof DashboardCommercialRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard/buyer': {
       id: '/dashboard/buyer'
       path: '/dashboard/buyer'
       fullPath: '/dashboard/buyer'
       preLoaderRoute: typeof DashboardBuyerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/airbnb': {
+      id: '/dashboard/airbnb'
+      path: '/dashboard/airbnb'
+      fullPath: '/dashboard/airbnb'
+      preLoaderRoute: typeof DashboardAirbnbRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard/agent': {
@@ -880,7 +980,6 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   AirbnbsRoute: AirbnbsRoute,
   CommercialPropertyRoute: CommercialPropertyRoute,
-  CompareRoute: CompareRoute,
   ConciergeRoute: ConciergeRoute,
   ContactRoute: ContactRoute,
   HomesForSaleRoute: HomesForSaleRoute,
@@ -894,12 +993,17 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   DashboardAdminRoute: DashboardAdminRoute,
   DashboardAgentRoute: DashboardAgentRoute,
+  DashboardAirbnbRoute: DashboardAirbnbRoute,
   DashboardBuyerRoute: DashboardBuyerRoute,
+  DashboardCommercialRoute: DashboardCommercialRoute,
   DashboardLandlordRoute: DashboardLandlordRoute,
   DashboardSellerRoute: DashboardSellerRoute,
   DashboardTenantRoute: DashboardTenantRoute,
   DashboardTestModeRoute: DashboardTestModeRoute,
+  HqAirbnbBookingsRoute: HqAirbnbBookingsRoute,
   HqAnalyticsRoute: HqAnalyticsRoute,
+  HqCalendarRoute: HqCalendarRoute,
+  HqCommercialRequestsRoute: HqCommercialRequestsRoute,
   HqConciergeRequestsRoute: HqConciergeRequestsRoute,
   HqDatabaseRoute: HqDatabaseRoute,
   HqEmergencyRoute: HqEmergencyRoute,
@@ -909,6 +1013,7 @@ const rootRouteChildren: RootRouteChildren = {
   HqMediaRoute: HqMediaRoute,
   HqMessagesRoute: HqMessagesRoute,
   HqNotificationsRoute: HqNotificationsRoute,
+  HqPricingRoute: HqPricingRoute,
   HqReportsRoute: HqReportsRoute,
   HqRevenueRoute: HqRevenueRoute,
   HqSecurityRoute: HqSecurityRoute,

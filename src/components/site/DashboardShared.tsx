@@ -1,90 +1,101 @@
 import { Link } from "@tanstack/react-router";
-import { type LucideIcon } from "lucide-react";
-import { useCountUp } from "@/hooks/use-count-up";
+import { TrendingUp, TrendingDown } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { AppRole } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import type { AppRole } from "@/hooks/use-auth";
 
-const roleBadgeClass: Record<AppRole, string> = {
-  buyer: "role-badge-buyer",
-  tenant: "role-badge-tenant",
-  seller: "role-badge-seller",
-  landlord: "role-badge-landlord",
-  agent: "role-badge-agent",
-  hq: "role-badge-hq",
-  admin: "role-badge-admin",
+const roleColors: Record<AppRole, { bg: string; text: string; badge: string }> = {
+  buyer: { bg: "bg-blue-50 dark:bg-blue-900/20", text: "text-blue-700 dark:text-blue-300", badge: "bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200" },
+  tenant: { bg: "bg-cyan-50 dark:bg-cyan-900/20", text: "text-cyan-700 dark:text-cyan-300", badge: "bg-cyan-100 dark:bg-cyan-900/40 text-cyan-800 dark:text-cyan-200" },
+  seller: { bg: "bg-purple-50 dark:bg-purple-900/20", text: "text-purple-700 dark:text-purple-300", badge: "bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-200" },
+  landlord: { bg: "bg-green-50 dark:bg-green-900/20", text: "text-green-700 dark:text-green-300", badge: "bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200" },
+  agent: { bg: "bg-orange-50 dark:bg-orange-900/20", text: "text-orange-700 dark:text-orange-300", badge: "bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-200" },
+  airbnb: { bg: "bg-pink-50 dark:bg-pink-900/20", text: "text-pink-700 dark:text-pink-300", badge: "bg-pink-100 dark:bg-pink-900/40 text-pink-800 dark:text-pink-200" },
+  commercial: { bg: "bg-indigo-50 dark:bg-indigo-900/20", text: "text-indigo-700 dark:text-indigo-300", badge: "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-200" },
+  hq: { bg: "bg-gray-50 dark:bg-gray-900/20", text: "text-gray-700 dark:text-gray-300", badge: "bg-gray-100 dark:bg-gray-900/40 text-gray-800 dark:text-gray-200" },
+  admin: { bg: "bg-red-50 dark:bg-red-900/20", text: "text-red-700 dark:text-red-300", badge: "bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200" },
 };
 
-const roleLabel: Record<AppRole, string> = {
+const roleLabels: Record<AppRole, string> = {
   buyer: "Buyer",
   tenant: "Tenant",
   seller: "Seller",
   landlord: "Landlord",
   agent: "Agent",
+  airbnb: "Airbnb Host",
+  commercial: "Commercial",
   hq: "HQ",
   admin: "Admin",
 };
 
-export function RoleBadge({ role }: { role: AppRole }) {
+interface RoleBadgeProps {
+  role: AppRole;
+}
+
+export function RoleBadge({ role }: RoleBadgeProps) {
+  const colors = roleColors[role];
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider", roleBadgeClass[role])}>
-      <span className="h-1.5 w-1.5 rounded-full bg-current" />
-      {roleLabel[role]}
+    <span className={cn("px-3 py-1 rounded-full text-sm font-semibold", colors.badge)}>
+      {roleLabels[role]}
     </span>
   );
 }
 
-export function WelcomeSection({ firstName, role, subtitle }: { firstName: string; role: AppRole; subtitle: string }) {
+interface WelcomeSectionProps {
+  firstName: string;
+  role: AppRole;
+  subtitle?: string;
+}
+
+export function WelcomeSection({ firstName, role, subtitle }: WelcomeSectionProps) {
+  const colors = roleColors[role];
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <div className="flex items-center gap-3">
-          <h1 className="font-display text-2xl md:text-4xl font-bold">
-            Welcome back, {firstName}
-          </h1>
-          <RoleBadge role={role} />
-        </div>
-        <p className="mt-1.5 text-sm md:text-base text-muted-foreground">{subtitle}</p>
-      </div>
+    <div className={cn("rounded-lg p-6", colors.bg)}>
+      <h1 className={cn("font-display font-bold text-3xl mb-2", colors.text)}>
+        Welcome back, {firstName}!
+      </h1>
+      {subtitle && (
+        <p className="text-sm opacity-75 mb-4">{subtitle}</p>
+      )}
+      <RoleBadge role={role} />
     </div>
   );
 }
 
 export interface QuickAction {
-  to?: string;
+  to: string;
   icon: LucideIcon;
   label: string;
-  desc?: string;
-  onClick?: () => void;
-  accent?: string;
+  description: string;
 }
 
-export function QuickActionCard({ action, index = 0 }: { action: QuickAction; index?: number }) {
-  const Icon = action.icon;
-  const accent = action.accent ?? "text-primary";
-  const inner = (
-    <div className="group h-full rounded-2xl border border-border bg-card p-5 hover-lift animate-fade-up" style={{ animationDelay: `${index * 60}ms` }}>
-      <div className="flex items-center gap-3">
-        <div className={cn("grid h-11 w-11 place-items-center rounded-xl bg-primary/10", accent)}>
-          <Icon className="h-5 w-5" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm">{action.label}</p>
-          {action.desc && <p className="text-xs text-muted-foreground truncate">{action.desc}</p>}
-        </div>
-      </div>
-    </div>
-  );
-
-  if (action.to) {
-    return <Link to={action.to as any} className="block h-full">{inner}</Link>;
-  }
-  return <button onClick={action.onClick} className="block h-full w-full text-left">{inner}</button>;
+interface QuickActionGridProps {
+  actions: QuickAction[];
 }
 
-export function QuickActionGrid({ actions }: { actions: QuickAction[] }) {
+export function QuickActionGrid({ actions }: QuickActionGridProps) {
   return (
-    <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-      {actions.map((a, i) => <QuickActionCard key={a.label} action={a} index={i} />)}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {actions.map((action, index) => {
+        const Icon = action.icon;
+        return (
+          <Link
+            key={index}
+            to={action.to}
+            className="group p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary hover:shadow-soft transition-all duration-200 bg-white dark:bg-gray-900"
+          >
+            <div className="bg-primary/10 w-10 h-10 rounded-lg flex items-center justify-center mb-3 group-hover:bg-primary/20 transition-colors">
+              <Icon className="w-5 h-5 text-primary" />
+            </div>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+              {action.label}
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {action.description}
+            </p>
+          </Link>
+        );
+      })}
     </div>
   );
 }
@@ -92,37 +103,56 @@ export function QuickActionGrid({ actions }: { actions: QuickAction[] }) {
 export interface StatItem {
   icon: LucideIcon;
   label: string;
-  value: number;
-  suffix?: string;
-  prefix?: string;
-  delta?: string;
-  tone?: "primary" | "success" | "warning";
+  value: string | number;
+  delta?: {
+    value: number;
+    isPositive: boolean;
+  };
 }
 
-export function AnimatedStatCard({ stat, index = 0 }: { stat: StatItem; index?: number }) {
-  const count = useCountUp(stat.value);
-  const Icon = stat.icon;
-  const toneClass = stat.tone === "success" ? "text-success" : stat.tone === "warning" ? "text-warning" : "text-primary";
-  return (
-    <div className="rounded-2xl border border-border bg-card p-5 hover-lift animate-fade-up" style={{ animationDelay: `${index * 80}ms` }}>
-      <div className="flex items-center justify-between">
-        <div className={cn("grid h-10 w-10 place-items-center rounded-lg bg-primary/10", toneClass)}>
-          <Icon className="h-5 w-5" />
-        </div>
-        {stat.delta && <span className="text-xs font-semibold text-success">{stat.delta}</span>}
-      </div>
-      <p className="mt-4 font-display text-3xl font-bold tabular-nums stat-glow">
-        {stat.prefix}{count.toLocaleString()}{stat.suffix}
-      </p>
-      <p className="text-sm text-muted-foreground">{stat.label}</p>
-    </div>
-  );
+interface StatGridProps {
+  stats: StatItem[];
 }
 
-export function StatGrid({ stats }: { stats: StatItem[] }) {
+export function StatGrid({ stats }: StatGridProps) {
   return (
-    <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-      {stats.map((s, i) => <AnimatedStatCard key={s.label} stat={s} index={i} />)}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {stats.map((stat, index) => {
+        const Icon = stat.icon;
+        return (
+          <div
+            key={index}
+            className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-soft hover:shadow-elegant transition-shadow"
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div className="bg-primary/10 w-10 h-10 rounded-lg flex items-center justify-center">
+                <Icon className="w-5 h-5 text-primary" />
+              </div>
+              {stat.delta && (
+                <div className={cn(
+                  "flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded",
+                  stat.delta.isPositive
+                    ? "bg-success/10 text-success"
+                    : "bg-destructive/10 text-destructive"
+                )}>
+                  {stat.delta.isPositive ? (
+                    <TrendingUp className="w-3 h-3" />
+                  ) : (
+                    <TrendingDown className="w-3 h-3" />
+                  )}
+                  {Math.abs(stat.delta.value)}%
+                </div>
+              )}
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+              {stat.label}
+            </p>
+            <p className="font-display font-bold text-2xl text-gray-900 dark:text-white">
+              {stat.value}
+            </p>
+          </div>
+        );
+      })}
     </div>
   );
 }

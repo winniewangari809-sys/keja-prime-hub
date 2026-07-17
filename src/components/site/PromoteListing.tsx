@@ -1,102 +1,189 @@
-import { Star, TrendingUp, Eye, Wallet, Loader as Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { WhatsAppButton } from "@/components/site/WhatsAppButton";
+import { TrendingUp, CheckCircle } from "lucide-react";
+import { WhatsAppButton } from "./WhatsAppButton";
 
-const benefits = [
-  { icon: Eye, title: "Homepage placement", desc: "Your listing appears on the KejaHub homepage" },
-  { icon: TrendingUp, title: "Higher search ranking", desc: "Boost to the top of search results" },
-  { icon: Star, title: "More visibility", desc: "Featured badge and premium placement" },
+interface PromotionPlan {
+  duration: string;
+  durationDays: number;
+  price: number;
+  benefits: string[];
+  popular?: boolean;
+}
+
+const PROMOTION_PLANS: PromotionPlan[] = [
+  {
+    duration: "7 Days",
+    durationDays: 7,
+    price: 2500,
+    benefits: [
+      "Prominent listing placement",
+      "Daily visibility boost",
+      "Social media highlighting",
+      "Email campaign inclusion",
+    ],
+  },
+  {
+    duration: "30 Days",
+    durationDays: 30,
+    price: 7500,
+    benefits: [
+      "All from 7-day plan",
+      "Extended visibility",
+      "Multiple email campaigns",
+      "Premium search ranking",
+      "Featured badge on listing",
+    ],
+    popular: true,
+  },
+  {
+    duration: "90 Days",
+    durationDays: 90,
+    price: 18000,
+    benefits: [
+      "All from 30-day plan",
+      "Maximum visibility period",
+      "Weekly email campaigns",
+      "Social media promotion",
+      "Custom landing page",
+      "Monthly performance report",
+    ],
+  },
 ];
 
-const promotionPlans = [
-  { key: "7days", label: "7 Days", price: "KSh 2,500", desc: "Quick boost" },
-  { key: "30days", label: "30 Days", price: "KSh 7,500", desc: "Best value" },
-  { key: "90days", label: "90 Days", price: "KSh 18,000", desc: "Maximum exposure" },
-];
-
-export function PromoteListing({ propertyId, propertyTitle }: { propertyId?: string; propertyTitle?: string }) {
-  const [loading, setLoading] = useState(false);
-
-  const promote = async (plan: string) => {
-    setLoading(true);
-    if (propertyId) {
-      const days = plan === "7days" ? 7 : plan === "30days" ? 30 : 90;
-      const until = new Date();
-      until.setDate(until.getDate() + days);
-
-      const { error } = await supabase
-        .from("properties")
-        .update({
-          featured: true,
-          featured_until: until.toISOString(),
-        })
-        .eq("id", propertyId);
-
-      if (error) {
-        setLoading(false);
-        toast.error("Failed to promote listing. Please try again.");
-        return;
-      }
-    }
-    setLoading(false);
-    toast.success(`Listing promoted for ${plan === "7days" ? "7 days" : plan === "30days" ? "30 days" : "90 days"}! Pay via M-Pesa to complete.`);
-  };
-
+export function PromoteListing() {
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
-      <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-        <Star className="h-5 w-5 text-warning" /> Promote Listing
-      </h3>
-      <p className="mt-1 text-sm text-muted-foreground">Boost your listing's visibility and reach more buyers.</p>
-
-      {/* Benefits */}
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        {benefits.map((b) => (
-          <div key={b.title} className="rounded-xl border border-border p-4">
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-warning/15 text-warning">
-              <b.icon className="h-4 w-4" />
-            </div>
-            <p className="mt-2 font-semibold text-sm">{b.title}</p>
-            <p className="text-xs text-muted-foreground">{b.desc}</p>
-          </div>
-        ))}
+    <div className="space-y-12">
+      {/* Header */}
+      <div className="text-center max-w-3xl mx-auto">
+        <div className="flex items-center justify-center gap-2 mb-4">
+          <TrendingUp className="w-6 h-6 text-primary" />
+          <h1 className="font-display font-bold text-4xl">Promote Your Listing</h1>
+        </div>
+        <p className="text-lg text-gray-600 dark:text-gray-400">
+          Boost your property visibility and attract more buyers, tenants, or guests
+        </p>
       </div>
 
       {/* Plans */}
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        {promotionPlans.map((p) => (
-          <div key={p.key} className="rounded-xl border-2 border-border p-4 text-center hover:border-primary/40 transition-colors">
-            <p className="font-semibold text-sm">{p.label}</p>
-            <p className="font-display text-2xl font-bold text-primary mt-1">{p.price}</p>
-            <p className="text-xs text-muted-foreground">{p.desc}</p>
-            <Button
-              size="sm"
-              className="mt-3 w-full gradient-primary text-primary-foreground"
-              disabled={loading}
-              onClick={() => promote(p.key)}
-            >
-              {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Promote"}
-            </Button>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {PROMOTION_PLANS.map((plan, idx) => (
+          <div
+            key={idx}
+            className={`relative rounded-lg border transition-all duration-200 ${
+              plan.popular
+                ? "border-primary shadow-elegant lg:scale-105 bg-primary/5 dark:bg-primary/10"
+                : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
+            }`}
+          >
+            {plan.popular && (
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white px-4 py-1 rounded-full text-xs font-semibold">
+                Most Popular
+              </div>
+            )}
+
+            <div className="p-6">
+              <h3 className="font-display font-bold text-2xl mb-2">
+                {plan.duration}
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                {plan.durationDays} days of promotion
+              </p>
+
+              <div className="mb-6">
+                <span className="font-display font-bold text-3xl">
+                  KSh {plan.price.toLocaleString()}
+                </span>
+              </div>
+
+              <button
+                className={`w-full px-4 py-2 rounded-lg font-semibold transition-colors mb-6 ${
+                  plan.popular
+                    ? "bg-primary text-white hover:bg-primary/90"
+                    : "border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800"
+                }`}
+              >
+                Select Plan
+              </button>
+
+              <div className="space-y-3 border-t border-gray-200 dark:border-gray-700 pt-6">
+                {plan.benefits.map((benefit, benefitIdx) => (
+                  <div key={benefitIdx} className="flex items-start gap-3">
+                    <CheckCircle className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                      {benefit}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Payment instructions */}
-      <div className="mt-4 rounded-lg bg-warning/5 border border-warning/20 p-3 text-xs text-muted-foreground">
-        <p className="font-semibold text-foreground flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5" /> Payment Instructions</p>
-        <p className="mt-1">Pay via M-Pesa to Paybill <span className="font-mono font-semibold">400200</span>, Account: <span className="font-mono font-semibold">KEJAHUB-PROMOTE</span></p>
-        <p className="mt-0.5">Include your listing ID in the account reference for faster processing.</p>
+      {/* Payment Instructions */}
+      <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-8 border border-amber-200 dark:border-amber-800">
+        <h2 className="font-display font-bold text-2xl mb-4 text-amber-900 dark:text-amber-100">
+          How to Promote Your Listing
+        </h2>
+
+        <div className="space-y-4 text-amber-900 dark:text-amber-100 mb-6">
+          <div className="bg-white dark:bg-gray-900 p-4 rounded">
+            <h4 className="font-semibold mb-2">M-Pesa Payment (Paybill 400200):</h4>
+            <ol className="space-y-2 text-sm list-decimal list-inside">
+              <li>Go to M-Pesa and select "Lipa na M-Pesa Online"</li>
+              <li>Business Code: 400200</li>
+              <li>Account Reference: Your Property ID</li>
+              <li>Amount: Select based on your chosen plan</li>
+              <li>Promotion starts within 1 hour of payment</li>
+            </ol>
+          </div>
+
+          <div className="bg-white dark:bg-gray-900 p-4 rounded">
+            <h4 className="font-semibold mb-2">What Happens After Payment:</h4>
+            <ul className="space-y-1 text-sm list-disc list-inside">
+              <li>Your listing gets premium placement</li>
+              <li>Appears in promotional emails and social media</li>
+              <li>Increased visibility in search results</li>
+              <li>Daily performance updates in your dashboard</li>
+            </ul>
+          </div>
+        </div>
+
+        <WhatsAppButton
+          message="Hi! I want to promote my property listing. Can you help?"
+          label="Chat About Promotion"
+          variant="card"
+        />
       </div>
 
-      <div className="mt-4">
-        <WhatsAppButton
-          variant="card"
-          label="Need Help Choosing a Package?"
-          message="Hello KejaHub, I need help choosing a listing package."
-        />
+      {/* FAQ */}
+      <div className="space-y-4">
+        <h2 className="font-display font-bold text-2xl">Frequently Asked Questions</h2>
+
+        <div className="space-y-3">
+          {[
+            {
+              q: "When does promotion start?",
+              a: "Promotion starts within 1 hour of successful payment confirmation.",
+            },
+            {
+              q: "Can I renew a promotion?",
+              a: "Yes! You can renew promotion at any time before the current period ends.",
+            },
+            {
+              q: "What if I want to cancel?",
+              a: "Contact our support team. Refunds are available for unused promotion time.",
+            },
+            {
+              q: "How do I track performance?",
+              a: "Your dashboard shows real-time views, clicks, and inquiries during promotion.",
+            },
+          ].map((item, idx) => (
+            <div key={idx} className="p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+              <h4 className="font-semibold mb-2">{item.q}</h4>
+              <p className="text-gray-600 dark:text-gray-400">{item.a}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

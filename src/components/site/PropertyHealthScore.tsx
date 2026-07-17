@@ -1,102 +1,188 @@
-import { Check, X, Camera, MapPin, DollarSign, FileText, Sparkles } from "lucide-react";
+import { AlertCircle, CheckCircle, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Progress } from "@/components/ui/progress";
 
-interface HealthCheck {
-  key: string;
+interface HealthItem {
   label: string;
-  icon: typeof Camera;
-  done: boolean;
+  status: "complete" | "partial" | "missing";
+  description: string;
+  icon: typeof CheckCircle;
+}
+
+interface PropertyHealthScoreProps {
+  photos?: number;
+  hasLocation?: boolean;
+  hasPrice?: boolean;
+  hasDescription?: boolean;
+  hasAmenities?: boolean;
 }
 
 export function PropertyHealthScore({
-  photosCount,
-  hasLocation,
-  hasPrice,
-  hasDescription,
-  hasAmenities,
-}: {
-  photosCount: number;
-  hasLocation: boolean;
-  hasPrice: boolean;
-  hasDescription: boolean;
-  hasAmenities: boolean;
-}) {
-  const checks: HealthCheck[] = [
-    { key: "photos", label: "Photos Added", icon: Camera, done: photosCount > 0 },
-    { key: "location", label: "Location Added", icon: MapPin, done: hasLocation },
-    { key: "price", label: "Price Added", icon: DollarSign, done: hasPrice },
-    { key: "description", label: "Description Added", icon: FileText, done: hasDescription },
-    { key: "amenities", label: "Amenities Added", icon: Sparkles, done: hasAmenities },
+  photos = 0,
+  hasLocation = false,
+  hasPrice = false,
+  hasDescription = false,
+  hasAmenities = false,
+}: PropertyHealthScoreProps) {
+  const items: HealthItem[] = [
+    {
+      label: "Photos",
+      status: photos >= 5 ? "complete" : photos > 0 ? "partial" : "missing",
+      description: photos >= 5 ? "5+ photos uploaded" : `${photos} photos (need 5)`,
+      icon: CheckCircle,
+    },
+    {
+      label: "Location",
+      status: hasLocation ? "complete" : "missing",
+      description: hasLocation ? "Location set" : "Add location details",
+      icon: CheckCircle,
+    },
+    {
+      label: "Price",
+      status: hasPrice ? "complete" : "missing",
+      description: hasPrice ? "Price set" : "Add rental/sale price",
+      icon: CheckCircle,
+    },
+    {
+      label: "Description",
+      status: hasDescription ? "complete" : "missing",
+      description: hasDescription ? "Description added" : "Add property description",
+      icon: CheckCircle,
+    },
+    {
+      label: "Amenities",
+      status: hasAmenities ? "complete" : "missing",
+      description: hasAmenities ? "Amenities listed" : "Add property amenities",
+      icon: CheckCircle,
+    },
   ];
 
-  const completed = checks.filter((c) => c.done).length;
-  const score = Math.round((completed / checks.length) * 100);
+  const completionPercentage = (
+    items.filter(i => i.status === "complete").length / items.length
+  ) * 100;
 
-  const scoreColor =
-    score >= 80 ? "text-success" : score >= 50 ? "text-warning-foreground" : "text-destructive";
-  const scoreBg =
-    score >= 80 ? "bg-success" : score >= 50 ? "bg-warning" : "bg-destructive";
+  const statusColors: Record<string, string> = {
+    complete: "text-success",
+    partial: "text-warning",
+    missing: "text-gray-400 dark:text-gray-600",
+  };
+
+  const statusBgColors: Record<string, string> = {
+    complete: "bg-success/10",
+    partial: "bg-warning/10",
+    missing: "bg-gray-100 dark:bg-gray-800",
+  };
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
-      <h3 className="font-display text-xl font-semibold flex items-center gap-2 mb-4">
-        Property Health Score
-      </h3>
-
-      <div className="flex items-center gap-4 mb-6">
-        <div className="relative grid h-20 w-20 place-items-center shrink-0">
-          <svg className="absolute inset-0 -rotate-90" viewBox="0 0 80 80">
-            <circle cx="40" cy="40" r="34" fill="none" stroke="currentColor" strokeWidth="6" className="text-border" />
+    <div className="space-y-6">
+      {/* Circular Progress */}
+      <div className="flex flex-col items-center">
+        <div className="relative w-48 h-48">
+          <svg className="w-full h-full transform -rotate-90" viewBox="0 0 180 180">
+            {/* Background circle */}
             <circle
-              cx="40"
-              cy="40"
-              r="34"
+              cx="90"
+              cy="90"
+              r="80"
               fill="none"
               stroke="currentColor"
-              strokeWidth="6"
-              strokeLinecap="round"
-              className={cn(scoreColor, "transition-all duration-500")}
-              strokeDasharray={`${(score / 100) * 213.6} 213.6`}
+              strokeWidth="8"
+              className="text-gray-200 dark:text-gray-700"
+            />
+
+            {/* Progress circle */}
+            <circle
+              cx="90"
+              cy="90"
+              r="80"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="8"
+              strokeDasharray={`${(completionPercentage / 100) * 503} 503`}
+              className="text-primary transition-all duration-500"
             />
           </svg>
-          <span className={cn("font-display text-2xl font-bold", scoreColor)}>{score}%</span>
+
+          {/* Center content */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="font-display font-bold text-4xl text-gray-900 dark:text-white">
+              {Math.round(completionPercentage)}%
+            </span>
+            <span className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              Complete
+            </span>
+          </div>
         </div>
-        <div>
-          <p className="font-semibold text-sm">
-            {score >= 80 ? "Excellent!" : score >= 50 ? "Good progress" : "Needs work"}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {completed} of {checks.length} checks completed. {score >= 80 ? "Your listing is ready to publish." : "Complete the remaining items to improve visibility."}
-          </p>
-        </div>
+
+        <p className="text-center text-gray-600 dark:text-gray-400 mt-6">
+          Complete your listing to increase visibility and attract more buyers
+        </p>
       </div>
 
-      <div className="space-y-2">
-        {checks.map((c) => {
-          const Icon = c.icon;
-          return (
-            <div
-              key={c.key}
-              className={cn(
-                "flex items-center gap-3 rounded-lg border p-3 transition-colors",
-                c.done ? "border-success/30 bg-success/5" : "border-border",
-              )}
-            >
-              <span className={cn("grid h-7 w-7 place-items-center rounded-lg shrink-0", c.done ? "bg-success/15 text-success" : "bg-secondary text-muted-foreground")}>
-                {c.done ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+      {/* Checklist */}
+      <div className="space-y-3">
+        {items.map((item, idx) => (
+          <div
+            key={idx}
+            className={cn(
+              "p-4 rounded-lg border transition-all",
+              item.status === "complete"
+                ? "border-success/30 bg-success/5"
+                : item.status === "partial"
+                  ? "border-warning/30 bg-warning/5"
+                  : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
+            )}
+          >
+            <div className="flex items-start gap-3">
+              <div className={cn("mt-0.5 flex-shrink-0", statusColors[item.status])}>
+                {item.status === "complete" && (
+                  <CheckCircle className="w-5 h-5" />
+                )}
+                {item.status === "partial" && (
+                  <AlertCircle className="w-5 h-5" />
+                )}
+                {item.status === "missing" && (
+                  <Circle className="w-5 h-5" />
+                )}
+              </div>
+
+              <div className="flex-1">
+                <h4 className="font-semibold text-gray-900 dark:text-white">
+                  {item.label}
+                </h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  {item.description}
+                </p>
+              </div>
+
+              <span className={cn(
+                "text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0",
+                item.status === "complete"
+                  ? "bg-success/10 text-success"
+                  : item.status === "partial"
+                    ? "bg-warning/10 text-warning"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+              )}>
+                {item.status === "complete" ? "Done" : item.status === "partial" ? "Partial" : "Missing"}
               </span>
-              <Icon className={cn("h-4 w-4 shrink-0", c.done ? "text-success" : "text-muted-foreground")} />
-              <span className={cn("text-sm font-medium", c.done ? "text-foreground" : "text-muted-foreground")}>
-                {c.label}
-              </span>
-              {c.key === "photos" && (
-                <span className="ml-auto text-xs text-muted-foreground">{photosCount}/20</span>
-              )}
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
+
+      {/* Tips */}
+      {completionPercentage < 100 && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+          <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+            Quick Tips to Improve Your Score
+          </h4>
+          <ul className="space-y-1 text-sm text-blue-900 dark:text-blue-100">
+            <li>• Add high-quality photos showing different areas</li>
+            <li>• Write a detailed, engaging description</li>
+            <li>• List all amenities and special features</li>
+            <li>• Verify location with accurate details</li>
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

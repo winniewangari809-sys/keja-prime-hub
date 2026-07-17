@@ -1,21 +1,18 @@
+import { Link } from "@tanstack/react-router";
+import { Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/** Interactive, animated KejaHub logo. Pure CSS, respects reduced motion. */
-export function BrandLogo({ className, showWordmark = true }: { className?: string; showWordmark?: boolean }) {
+interface BrandLogoProps {
+  className?: string;
+}
+
+export function BrandLogo({ className }: BrandLogoProps) {
   return (
-    <span className={cn("inline-flex items-center gap-2", className)}>
-      <span className="brand-mark relative grid h-9 w-9 place-items-center rounded-xl gradient-primary text-primary-foreground shadow-soft overflow-hidden">
-        <span className="brand-emoji brand-emoji-1">🔍</span>
-        <span className="brand-emoji brand-emoji-2">🏠</span>
-        <span className="brand-emoji brand-emoji-3">🏢</span>
-        <span className="brand-emoji brand-emoji-4">✈️</span>
-        <span className="brand-glow" aria-hidden />
-      </span>
-      {showWordmark && (
-        <span className="font-display text-xl font-bold tracking-tight">
-          Keja<span className="text-primary">Hub</span>
-        </span>
-      )}
-    </span>
+    <Link to="/" className={cn("flex items-center gap-2 hover:opacity-80 transition-opacity", className)}>
+      <div className="gradient-primary rounded-lg p-2 flex items-center justify-center">
+        <Home className="w-5 h-5 text-white" />
+      </div>
+      <span className="font-display font-bold text-xl text-gray-900 dark:text-white">KejaHub</span>
+    </Link>
   );
 }

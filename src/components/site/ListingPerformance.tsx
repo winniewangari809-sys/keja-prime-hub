@@ -1,100 +1,150 @@
-import { ChartBar as BarChart3, Eye, Heart, Calendar, FileText, CircleCheck as CheckCircle, Hop as Home, TrendingUp, Award } from "lucide-react";
+import { Eye, Heart, MessageSquare, Home, TrendingUp } from "lucide-react";
+import { properties } from "@/lib/mock-data";
+import { cn } from "@/lib/utils";
 
-const performanceStats = [
-  { icon: Heart, label: "Properties Saved", value: 47, delta: "+8 this week" },
-  { icon: Calendar, label: "Viewing Requests", value: 12, delta: "+3 this week" },
-  { icon: Calendar, label: "Scheduled Viewings", value: 8, delta: "+2 this week" },
-  { icon: FileText, label: "Offers Received", value: 5, delta: "+1 this week" },
-  { icon: CheckCircle, label: "Properties Sold", value: 3, delta: "+1 this month" },
-  { icon: Home, label: "Properties Rented", value: 7, delta: "+2 this month" },
-];
-
-const topListings = [
-  { title: "Kilimani 2BR Apartment", views: 1240, saves: 34, rank: 1 },
-  { title: "Ruiru Bedsitter", views: 890, saves: 28, rank: 2 },
-  { title: "Diani Beach Villa", views: 756, saves: 22, rank: 3 },
-];
+interface PerformanceStat {
+  icon: typeof Eye;
+  label: string;
+  value: number;
+  color: string;
+}
 
 export function ListingPerformance() {
+  // Mock performance data
+  const stats: PerformanceStat[] = [
+    {
+      icon: Eye,
+      label: "Views",
+      value: Math.floor(Math.random() * 5000) + 500,
+      color: "text-blue-600 dark:text-blue-400",
+    },
+    {
+      icon: Heart,
+      label: "Saves",
+      value: Math.floor(Math.random() * 500) + 50,
+      color: "text-red-600 dark:text-red-400",
+    },
+    {
+      icon: MessageSquare,
+      label: "Inquiries",
+      value: Math.floor(Math.random() * 200) + 20,
+      color: "text-green-600 dark:text-green-400",
+    },
+    {
+      icon: Home,
+      label: "Viewings",
+      value: Math.floor(Math.random() * 50) + 5,
+      color: "text-purple-600 dark:text-purple-400",
+    },
+  ];
+
+  // Get top performing properties
+  const topProperties = properties.slice(0, 5);
+
   return (
-    <div className="space-y-6">
-      {/* Performance stats */}
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-          <BarChart3 className="h-5 w-5 text-primary" /> Listing Performance
-        </h3>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {performanceStats.map((s) => (
-            <div key={s.label} className="rounded-xl border border-border p-4 hover-lift">
-              <div className="flex items-center gap-3">
-                <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary">
-                  <s.icon className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="font-display text-2xl font-bold">{s.value}</p>
-                  <p className="text-xs text-muted-foreground">{s.label}</p>
-                </div>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <TrendingUp className="w-8 h-8 text-primary" />
+        <h2 className="font-display font-bold text-3xl">Your Listings Performance</h2>
+      </div>
+
+      {/* Performance Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {stats.map((stat, idx) => {
+          const Icon = stat.icon;
+          return (
+            <div
+              key={idx}
+              className="p-4 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-soft"
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <Icon className={cn("w-5 h-5", stat.color)} />
+                <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">
+                  {stat.label}
+                </span>
               </div>
-              {s.delta && <p className="mt-2 text-xs font-semibold text-success">{s.delta}</p>}
+              <p className="font-display font-bold text-2xl text-gray-900 dark:text-white">
+                {stat.value.toLocaleString()}
+              </p>
             </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
       {/* Top Performing Listings */}
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-          <TrendingUp className="h-5 w-5 text-primary" /> Top Performing Listings
-        </h3>
-        <div className="mt-4 space-y-3">
-          {topListings.map((l) => (
-            <div key={l.title} className="flex items-center gap-4 rounded-xl border border-border p-4 hover:bg-accent transition-colors">
-              <div className={`grid h-10 w-10 place-items-center rounded-full font-bold text-sm shrink-0 ${
-                l.rank === 1 ? "bg-warning/15 text-warning" : l.rank === 2 ? "bg-secondary text-muted-foreground" : "bg-orange-700/15 text-orange-700"
-              }`}>
-                {l.rank}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm truncate">{l.title}</p>
-                <div className="mt-1 flex items-center gap-4 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1"><Eye className="h-3 w-3" /> {l.views} views</span>
-                  <span className="flex items-center gap-1"><Heart className="h-3 w-3" /> {l.saves} saves</span>
+      <div>
+        <h3 className="font-display font-bold text-2xl mb-4">Top Performing Listings</h3>
+
+        <div className="space-y-3">
+          {topProperties.map((property, idx) => (
+            <div
+              key={property.id}
+              className="p-4 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 hover:shadow-soft transition-shadow"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary text-white text-xs font-bold">
+                      {idx + 1}
+                    </span>
+                    <h4 className="font-semibold text-gray-900 dark:text-white line-clamp-1">
+                      {property.title}
+                    </h4>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                    {property.location}
+                  </p>
+
+                  <div className="flex flex-wrap gap-4 text-sm">
+                    <div className="flex items-center gap-1.5">
+                      <Eye className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      <span className="font-semibold">
+                        {Math.floor(Math.random() * 5000) + 500}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Heart className="w-4 h-4 text-red-600 dark:text-red-400" />
+                      <span className="font-semibold">
+                        {Math.floor(Math.random() * 500) + 50}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <MessageSquare className="w-4 h-4 text-green-600 dark:text-green-400" />
+                      <span className="font-semibold">
+                        {Math.floor(Math.random() * 200) + 20}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    Performance
+                  </p>
+                  <div className="w-16 h-8 bg-gradient-primary rounded flex items-center justify-center">
+                    <p className="font-bold text-white text-sm">
+                      {Math.floor(Math.random() * 40) + 60}%
+                    </p>
+                  </div>
                 </div>
               </div>
-              <Award className="h-5 w-5 text-warning shrink-0" />
             </div>
           ))}
         </div>
       </div>
 
-      {/* Most Viewed & Most Saved */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-border bg-card p-6">
-          <h3 className="font-display text-lg font-semibold flex items-center gap-2">
-            <Eye className="h-4 w-4 text-primary" /> Most Viewed Listings
-          </h3>
-          <div className="mt-4 space-y-2">
-            {topListings.map((l) => (
-              <div key={l.title} className="flex items-center justify-between rounded-lg border border-border p-3 text-sm">
-                <span className="font-medium truncate">{l.title}</span>
-                <span className="font-semibold text-primary shrink-0 ml-3">{l.views} views</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="rounded-2xl border border-border bg-card p-6">
-          <h3 className="font-display text-lg font-semibold flex items-center gap-2">
-            <Heart className="h-4 w-4 text-primary" /> Most Saved Listings
-          </h3>
-          <div className="mt-4 space-y-2">
-            {topListings.map((l) => (
-              <div key={l.title} className="flex items-center justify-between rounded-lg border border-border p-3 text-sm">
-                <span className="font-medium truncate">{l.title}</span>
-                <span className="font-semibold text-primary shrink-0 ml-3">{l.saves} saves</span>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* Insights */}
+      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 border border-blue-200 dark:border-blue-800">
+        <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-3">
+          Performance Insights
+        </h3>
+        <ul className="space-y-2 text-sm text-blue-900 dark:text-blue-100">
+          <li>✓ Your listings are performing 35% better than average</li>
+          <li>✓ Morning hours (8am-10am) get the most views</li>
+          <li>✓ High-quality photos increase inquiries by 50%</li>
+          <li>✓ Adding amenities descriptions helps with search ranking</li>
+        </ul>
       </div>
     </div>
   );

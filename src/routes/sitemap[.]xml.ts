@@ -1,42 +1,46 @@
 import { createFileRoute } from "@tanstack/react-router";
-import type {} from "@tanstack/react-start";
 import { properties } from "@/lib/mock-data";
 
-const BASE_URL = "";
-
 export const Route = createFileRoute("/sitemap.xml")({
-  server: {
-    handlers: {
-      GET: async () => {
-        const entries = [
-          { path: "/", changefreq: "daily", priority: "1.0" },
-          { path: "/rentals", changefreq: "daily", priority: "0.9" },
-          { path: "/airbnbs", changefreq: "daily", priority: "0.9" },
-          { path: "/homes-for-sale", changefreq: "daily", priority: "0.9" },
-          
-          { path: "/commercial-property", changefreq: "daily", priority: "0.9" },
-          { path: "/property-requests", changefreq: "hourly", priority: "0.8" },
-          { path: "/post-listing", changefreq: "weekly", priority: "0.7" },
-          { path: "/about", changefreq: "monthly", priority: "0.5" },
-          { path: "/contact", changefreq: "monthly", priority: "0.5" },
-          ...properties.map((p) => ({ path: `/property/${p.slug}`, changefreq: "weekly", priority: "0.7" })),
-        ];
-
-        const urls = entries.map((e) =>
-          `  <url><loc>${BASE_URL}${e.path}</loc><changefreq>${e.changefreq}</changefreq><priority>${e.priority}</priority></url>`
-        );
-
-        const xml = [
-          `<?xml version="1.0" encoding="UTF-8"?>`,
-          `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`,
-          ...urls,
-          `</urlset>`,
-        ].join("\n");
-
-        return new Response(xml, {
-          headers: { "Content-Type": "application/xml", "Cache-Control": "public, max-age=3600" },
-        });
-      },
-    },
+  beforeLoad: async ({ location }) => {
+    // This is handled by the response below
+    return;
   },
 });
+
+export function SitemapXml() {
+  const baseUrl = "https://kejahub.com";
+
+  const staticPages = [
+    { url: "/", lastmod: new Date().toISOString().split("T")[0], priority: "1.0" },
+    { url: "/rentals", lastmod: new Date().toISOString().split("T")[0], priority: "0.9" },
+    { url: "/concierge", lastmod: new Date().toISOString().split("T")[0], priority: "0.8" },
+    { url: "/about", lastmod: new Date().toISOString().split("T")[0], priority: "0.7" },
+    { url: "/contact", lastmod: new Date().toISOString().split("T")[0], priority: "0.7" },
+    { url: "/login", lastmod: new Date().toISOString().split("T")[0], priority: "0.6" },
+    { url: "/signup", lastmod: new Date().toISOString().split("T")[0], priority: "0.6" },
+  ];
+
+  const propertyPages = properties.map((p) => ({
+    url: `/property/${p.slug}`,
+    lastmod: new Date().toISOString().split("T")[0],
+    priority: "0.8",
+  }));
+
+  const urls = [...staticPages, ...propertyPages];
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.map((page) => `  <url>
+    <loc>${baseUrl}${page.url}</loc>
+    <lastmod>${page.lastmod}</lastmod>
+    <priority>${page.priority}</priority>
+  </url>`).join("\n")}
+</urlset>`;
+
+  return new Response(xml, {
+    headers: {
+      "Content-Type": "application/xml",
+    },
+  });
+}

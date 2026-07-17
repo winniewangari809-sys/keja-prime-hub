@@ -1,112 +1,202 @@
-import { useEffect, useState } from "react";
-import { Activity, UserPlus, Building2, Calendar, Heart, BadgeCheck, Package, MessageCircle } from "lucide-react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Activity, User, Home, Calendar, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ActivityItem {
   id: string;
-  type: string;
+  type: "user" | "property" | "viewing" | "concierge_request";
+  title: string;
   description: string;
-  created_at: string;
+  timestamp: string;
+  icon: typeof User;
 }
-
-const activityIcons: Record<string, { icon: typeof UserPlus; color: string }> = {
-  new_user: { icon: UserPlus, color: "bg-blue-500/10 text-blue-500" },
-  new_listing: { icon: Building2, color: "bg-primary/10 text-primary" },
-  viewing_requested: { icon: Calendar, color: "bg-amber-500/10 text-amber-600" },
-  property_saved: { icon: Heart, color: "bg-rose-500/10 text-rose-500" },
-  verification_requested: { icon: BadgeCheck, color: "bg-emerald-500/10 text-emerald-600" },
-  package_purchased: { icon: Package, color: "bg-purple-500/10 text-purple-500" },
-  whatsapp_inquiry: { icon: MessageCircle, color: "bg-teal-500/10 text-teal-600" },
-};
 
 export function HQActivityFeed() {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchActivity() {
-      try {
-        const [users, properties, viewings, requests] = await Promise.all([
-          supabase.from("profiles").select("id, created_at").order("created_at", { ascending: false }).limit(5),
-          supabase.from("properties").select("id, title, created_at").order("created_at", { ascending: false }).limit(5),
-          supabase.from("viewings").select("id, property_title, created_at").order("created_at", { ascending: false }).limit(5),
-          supabase.from("concierge_requests").select("id, type, full_name, created_at").order("created_at", { ascending: false }).limit(5),
-        ]);
+    const fetchActivities = async () => {
+      // Fetch recent data from multiple tables
+      const [usersData, propertiesData, viewingsData, conciergeData] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(5),
+        supabase
+          .from("properties")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(5),
+        supabase
+          .from("viewings")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(5),
+        supabase
+          .from("concierge_requests")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(5),
+      ]);
 
-        const items: ActivityItem[] = [];
+      const activityItems: ActivityItem[] = [];
 
-        (users.data ?? []).forEach((u: any) => {
-          items.push({
-            id: `user-${u.id}`,
-            type: "new_user",
-            description: "New user registered",
-            created_at: u.created_at,
+      // Add user activities
+      if (usersData.data) {
+        usersData.data.forEach((user: any) => {
+          activityItems.push({
+            id: `user-${user.id}`,
+            type: "user",
+            title: "New user registered",
+            description: `${user.full_name || user.first_name || "User"} joined KejaHub`,
+            timestamp: user.created_at,
+            icon: User,
           });
         });
-
-        (properties.data ?? []).forEach((p: any) => {
-          items.push({
-            id: `prop-${p.id}`,
-            type: "new_listing",
-            description: `Property listed: ${p.title}`,
-            created_at: p.created_at,
-          });
-        });
-
-        (viewings.data ?? []).forEach((v: any) => {
-          items.push({
-            id: `viewing-${v.id}`,
-            type: "viewing_requested",
-            description: `Viewing requested for "${v.property_title}"`,
-            created_at: v.created_at,
-          });
-        });
-
-        (requests.data ?? []).forEach((r: any) => {
-          items.push({
-            id: `req-${r.id}`,
-            type: r.type === "inquiry" ? "whatsapp_inquiry" : "verification_requested",
-            description: `${r.full_name}: ${r.type === "inquiry" ? "WhatsApp inquiry received" : "Concierge request"}`,
-            created_at: r.created_at,
-          });
-        });
-
-        items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        setActivities(items.slice(0, 15));
-      } catch {
-        setActivities([]);
-      } finally {
-        setLoading(false);
       }
-    }
-    fetchActivity();
+
+      // Add property activities
+      if (propertiesData.data) {
+        propertiesData.data.forEach((prop: any) => {
+          activityItems.push({
+            id: `prop-${prop.id}`,
+            type: "property",
+            title: "Property listed",
+            description: prop.title,
+            timestamp: prop.created_at,
+            icon: Home,
+          });
+        });
+      }
+
+      // Add viewing activities
+      if (viewingsData.data) {
+        viewingsData.data.forEach((viewing: any) => {
+          activityItems.push({
+            id: `viewing-${viewing.id}`,
+            type: "viewing",
+            title: "Viewing scheduled",
+            description: `Viewing scheduled for ${new Date(viewing.scheduled_at).toLocaleDateString()}`,
+            timestamp: viewing.created_at,
+            icon: Calendar,
+          });
+        });
+      }
+
+      // Add concierge activities
+      if (conciergeData.data) {
+        conciergeData.data.forEach((concierge: any) => {
+          activityItems.push({
+            id: `concierge-${concierge.id}`,
+            type: "concierge_request",
+            title: "Concierge request",
+            description: `${concierge.request_type} request received`,
+            timestamp: concierge.created_at,
+            icon: MessageSquare,
+          });
+        });
+      }
+
+      // Sort by timestamp
+      activityItems.sort((a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+
+      setActivities(activityItems.slice(0, 15));
+      setLoading(false);
+    };
+
+    fetchActivities();
+
+    // Subscribe to real-time updates
+    const subscription = supabase
+      .channel("admin_activities")
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => {
+        fetchActivities();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "properties" }, () => {
+        fetchActivities();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "viewings" }, () => {
+        fetchActivities();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "concierge_requests" }, () => {
+        fetchActivities();
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        {[1, 2, 3, 4, 5].map(i => (
+          <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  const typeColors: Record<string, string> = {
+    user: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300",
+    property: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300",
+    viewing: "bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300",
+    concierge_request: "bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300",
+  };
+
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
-      <h3 className="font-display text-xl font-semibold flex items-center gap-2 mb-4">
-        <Activity className="h-5 w-5 text-primary" /> Live Activity Feed
-      </h3>
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Loading activity...</p>
-      ) : activities.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No recent activity.</p>
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 mb-6">
+        <Activity className="w-6 h-6 text-primary" />
+        <h2 className="font-display font-bold text-2xl">Activity Feed</h2>
+      </div>
+
+      {activities.length === 0 ? (
+        <div className="text-center py-12 text-gray-600 dark:text-gray-400">
+          <Activity className="w-12 h-12 mx-auto mb-4 opacity-50" />
+          <p>No recent activity</p>
+        </div>
       ) : (
-        <div className="space-y-2 max-h-96 overflow-y-auto">
-          {activities.map((a) => {
-            const meta = activityIcons[a.type] ?? { icon: Activity, color: "bg-secondary text-muted-foreground" };
-            const Icon = meta.icon;
+        <div className="space-y-3">
+          {activities.map((activity, idx) => {
+            const Icon = activity.icon;
             return (
-              <div key={a.id} className="flex items-center gap-3 rounded-lg border border-border p-3 hover:bg-accent transition-colors">
-                <span className={cn("grid h-8 w-8 place-items-center rounded-lg shrink-0", meta.color)}>
-                  <Icon className="h-4 w-4" />
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{a.description}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(a.created_at).toLocaleDateString("en-KE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                  </p>
+              <div
+                key={activity.id}
+                className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:shadow-soft transition-shadow"
+              >
+                <div className="flex items-start gap-4">
+                  <div className={cn(
+                    "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
+                    typeColors[activity.type]
+                  )}>
+                    <Icon className="w-5 h-5" />
+                  </div>
+
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+                      {activity.title}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                      {activity.description}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500">
+                      {new Date(activity.timestamp).toLocaleString()}
+                    </p>
+                  </div>
+
+                  <span className={cn(
+                    "text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0",
+                    typeColors[activity.type]
+                  )}>
+                    {activity.type.replace("_", " ")}
+                  </span>
                 </div>
               </div>
             );

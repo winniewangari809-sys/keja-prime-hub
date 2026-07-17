@@ -1,130 +1,143 @@
-import { useEffect, useState } from "react";
-import { Heart, Trash2, Loader as Loader2 } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Heart, Trash2 } from "lucide-react";
+import { PropertyCard } from "./PropertyCard";
+import { Property } from "@/lib/mock-data";
 
 interface SavedProperty {
   id: string;
+  user_id: string;
   property_id: string;
-  title: string;
-  location: string | null;
-  price: number | null;
-  image_url: string | null;
   created_at: string;
+  properties?: Property;
 }
 
-export function SavedProperties({ userId }: { userId?: string }) {
-  const [saved, setSaved] = useState<SavedProperty[]>([]);
+export function SavedProperties() {
+  const [savedProperties, setSavedProperties] = useState<SavedProperty[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
-    async function fetchSaved() {
+    if (!user) return;
+
+    const fetchSavedProperties = async () => {
       const { data } = await supabase
         .from("property_saves")
-        .select(`
-          id,
-          property_id,
-          created_at,
-          properties!inner(title, location, price, images)
-        `)
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(6);
+        .select("*, properties(*)")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
 
       if (data) {
-        const mapped: SavedProperty[] = (data as any[]).map((d) => ({
-          id: d.id,
-          property_id: d.property_id,
-          title: d.properties?.title ?? "Property",
-          location: d.properties?.location ?? null,
-          price: d.properties?.price ?? null,
-          image_url: d.properties?.images?.[0] ?? null,
-          created_at: d.created_at,
-        }));
-        setSaved(mapped);
+        setSavedProperties(data as SavedProperty[]);
       }
       setLoading(false);
-    }
-    fetchSaved();
-  }, [userId]);
+    };
 
-  const removeSaved = async (id: string) => {
-    const { error } = await supabase.from("property_saves").delete().eq("id", id);
-    if (error) {
-      toast.error("Failed to remove saved property");
-      return;
+    fetchSavedProperties();
+
+    const subscription = supabase
+      .channel("property_saves")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "property_saves",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          fetchSavedProperties();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [user]);
+
+  const handleRemove = async (saveId: string) => {
+    try {
+      await supabase
+        .from("property_saves")
+        .delete()
+        .eq("id", saveId);
+
+      toast.success("Removed from saved");
+      setSavedProperties(savedProperties.filter(s => s.id !== saveId));
+    } catch (error) {
+      toast.error("Failed to remove property");
+      console.error(error);
     }
-    setSaved(saved.filter((s) => s.id !== id));
-    toast.success("Property removed from saved");
   };
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <h3 className="font-display text-xl font-semibold flex items-center gap-2 mb-4">
-          <Heart className="h-5 w-5 text-primary" /> Saved Properties
-        </h3>
-        <div className="grid h-24 place-items-center text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-64 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+        ))}
       </div>
     );
   }
 
-  if (saved.length === 0) {
+  if (savedProperties.length === 0) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <h3 className="font-display text-xl font-semibold flex items-center gap-2 mb-2">
-          <Heart className="h-5 w-5 text-primary" /> Saved Properties
-        </h3>
-        <p className="text-sm text-muted-foreground">
-          No saved properties yet. Browse listings and tap the heart icon to save properties for later.
+      <div className="text-center py-12">
+        <Heart className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+        <p className="text-gray-600 dark:text-gray-400 mb-4">
+          No saved properties yet
+        </p>
+        <p className="text-sm text-gray-500 dark:text-gray-500">
+          Start exploring and save your favorite properties
         </p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-          <Heart className="h-5 w-5 text-primary" /> Saved Properties
-        </h3>
-        <span className="text-xs text-muted-foreground">{saved.length} saved</span>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {saved.map((s) => (
-          <div key={s.id} className="group rounded-xl border border-border overflow-hidden hover-lift">
-            <div className="relative h-32 overflow-hidden">
-              {s.image_url ? (
-                <img src={s.image_url} alt={s.title} className="h-full w-full object-cover" />
-              ) : (
-                <div className="grid h-full place-items-center bg-secondary text-muted-foreground">
-                  <Heart className="h-6 w-6" />
-                </div>
-              )}
+    <div>
+      <h2 className="font-display font-bold text-2xl mb-6 flex items-center gap-2">
+        <Heart className="w-6 h-6 text-destructive" />
+        Your Saved Properties ({savedProperties.length})
+      </h2>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {savedProperties.map(save => {
+          // Mock property data since we need to use mock data
+          const mockProperty = {
+            id: save.property_id,
+            slug: `property-${save.property_id}`,
+            title: save.properties?.title || "Property",
+            location: save.properties?.location || "Location",
+            price: save.properties?.price || 0,
+            category: (save.properties?.category as any) || "rental",
+            propertyType: save.properties?.propertyType || "Property",
+            bedrooms: save.properties?.bedrooms || 0,
+            bathrooms: save.properties?.bathrooms || 0,
+            size: save.properties?.size || 0,
+            amenities: save.properties?.amenities || [],
+            images: save.properties?.images || [],
+            description: save.properties?.description || "",
+            featured: save.properties?.featured || false,
+            status: (save.properties?.status as any) || "available",
+            owner: save.properties?.owner || { name: "", phone: "", verificationTier: "unverified" },
+          };
+
+          return (
+            <div key={save.id} className="relative group">
+              <PropertyCard property={mockProperty} />
               <button
-                onClick={() => removeSaved(s.id)}
-                className="absolute top-2 right-2 grid h-8 w-8 place-items-center rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
+                onClick={() => handleRemove(save.id)}
+                className="absolute top-3 right-3 p-2 bg-white dark:bg-gray-900 rounded-lg shadow-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors opacity-0 group-hover:opacity-100"
               >
-                <Trash2 className="h-3.5 w-3.5" />
+                <Trash2 className="w-5 h-5 text-destructive" />
               </button>
             </div>
-            <div className="p-3">
-              <p className="font-semibold text-sm line-clamp-1">{s.title}</p>
-              {s.location && <p className="text-xs text-muted-foreground mt-0.5">{s.location}</p>}
-              {s.price != null && (
-                <p className="text-sm font-bold text-primary mt-1">KSh {s.price.toLocaleString()}</p>
-              )}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

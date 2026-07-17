@@ -1,106 +1,170 @@
-import { useEffect, useState } from "react";
-import { History, Calendar, Clock, Loader as Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
+import { Calendar, MapPin, Clock, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const statusMeta: Record<string, { label: string; color: string }> = {
-  completed: { label: "Completed", color: "bg-success/15 text-success" },
-  cancelled: { label: "Cancelled", color: "bg-destructive/15 text-destructive" },
-  rejected: { label: "Rejected", color: "bg-destructive/15 text-destructive" },
-  approved: { label: "Approved", color: "bg-success/15 text-success" },
-  pending: { label: "Pending", color: "bg-warning/15 text-warning-foreground" },
-  rescheduled: { label: "Rescheduled", color: "bg-primary/15 text-primary" },
-};
 
 interface ViewingRecord {
   id: string;
-  property_title: string | null;
-  preferred_date: string;
-  preferred_time: string;
-  status: string;
-  created_at: string;
+  user_id: string;
+  property_id: string;
+  scheduled_at: string;
+  status: "scheduled" | "completed" | "cancelled";
+  properties?: {
+    title: string;
+    location: string;
+  };
 }
 
-export function ViewingHistory({ userId }: { userId?: string }) {
-  const [history, setHistory] = useState<ViewingRecord[]>([]);
+export function ViewingHistory() {
+  const [viewings, setViewings] = useState<ViewingRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<"all" | "completed" | "cancelled">("all");
+  const { user } = useAuth();
 
   useEffect(() => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
-    async function fetchHistory() {
-      const { data } = await supabase
-        .from("viewings")
-        .select("id, property_title, preferred_date, preferred_time, status, created_at")
-        .eq("requester_id", userId)
-        .in("status", ["completed", "cancelled", "rejected"])
-        .order("created_at", { ascending: false })
-        .limit(10);
+    if (!user) return;
 
-      if (data) setHistory(data as ViewingRecord[]);
+    const fetchViewings = async () => {
+      let query = supabase
+        .from("viewings")
+        .select("*, properties(title, location)")
+        .eq("user_id", user.id)
+        .in("status", ["completed", "cancelled"])
+        .order("scheduled_at", { ascending: false });
+
+      if (filter !== "all") {
+        query = query.eq("status", filter);
+      }
+
+      const { data } = await query;
+
+      if (data) {
+        setViewings(data as ViewingRecord[]);
+      }
       setLoading(false);
-    }
-    fetchHistory();
-  }, [userId]);
+    };
+
+    fetchViewings();
+
+    const subscription = supabase
+      .channel("viewings")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "viewings",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          fetchViewings();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [user, filter]);
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <h3 className="font-display text-xl font-semibold flex items-center gap-2 mb-4">
-          <History className="h-5 w-5 text-primary" /> Viewing History
-        </h3>
-        <div className="grid h-20 place-items-center text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-        </div>
+      <div className="space-y-4">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-20 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+        ))}
       </div>
     );
   }
 
-  if (history.length === 0) {
+  if (viewings.length === 0) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <h3 className="font-display text-xl font-semibold flex items-center gap-2 mb-2">
-          <History className="h-5 w-5 text-primary" /> Viewing History
-        </h3>
-        <p className="text-sm text-muted-foreground">No viewing history yet. Completed and cancelled viewings will appear here.</p>
+      <div className="text-center py-12">
+        <Home className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+        <p className="text-gray-600 dark:text-gray-400">
+          {filter === "all"
+            ? "No viewing history yet"
+            : `No ${filter} viewings`}
+        </p>
       </div>
     );
   }
+
+  const statusColors: Record<string, string> = {
+    completed: "bg-success/10 text-success border-success/30",
+    cancelled: "bg-destructive/10 text-destructive border-destructive/30",
+  };
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
-      <h3 className="font-display text-xl font-semibold flex items-center gap-2 mb-4">
-        <History className="h-5 w-5 text-primary" /> Viewing History
-      </h3>
-      <div className="space-y-2">
-        {history.map((v) => {
-          const sm = statusMeta[v.status] ?? statusMeta.pending;
-          return (
-            <div key={v.id} className="flex items-center gap-3 rounded-xl border border-border p-3">
-              <div className="grid h-10 w-10 place-items-center rounded-lg bg-secondary text-muted-foreground shrink-0">
-                <Calendar className="h-4 w-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm truncate">{v.property_title || "Property viewing"}</p>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    {new Date(v.preferred_date).toLocaleDateString("en-KE", { day: "numeric", month: "short", year: "numeric" })}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    {v.preferred_time}
-                  </span>
+    <div className="space-y-4">
+      {/* Filter */}
+      <div className="flex gap-2 mb-6">
+        {(["all", "completed", "cancelled"] as const).map(status => (
+          <button
+            key={status}
+            onClick={() => setFilter(status)}
+            className={cn(
+              "px-4 py-2 rounded-lg font-semibold transition-colors text-sm",
+              filter === status
+                ? "bg-primary text-white"
+                : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+            )}
+          >
+            {status === "all" ? "All Viewings" : status.charAt(0).toUpperCase() + status.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {/* Viewing List */}
+      <div className="space-y-3">
+        {viewings.map(viewing => (
+          <div
+            key={viewing.id}
+            className={cn(
+              "p-4 rounded-lg border transition-all hover:shadow-soft",
+              statusColors[viewing.status]
+            )}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                  {viewing.properties?.title || "Property"}
+                </h3>
+
+                <div className="space-y-1.5 text-sm text-gray-600 dark:text-gray-400">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4" />
+                    <span>{viewing.properties?.location || "Location"}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    <span>
+                      {new Date(viewing.scheduled_at).toLocaleDateString()}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    <span>
+                      {new Date(viewing.scheduled_at).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </div>
                 </div>
               </div>
-              <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold shrink-0", sm.color)}>
-                {sm.label}
-              </span>
+
+              <div className="text-right">
+                <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold capitalize">
+                  {viewing.status}
+                </span>
+              </div>
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
     </div>
   );

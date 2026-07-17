@@ -1,93 +1,148 @@
-import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { Mail, Lock, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Building2, Loader as Loader2 } from "lucide-react";
-import { toast } from "sonner";
-import { useState } from "react";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { dashboardForRole, type AppRole } from "@/hooks/use-auth";
-
-type Search = { next?: string };
+import { dashboardForRole, useAuth } from "@/hooks/use-auth";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
-  head: () => ({ meta: [{ title: "Login — KejaHub" }, { name: "description", content: "Log in to KejaHub to save properties, message owners and manage listings." }] }),
-  validateSearch: (s: Record<string, unknown>): Search => ({ next: typeof s.next === "string" ? s.next : undefined }),
-  component: Login,
+  head: () => ({
+    meta: [
+      {
+        title: "Login — KejaHub",
+      },
+      {
+        name: "description",
+        content: "Sign in to your KejaHub account to access your dashboard.",
+      },
+    ],
+  }),
+  component: LoginPage,
 });
 
-function Login() {
-  const navigate = useNavigate();
-  const { next } = useSearch({ from: "/login" });
+function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const { role } = useAuth();
 
-  async function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setError(null);
+    setIsLoading(true);
+
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      const userId = data.user?.id;
-      let role: AppRole | null = null;
-      if (userId) {
-        const { data: r, error: roleError } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", userId)
-          .maybeSingle();
-        if (roleError) throw roleError;
-        role = (r?.role as AppRole | undefined) ?? null;
-      }
-      if (!role) {
-        toast.error("Your account has no role assigned. Please contact support.");
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        setError(signInError.message);
+        toast.error("Login failed: " + signInError.message);
         return;
       }
-      toast.success("👋 Welcome back to KejaHub");
-      navigate({ to: (next && next.startsWith("/") ? next : dashboardForRole(role)) as any });
-    } catch (err: any) {
-      const msg = err?.message ?? "Sign in failed";
-      if (msg.includes("Invalid API key")) {
-        toast.error("Supabase connection error: The API key doesn't match the project URL. Check .env — VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be from the same project.", { duration: 8000 });
-      } else {
-        toast.error(msg, { duration: 6000 });
+
+      if (data.user) {
+        toast.success("Logged in successfully!");
+
+        // Get the updated role from useAuth and navigate
+        setTimeout(() => {
+          navigate({ to: dashboardForRole(role) });
+        }, 500);
       }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "An error occurred";
+      setError(message);
+      toast.error(message);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] grid lg:grid-cols-2">
-      <div className="flex items-center justify-center p-6 lg:p-16">
-        <form onSubmit={handleSubmit} className="w-full max-w-md">
-          <Link to="/" className="flex items-center gap-2 mb-8">
-            <span className="grid h-9 w-9 place-items-center rounded-xl gradient-primary text-primary-foreground"><Building2 className="h-5 w-5" /></span>
-            <span className="font-display text-xl font-bold">Keja<span className="text-primary">Hub</span></span>
-          </Link>
-          <h1 className="font-display text-3xl font-bold">Welcome back</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Sign in to continue your property journey.</p>
-
-          <div className="mt-8 space-y-4">
-            <div><label className="text-sm font-semibold">Email</label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required className="mt-1" /></div>
-            <div><label className="text-sm font-semibold">Password</label><Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="mt-1" /></div>
-            <Button type="submit" size="lg" disabled={loading} className="w-full gradient-primary text-primary-foreground">
-              {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing in…</> : "Sign in"}
-            </Button>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md">
+        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 p-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-display font-bold text-gray-900 dark:text-white mb-2">
+              Welcome Back
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Sign in to your KejaHub account
+            </p>
           </div>
 
-          <p className="mt-6 text-sm text-center text-muted-foreground">
-            New to KejaHub? <Link to="/signup" className="text-primary font-semibold hover:underline">Create an account</Link>
-          </p>
-        </form>
-      </div>
-      <div className="hidden lg:block relative">
-        <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80" alt="" className="absolute inset-0 h-full w-full object-cover" />
-        <div className="absolute inset-0 gradient-primary opacity-70" />
-        <div className="absolute inset-0 flex items-end p-12 text-primary-foreground">
-          <div>
-            <h2 className="font-display text-3xl font-bold text-balance">Kenya's most trusted property marketplace.</h2>
-            <p className="mt-3 text-primary-foreground/85">Find. Rent. Buy. Lease.</p>
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+              <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <Label htmlFor="email" className="text-gray-900 dark:text-white">
+                Email Address
+              </Label>
+              <div className="relative mt-2">
+                <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isLoading}
+                  className="pl-10"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="password" className="text-gray-900 dark:text-white">
+                Password
+              </Label>
+              <div className="relative mt-2">
+                <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isLoading}
+                  className="pl-10"
+                  required
+                />
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full"
+            >
+              {isLoading ? "Signing in..." : "Sign In"}
+            </Button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Don't have an account?{" "}
+              <Link
+                to="/signup"
+                className="font-semibold text-primary hover:underline"
+              >
+                Sign up here
+              </Link>
+            </p>
           </div>
         </div>
       </div>

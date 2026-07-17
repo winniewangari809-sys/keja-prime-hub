@@ -1,329 +1,374 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { HQPage, EmptyState } from "@/components/site/HQPage";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Search, Loader as Loader2, CircleCheck as CheckCircle2, Circle as XCircle, EyeOff, Trash2, Star, Pencil } from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
+import {
+  Home,
+  Search,
+  CheckCircle2,
+  XCircle,
+  Eye,
+  Star,
+  MoreVertical,
+} from "lucide-react";
+import { useRequireRole } from "@/hooks/use-require-role";
+import { HQPage } from "@/components/site";
+import {
+  Button,
+  Input,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/hq/listings")({
-  head: () => ({ meta: [{ title: "Listings — KejaHub HQ" }, { name: "robots", content: "noindex" }] }),
-  component: HQListings,
+  head: () => ({
+    meta: [
+      {
+        title: "Listing Management — KejaHub Command Center",
+      },
+      {
+        name: "robots",
+        content: "noindex",
+      },
+    ],
+  }),
+  component: ListingManagement,
 });
 
-interface PropertyRow {
+interface ListingRecord {
   id: string;
   title: string;
-  location: string | null;
-  price: number | null;
-  property_type: string;
+  location: string;
+  price: number;
   status: string;
   admin_status: string;
-  admin_note: string | null;
-  featured: boolean;
-  images: any;
   created_at: string;
+  owner_id: string;
 }
 
-const adminStatusMeta: Record<string, { label: string; color: string }> = {
-  pending: { label: "Pending Review", color: "bg-warning/15 text-warning-foreground" },
-  approved: { label: "Approved", color: "bg-success/15 text-success" },
-  rejected: { label: "Rejected", color: "bg-destructive/15 text-destructive" },
-  hidden: { label: "Hidden", color: "bg-secondary text-muted-foreground" },
-};
-
-function HQListings() {
-  const [properties, setProperties] = useState<PropertyRow[]>([]);
+function ListingManagement() {
+  const { loading: authLoading } = useRequireRole(["hq", "admin"]);
+  const [listings, setListings] = useState<ListingRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [rejectTarget, setRejectTarget] = useState<PropertyRow | null>(null);
-  const [rejectNote, setRejectNote] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterAdminStatus, setFilterAdminStatus] = useState("all");
+  const [selectedListing, setSelectedListing] = useState<ListingRecord | null>(
+    null
+  );
 
-  const fetchProperties = async () => {
-    setLoading(true);
+  useEffect(() => {
+    if (!authLoading) {
+      fetchListings();
+    }
+  }, [authLoading]);
+
+  const fetchListings = async () => {
     try {
-      const { data, error } = await supabase
-        .from("properties")
-        .select("id, title, location, price, property_type, status, admin_status, admin_note, featured, images, created_at")
-        .order("created_at", { ascending: false })
-        .limit(200);
+      const { data: listingData } = await supabase
+        .from("listings")
+        .select(
+          "id, title, location, price, status, admin_status, created_at, owner_id"
+        )
+        .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      setProperties(data ?? []);
-    } catch {
-      setProperties([]);
+      if (listingData) {
+        setListings(
+          listingData.map((l: any) => ({
+            id: l.id,
+            title: l.title,
+            location: l.location,
+            price: l.price,
+            status: l.status || "active",
+            admin_status: l.admin_status || "pending",
+            created_at: l.created_at,
+            owner_id: l.owner_id,
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Failed to fetch listings:", error);
+      toast.error("Failed to load listings");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchProperties();
-  }, []);
+  const updateListingStatus = async (
+    listingId: string,
+    adminStatus: string
+  ) => {
+    try {
+      const { error } = await supabase
+        .from("listings")
+        .update({ admin_status: adminStatus })
+        .eq("id", listingId);
 
-  const filtered = properties.filter((p) => {
-    if (statusFilter !== "all" && p.admin_status !== statusFilter) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      return p.title.toLowerCase().includes(q) || (p.location?.toLowerCase().includes(q) ?? false);
+      if (error) throw error;
+
+      setListings(
+        listings.map((l) =>
+          l.id === listingId ? { ...l, admin_status: adminStatus } : l
+        )
+      );
+      toast.success("Listing updated");
+      setSelectedListing(null);
+    } catch (error) {
+      console.error("Failed to update listing:", error);
+      toast.error("Failed to update listing");
     }
-    return true;
+  };
+
+  const filteredListings = listings.filter((listing) => {
+    const matchesSearch =
+      listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      listing.location.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus =
+      filterStatus === "all" || listing.status === filterStatus;
+    const matchesAdminStatus =
+      filterAdminStatus === "all" || listing.admin_status === filterAdminStatus;
+    return matchesSearch && matchesStatus && matchesAdminStatus;
   });
 
-  const updateAdminStatus = async (prop: PropertyRow, status: "approved" | "rejected" | "hidden", note?: string) => {
-    setActionLoading(prop.id);
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      const { error } = await supabase
-        .from("properties")
-        .update({
-          admin_status: status,
-          admin_note: note ?? null,
-          reviewed_by: userData.user?.id ?? null,
-          reviewed_at: new Date().toISOString(),
-        })
-        .eq("id", prop.id);
-
-      if (error) throw error;
-      toast.success(`Listing ${status === "approved" ? "approved" : status === "rejected" ? "rejected" : "hidden"}`);
-      if (status === "rejected") setRejectTarget(null);
-      fetchProperties();
-    } catch (err: any) {
-      toast.error(`Failed: ${err.message || "Unknown error"}`);
-    } finally {
-      setActionLoading(null);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "approved":
+        return "bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200";
+      case "rejected":
+        return "bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200";
+      case "suspended":
+        return "bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-200";
+      case "pending":
+        return "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-200";
+      default:
+        return "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200";
     }
   };
 
-  const toggleFeature = async (prop: PropertyRow) => {
-    setActionLoading(prop.id);
-    try {
-      const until = prop.featured ? null : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-      const { error } = await supabase
-        .from("properties")
-        .update({ featured: !prop.featured, featured_until: until })
-        .eq("id", prop.id);
-
-      if (error) throw error;
-      toast.success(prop.featured ? "Unfeatured" : "Featured for 7 days");
-      fetchProperties();
-    } catch (err: any) {
-      toast.error(`Failed: ${err.message || "Unknown error"}`);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const deleteListing = async (prop: PropertyRow) => {
-    if (!confirm(`Delete "${prop.title}"? This cannot be undone.`)) return;
-    setActionLoading(prop.id);
-    try {
-      const { error } = await supabase.from("properties").delete().eq("id", prop.id);
-      if (error) throw error;
-      toast.success("Listing deleted");
-      fetchProperties();
-    } catch (err: any) {
-      toast.error(`Failed: ${err.message || "Unknown error"}`);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const counts = {
-    all: properties.length,
-    pending: properties.filter((p) => p.admin_status === "pending").length,
-    approved: properties.filter((p) => p.admin_status === "approved").length,
-    rejected: properties.filter((p) => p.admin_status === "rejected").length,
-    hidden: properties.filter((p) => p.admin_status === "hidden").length,
-  };
+  if (authLoading || loading) {
+    return (
+      <HQPage title="Listing Management" description="Review and manage property listings">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border border-gray-300 border-t-primary mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading listings...</p>
+          </div>
+        </div>
+      </HQPage>
+    );
+  }
 
   return (
-    <HQPage title="Listing Management" description="Approve, reject, hide, feature, or delete any listing on the platform.">
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-        {Object.entries(counts).map(([key, count]) => (
-          <button
-            key={key}
-            onClick={() => setStatusFilter(key)}
-            className={cn(
-              "rounded-xl border p-4 text-left transition-colors",
-              statusFilter === key ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/40"
-            )}
-          >
-            <p className="text-2xl font-bold tabular-nums">{count}</p>
-            <p className="text-xs text-muted-foreground capitalize">{key === "all" ? "All Listings" : key}</p>
-          </button>
-        ))}
-      </div>
+    <HQPage title="Listing Management" description="Review and manage property listings">
+      <div className="space-y-6">
+        {/* Filters */}
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1">
+            <Input
+              placeholder="Search by title or location..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              icon={<Search className="w-5 h-5" />}
+            />
+          </div>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-full md:w-48">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterAdminStatus} onValueChange={setFilterAdminStatus}>
+            <SelectTrigger className="w-full md:w-48">
+              <SelectValue placeholder="Review Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Reviews</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+              <SelectItem value="suspended">Suspended</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-      {/* Search */}
-      <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by title or location..."
-          className="pl-9"
-        />
-      </div>
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+            <p className="text-sm text-gray-600 dark:text-gray-400">Total Listings</p>
+            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+              {listings.length}
+            </p>
+          </div>
+          <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+            <p className="text-sm text-gray-600 dark:text-gray-400">Approved</p>
+            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+              {listings.filter((l) => l.admin_status === "approved").length}
+            </p>
+          </div>
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
+            <p className="text-sm text-gray-600 dark:text-gray-400">Pending Review</p>
+            <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+              {listings.filter((l) => l.admin_status === "pending").length}
+            </p>
+          </div>
+          <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
+            <p className="text-sm text-gray-600 dark:text-gray-400">Suspended</p>
+            <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+              {listings.filter((l) => l.admin_status === "suspended").length}
+            </p>
+          </div>
+        </div>
 
-      {loading ? (
-        <div className="grid min-h-[40vh] place-items-center text-muted-foreground"><Loader2 className="h-6 w-6 animate-spin" /></div>
-      ) : filtered.length === 0 ? (
-        <EmptyState label="No listings found." />
-      ) : (
-        <div className="rounded-2xl border border-border bg-card overflow-hidden">
+        {/* Listings Table */}
+        <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-secondary/60 text-left text-xs uppercase text-muted-foreground">
+            <thead className="bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
               <tr>
-                <th className="p-4">Property</th>
-                <th className="p-4">Type</th>
-                <th className="p-4">Price</th>
-                <th className="p-4">Admin Status</th>
-                <th className="p-4">Featured</th>
-                <th className="p-4 text-right">Actions</th>
+                <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-gray-100">
+                  Title
+                </th>
+                <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-gray-100">
+                  Location
+                </th>
+                <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-gray-100">
+                  Price
+                </th>
+                <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-gray-100">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-gray-100">
+                  Review
+                </th>
+                <th className="px-6 py-3 text-left font-semibold text-gray-900 dark:text-gray-100">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((prop) => {
-                const images = (prop.images as string[]) ?? [];
-                return (
-                  <tr key={prop.id} className={cn("border-t border-border", prop.admin_status === "hidden" && "opacity-60")}>
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        {images[0] && <img src={images[0]} alt="" className="h-10 w-14 rounded object-cover" />}
-                        <div className="min-w-0">
-                          <p className="font-semibold line-clamp-1">{prop.title}</p>
-                          <p className="text-xs text-muted-foreground">{prop.location ?? "—"}</p>
+              {filteredListings.map((listing) => (
+                <tr
+                  key={listing.id}
+                  className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                >
+                  <td className="px-6 py-4 text-gray-900 dark:text-gray-100 font-semibold max-w-xs truncate">
+                    {listing.title}
+                  </td>
+                  <td className="px-6 py-4 text-gray-600 dark:text-gray-400">
+                    {listing.location}
+                  </td>
+                  <td className="px-6 py-4 text-gray-900 dark:text-gray-100 font-semibold">
+                    KES {listing.price.toLocaleString()}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span
+                      className={cn(
+                        "px-3 py-1 rounded-full text-xs font-semibold",
+                        listing.status === "active"
+                          ? "bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200"
+                          : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                      )}
+                    >
+                      {listing.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={cn("px-3 py-1 rounded-full text-xs font-semibold", getStatusColor(listing.admin_status))}>
+                      {listing.admin_status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <Dialog
+                      open={selectedListing?.id === listing.id}
+                      onOpenChange={(open) =>
+                        setSelectedListing(open ? listing : null)
+                      }
+                    >
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Listing Actions</DialogTitle>
+                          <DialogDescription>
+                            {listing.title}
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-2">
+                          <Button
+                            onClick={() =>
+                              updateListingStatus(listing.id, "approved")
+                            }
+                            className="w-full"
+                            variant="default"
+                          >
+                            <CheckCircle2 className="w-4 h-4 mr-2" />
+                            Approve
+                          </Button>
+                          <Button
+                            onClick={() =>
+                              updateListingStatus(listing.id, "rejected")
+                            }
+                            className="w-full"
+                            variant="destructive"
+                          >
+                            <XCircle className="w-4 h-4 mr-2" />
+                            Reject
+                          </Button>
+                          <Button
+                            onClick={() =>
+                              updateListingStatus(listing.id, "suspended")
+                            }
+                            className="w-full"
+                            variant="outline"
+                          >
+                            Suspend
+                          </Button>
+                          <Button
+                            onClick={() =>
+                              updateListingStatus(listing.id, "featured")
+                            }
+                            className="w-full"
+                            variant="outline"
+                          >
+                            <Star className="w-4 h-4 mr-2" />
+                            Feature
+                          </Button>
                         </div>
-                      </div>
-                    </td>
-                    <td className="p-4 capitalize">{prop.property_type}</td>
-                    <td className="p-4 font-semibold">KSh {prop.price?.toLocaleString() ?? "—"}</td>
-                    <td className="p-4">
-                      <span className={cn("rounded-full px-2 py-1 text-xs font-semibold", adminStatusMeta[prop.admin_status]?.color)}>
-                        {adminStatusMeta[prop.admin_status]?.label ?? prop.admin_status}
-                      </span>
-                      {prop.admin_note && (
-                        <p className="mt-1 text-[10px] text-orange-600 max-w-[200px] truncate" title={prop.admin_note}>
-                          Note: {prop.admin_note}
-                        </p>
-                      )}
-                    </td>
-                    <td className="p-4">
-                      {prop.featured ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-2 py-1 text-xs font-semibold text-warning-foreground">
-                          <Star className="h-3 w-3 fill-current" /> Featured
-                        </span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center justify-end gap-1">
-                        {prop.admin_status !== "approved" && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 p-0 text-success hover:text-success"
-                            onClick={() => updateAdminStatus(prop, "approved")}
-                            title="Approve"
-                            disabled={actionLoading === prop.id}
-                          >
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        {prop.admin_status !== "rejected" && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                            onClick={() => { setRejectTarget(prop); setRejectNote(""); }}
-                            title="Reject"
-                            disabled={actionLoading === prop.id}
-                          >
-                            <XCircle className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        {prop.admin_status !== "hidden" && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                            onClick={() => updateAdminStatus(prop, "hidden")}
-                            title="Hide"
-                            disabled={actionLoading === prop.id}
-                          >
-                            <EyeOff className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className={cn("h-8 w-8 p-0", prop.featured ? "text-warning-foreground" : "text-muted-foreground hover:text-warning-foreground")}
-                          onClick={() => toggleFeature(prop)}
-                          title={prop.featured ? "Unfeature" : "Feature"}
-                          disabled={actionLoading === prop.id}
-                        >
-                          <Star className={cn("h-3.5 w-3.5", prop.featured && "fill-current")} />
-                        </Button>
-                        <Button asChild size="sm" variant="ghost" className="h-8 w-8 p-0" title="View">
-                          <Link to="/property/$slug" params={{ slug: prop.id }}>
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Link>
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                          onClick={() => deleteListing(prop)}
-                          title="Delete"
-                          disabled={actionLoading === prop.id}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                      </DialogContent>
+                    </Dialog>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
-      )}
 
-      {/* Reject dialog */}
-      <Dialog open={!!rejectTarget} onOpenChange={(open) => !open && setRejectTarget(null)}>
-        <DialogContent>
-          <DialogTitle>Reject Listing</DialogTitle>
-          <DialogDescription>
-            {rejectTarget?.title} — provide a reason for the owner.
-          </DialogDescription>
-          <Textarea
-            value={rejectNote}
-            onChange={(e) => setRejectNote(e.target.value)}
-            rows={3}
-            placeholder="e.g. Photos don't match the description. Please upload accurate photos."
-            className="mt-4"
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRejectTarget(null)}>Cancel</Button>
-            <Button
-              variant="destructive"
-              onClick={() => rejectTarget && updateAdminStatus(rejectTarget, "rejected", rejectNote)}
-              disabled={actionLoading === rejectTarget?.id}
-            >
-              {actionLoading === rejectTarget?.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Reject Listing"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        {filteredListings.length === 0 && (
+          <div className="text-center py-12">
+            <Home className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+            <p className="text-gray-600 dark:text-gray-400">No listings found</p>
+          </div>
+        )}
+      </div>
     </HQPage>
   );
 }

@@ -1,122 +1,144 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PageHeader } from "@/components/site/PageHeader";
-import { propertyRequests } from "@/lib/mock-data";
+import { useAuth, dashboardForRole } from "@/hooks/use-auth";
+import { useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState } from "react";
-import { toast } from "sonner";
-import { MessageSquare, Clock } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/property-requests")({
-  head: () => ({ meta: [{ title: "Property Request Marketplace — KejaHub" }, { name: "description", content: "Post what you're looking for. Landlords, agents and owners will respond with matches." }] }),
-  component: RequestsPage,
+  head: () => ({
+    meta: [
+      {
+        title: "Property Requests — KejaHub",
+      },
+      {
+        name: "description",
+        content: "Manage your saved property searches and alerts.",
+      },
+    ],
+  }),
+  component: PropertyRequestsPage,
 });
 
-function RequestsPage() {
-  const [type, setType] = useState("Rental");
-  const [location, setLocation] = useState("");
-  const [budget, setBudget] = useState("");
-  const [description, setDescription] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const auth = useAuth();
+function PropertyRequestsPage() {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!auth.user) {
-      toast.error("Please sign in to post a request.");
-      return;
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate({ to: "/login" });
     }
-    setSubmitting(true);
-    try {
-      const { error } = await supabase.from("requests").insert({
-        requester_id: auth.user.id,
-        type: type.toLowerCase(),
-        message: `${description} | Location: ${location} | Budget: ${budget}`,
-      });
-      if (error) throw error;
-      toast.success("Your request has been posted.");
-      setLocation("");
-      setBudget("");
-      setDescription("");
-    } catch (err: any) {
-      toast.error(err?.message ?? "Failed to post request");
-    } finally {
-      setSubmitting(false);
-    }
+  }, [user, loading, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
-  return (
-    <>
-      <PageHeader eyebrow="Marketplace" title="Property Request Marketplace" description="Tell the market what you're looking for — verified landlords, owners and agents will respond." />
-      <section className="container-app py-10 grid gap-10 lg:grid-cols-[1fr_420px]">
-        <div>
-          <h2 className="font-display text-2xl font-semibold mb-6">Active requests</h2>
-          <div className="space-y-3">
-            {propertyRequests.map((r) => (
-              <div key={r.id} className="group rounded-2xl border border-border bg-card p-5 hover-lift">
-                <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">{r.type}</span>
-                  <span className="text-xs text-muted-foreground inline-flex items-center gap-1"><Clock className="h-3 w-3" /> {r.posted}</span>
-                  <span className="text-xs text-muted-foreground">by {r.user}</span>
-                </div>
-                <p className="font-medium">{r.title}</p>
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex gap-4 text-xs text-muted-foreground">
-                    <span>📍 {r.location}</span>
-                    <span>💰 {r.budget}</span>
-                    <span className="inline-flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {r.responses} responses</span>
-                  </div>
-                  <Button size="sm" className="gradient-primary text-primary-foreground" onClick={() => toast.success("Response sent")}>
-                    Respond
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+  if (!user) {
+    return null;
+  }
 
-        <aside className="lg:sticky lg:top-24 self-start">
-          <form
-            onSubmit={handleSubmit}
-            className="rounded-2xl border border-border bg-card p-6 shadow-elegant"
-          >
-            <h3 className="font-display text-lg font-semibold">Post a request</h3>
-            <p className="mt-1 text-sm text-muted-foreground">Free · takes 30 seconds</p>
-            <div className="mt-5 space-y-3">
-              <div>
-                <label className="text-xs font-semibold">What are you looking for?</label>
-                <Select value={type} onValueChange={setType}>
-                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {["Rental", "Airbnb", "Home", "Commercial"].map((t) => (
-                      <SelectItem key={t} value={t}>Looking for {t}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-xs font-semibold">Location</label>
-                <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Ruiru, Nairobi" className="mt-1" required />
-              </div>
-              <div>
-                <label className="text-xs font-semibold">Budget (KSh)</label>
-                <Input value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="e.g. 30,000" className="mt-1" required />
-              </div>
-              <div>
-                <label className="text-xs font-semibold">Describe your ideal property</label>
-                <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. 2-bedroom apartment, furnished, secure compound" className="mt-1" rows={3} required />
-              </div>
-              <Button type="submit" disabled={submitting} className="w-full gradient-primary text-primary-foreground" size="lg">
-                {submitting ? "Posting…" : "Post request"}
-              </Button>
+  const requests = [
+    {
+      id: "1",
+      name: "3 Bedroom Apartment, Westlands",
+      budget: "50,000 - 75,000 KES/month",
+      location: "Westlands",
+      createdAt: "2 weeks ago",
+      matches: 5,
+    },
+    {
+      id: "2",
+      name: "Villa with Garden, Karen",
+      budget: "100,000 - 150,000 KES/month",
+      location: "Karen",
+      createdAt: "1 month ago",
+      matches: 2,
+    },
+  ];
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="container-app py-8">
+        <div className="max-w-4xl">
+          <h1 className="text-3xl font-display font-bold text-gray-900 dark:text-white mb-2">
+            Saved Searches
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-8">
+            Manage your property search alerts
+          </p>
+
+          {requests.length > 0 ? (
+            <div className="space-y-4">
+              {requests.map((request) => (
+                <div
+                  key={request.id}
+                  className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6 hover:shadow-md dark:hover:shadow-lg/20 transition-shadow"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                        {request.name}
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                            Budget
+                          </p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300">
+                            {request.budget}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                            Location
+                          </p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300">
+                            {request.location}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                            Created
+                          </p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300">
+                            {request.createdAt}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-sm text-primary font-medium">
+                        {request.matches} new match{request.matches !== 1 ? "es" : ""}
+                      </p>
+                    </div>
+                    <div className="flex gap-2 ml-4">
+                      <Button variant="outline" size="sm">
+                        Edit
+                      </Button>
+                      <Button variant="ghost" size="icon">
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          </form>
-        </aside>
-      </section>
-    </>
+          ) : (
+            <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800">
+              <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                No saved searches yet
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Create a saved search to get alerts for matching properties
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

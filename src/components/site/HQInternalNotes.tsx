@@ -1,143 +1,220 @@
 import { useState, useEffect } from "react";
-import { StickyNote, Plus, Trash2, Loader as Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { FileText, Plus, X } from "lucide-react";
 
-const noteLabels: Record<string, { label: string; color: string }> = {
-  hot_lead: { label: "Hot Lead", color: "bg-red-500/15 text-red-500" },
-  serious_buyer: { label: "Serious Buyer", color: "bg-emerald-500/15 text-emerald-600" },
-  negotiation: { label: "Negotiation Started", color: "bg-blue-500/15 text-blue-500" },
-  waiting: { label: "Waiting Response", color: "bg-amber-500/15 text-amber-600" },
-  closed: { label: "Closed Deal", color: "bg-primary/15 text-primary" },
-  general: { label: "General", color: "bg-secondary text-muted-foreground" },
-};
-
-interface Note {
+interface InternalNote {
   id: string;
-  viewing_id: string | null;
-  note: string;
-  tag: string;
+  content: string;
+  tags: string[];
   created_at: string;
 }
 
-export function HQInternalNotes({ viewingId }: { viewingId?: string }) {
-  const [notes, setNotes] = useState<Note[]>([]);
+const TAG_OPTIONS = [
+  "Hot Lead",
+  "Serious Buyer",
+  "Negotiation",
+  "Waiting",
+  "Closed",
+];
+
+const TAG_COLORS: Record<string, string> = {
+  "Hot Lead": "bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200",
+  "Serious Buyer": "bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200",
+  "Negotiation": "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-200",
+  "Waiting": "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200",
+  "Closed": "bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200",
+};
+
+export function HQInternalNotes() {
+  const [notes, setNotes] = useState<InternalNote[]>([]);
   const [newNote, setNewNote] = useState("");
-  const [tag, setTag] = useState("general");
-  const [loading, setLoading] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetchNotes();
-  }, [viewingId]);
+  }, []);
 
-  async function fetchNotes() {
-    let query = supabase.from("admin_settings").select("id, value").ilike("key", "internal_note_%");
-    if (viewingId) {
-      query = query.eq("category", viewingId);
-    }
-    const { data } = await query.order("created_at", { ascending: false }).limit(20);
+  const fetchNotes = async () => {
+    const { data } = await supabase
+      .from("admin_settings")
+      .select("*")
+      .eq("key", "internal_notes")
+      .order("created_at", { ascending: false })
+      .limit(20);
+
     if (data) {
-      const parsed: Note[] = (data as any[]).map((d) => {
-        try {
-          const obj = JSON.parse(d.value);
-          return { id: d.id, viewing_id: obj.viewing_id ?? null, note: obj.note ?? "", tag: obj.tag ?? "general", created_at: obj.created_at ?? new Date().toISOString() };
-        } catch {
-          return { id: d.id, viewing_id: null, note: String(d.value), tag: "general", created_at: new Date().toISOString() };
-        }
-      });
-      setNotes(parsed);
+      setNotes(data.map(item => ({
+        id: item.id,
+        content: item.value?.content || "",
+        tags: item.value?.tags || [],
+        created_at: item.created_at,
+      })));
     }
+    setLoading(false);
+  };
+
+  const handleAddNote = async () => {
+    if (!newNote.trim()) {
+      toast.error("Please enter a note");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from("admin_settings")
+        .insert({
+          key: "internal_notes",
+          value: {
+            content: newNote,
+            tags: selectedTags,
+          },
+        });
+
+      if (error) throw error;
+
+      toast.success("Note added");
+      setNewNote("");
+      setSelectedTags([]);
+      fetchNotes();
+    } catch (error) {
+      toast.error("Failed to add note");
+      console.error(error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    try {
+      await supabase
+        .from("admin_settings")
+        .delete()
+        .eq("id", noteId);
+
+      toast.success("Note deleted");
+      fetchNotes();
+    } catch (error) {
+      toast.error("Failed to delete note");
+      console.error(error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+        ))}
+      </div>
+    );
   }
 
-  const addNote = async () => {
-    if (!newNote.trim()) return;
-    setLoading(true);
-    const noteData = {
-      note: newNote.trim(),
-      tag,
-      viewing_id: viewingId ?? null,
-      created_at: new Date().toISOString(),
-    };
-    const { error } = await supabase.from("admin_settings").insert({
-      key: `internal_note_${Date.now()}`,
-      value: JSON.stringify(noteData),
-      category: viewingId ?? "general",
-    });
-    setLoading(false);
-    if (error) {
-      toast.error("Failed to save note");
-      return;
-    }
-    toast.success("Note saved");
-    setNewNote("");
-    setTag("general");
-    fetchNotes();
-  };
-
-  const deleteNote = async (id: string) => {
-    const { error } = await supabase.from("admin_settings").delete().eq("id", id);
-    if (error) {
-      toast.error("Failed to delete note");
-      return;
-    }
-    setNotes(notes.filter((n) => n.id !== id));
-    toast.success("Note deleted");
-  };
-
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
-      <h3 className="font-display text-xl font-semibold flex items-center gap-2 mb-4">
-        <StickyNote className="h-5 w-5 text-primary" /> Internal Notes
-      </h3>
-      <p className="text-xs text-muted-foreground mb-4">HQ-only notes. Not visible to buyers or property partners.</p>
+    <div className="space-y-6">
+      {/* New Note Form */}
+      <div className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+        <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+          <Plus className="w-5 h-5" />
+          Add Internal Note
+        </h3>
 
-      <div className="space-y-3 mb-4">
-        <div className="flex flex-wrap gap-2">
-          {Object.entries(noteLabels).map(([key, meta]) => (
-            <button
-              key={key}
-              onClick={() => setTag(key)}
-              className={cn(
-                "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors",
-                tag === key ? meta.color + " ring-2 ring-offset-1 ring-primary/30" : "bg-secondary text-muted-foreground hover:bg-accent",
-              )}
-            >
-              {meta.label}
-            </button>
-          ))}
+        <div className="space-y-4">
+          <textarea
+            value={newNote}
+            onChange={(e) => setNewNote(e.target.value)}
+            placeholder="Add a note about this lead or transaction..."
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 resize-none"
+            rows={3}
+          />
+
+          <div>
+            <label className="text-sm font-semibold mb-2 block">Tags (optional)</label>
+            <div className="flex flex-wrap gap-2">
+              {TAG_OPTIONS.map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() =>
+                    setSelectedTags(
+                      selectedTags.includes(tag)
+                        ? selectedTags.filter(t => t !== tag)
+                        : [...selectedTags, tag]
+                    )
+                  }
+                  className={`px-3 py-1 rounded-full text-sm font-semibold transition-all ${
+                    selectedTags.includes(tag)
+                      ? TAG_COLORS[tag]
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={handleAddNote}
+            disabled={submitting || !newNote.trim()}
+            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+          >
+            {submitting ? "Adding..." : "Add Note"}
+          </button>
         </div>
-        <Textarea
-          rows={2}
-          value={newNote}
-          onChange={(e) => setNewNote(e.target.value)}
-          placeholder="Add an internal note..."
-        />
-        <Button size="sm" onClick={addNote} disabled={loading || !newNote.trim()}>
-          {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Plus className="h-3.5 w-3.5" /> Add Note</>}
-        </Button>
       </div>
 
-      <div className="space-y-2 max-h-64 overflow-y-auto">
+      {/* Notes List */}
+      <div>
+        <h3 className="font-display font-bold text-2xl mb-4 flex items-center gap-2">
+          <FileText className="w-6 h-6" />
+          Recent Notes
+        </h3>
+
         {notes.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">No notes yet.</p>
+          <div className="text-center py-12 text-gray-600 dark:text-gray-400">
+            <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p>No internal notes yet</p>
+          </div>
         ) : (
-          notes.map((n) => {
-            const meta = noteLabels[n.tag] ?? noteLabels.general;
-            return (
-              <div key={n.id} className="flex items-start gap-2 rounded-lg border border-border p-3">
-                <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0", meta.color)}>
-                  {meta.label}
-                </span>
-                <p className="flex-1 text-sm">{n.note}</p>
-                <button onClick={() => deleteNote(n.id)} className="text-muted-foreground hover:text-destructive shrink-0">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+          <div className="space-y-3">
+            {notes.map((note) => (
+              <div
+                key={note.id}
+                className="p-4 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 hover:shadow-soft transition-shadow"
+              >
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <p className="text-gray-900 dark:text-white flex-1">
+                    {note.content}
+                  </p>
+                  <button
+                    onClick={() => handleDeleteNote(note.id)}
+                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors flex-shrink-0"
+                  >
+                    <X className="w-5 h-5 text-gray-500" />
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {note.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className={`text-xs font-semibold px-2 py-1 rounded-full ${TAG_COLORS[tag] || "bg-gray-100 text-gray-700"
+                        }`}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+
+                <p className="text-xs text-gray-500 dark:text-gray-500">
+                  {new Date(note.created_at).toLocaleString()}
+                </p>
               </div>
-            );
-          })
+            ))}
+          </div>
         )}
       </div>
     </div>

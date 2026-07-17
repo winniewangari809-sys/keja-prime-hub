@@ -1,32 +1,44 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { PageHeader } from "./PageHeader";
-import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
-export function HQPage({ eyebrow, title, description, children }: {
-  eyebrow?: string;
+interface HQPageProps {
   title: string;
   description?: string;
-  children: ReactNode;
-}) {
-  return (
-    <>
-      <PageHeader eyebrow={eyebrow ?? "🏢 KejaHub HQ"} title={title} description={description} />
-      <section className="container-app py-8">
-        <Link to="/dashboard/admin" className="inline-flex items-center gap-1 text-sm text-primary hover:underline mb-6">
-          <ArrowLeft className="h-4 w-4" /> Back to HQ
-        </Link>
-        {children}
-      </section>
-    </>
-  );
+  backTo?: string;
+  children: React.ReactNode;
+  className?: string;
 }
 
-export function EmptyState({ label = "No data available yet." }: { label?: string }) {
+export function HQPage({
+  title,
+  description,
+  backTo = "/dashboard/admin",
+  children,
+  className,
+}: HQPageProps) {
   return (
-    <div className="rounded-2xl border border-dashed border-border p-12 text-center">
-      <p className="text-4xl">🗂</p>
-      <p className="mt-3 text-sm text-muted-foreground">{label}</p>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <PageHeader
+        eyebrow="Admin Dashboard"
+        title={title}
+        description={description}
+      />
+
+      <div className={cn("container-app py-8", className)}>
+        <Link
+          to={backTo}
+          className="inline-flex items-center gap-2 text-primary hover:text-primary/80 font-semibold mb-6 transition-colors"
+        >
+          <ChevronLeft className="w-5 h-5" />
+          Back to Dashboard
+        </Link>
+
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-soft p-6">
+          {children}
+        </div>
+      </div>
     </div>
   );
 }
