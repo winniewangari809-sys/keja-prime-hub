@@ -1,42 +1,21 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { useAuth, dashboardForRole } from "@/hooks/use-auth";
+import { createFileRoute } from "@tanstack/react-router";
+import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/dashboard/")({
-  head: () => ({
-    meta: [
-      {
-        title: "Dashboard — KejaHub",
-      },
-      {
-        name: "robots",
-        content: "noindex",
-      },
-    ],
-  }),
-  component: DashboardIndex,
+  component: DashboardPage,
 });
 
-function DashboardIndex() {
-  const navigate = useNavigate();
-  const { user, role, loading } = useAuth();
+function DashboardPage() {
+  const { user, loading } = useAuth();
 
-  useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        navigate({ to: "/login" });
-      } else {
-        navigate({ to: dashboardForRole(role) });
-      }
-    }
-  }, [loading, user, role, navigate]);
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border border-gray-300 border-t-primary mx-auto mb-4"></div>
-        <p className="text-gray-600 dark:text-gray-400">Loading your dashboard...</p>
-      </div>
+    <div className="min-h-screen bg-background p-8">
+      <h1 className="text-3xl font-bold">Dashboard</h1>
+      <p className="mt-4 text-muted-foreground">
+        Welcome{user ? `, ${user.email}` : ""}!
+      </p>
     </div>
   );
 }
