@@ -10,16 +10,18 @@ export type { TextareaProps } from "./textarea"
 export {
   Card,
   CardHeader,
-  CardFooter,
   CardTitle,
   CardDescription,
   CardContent,
+  CardFooter,
 } from "./card"
 
 export {
   Dialog,
-  DialogTrigger,
+  DialogPortal,
+  DialogOverlay,
   DialogClose,
+  DialogTrigger,
   DialogContent,
   DialogHeader,
   DialogFooter,
@@ -27,7 +29,12 @@ export {
   DialogDescription,
 } from "./dialog"
 
-export { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs"
+export {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "./tabs"
 
 export { Label } from "./label"
 
@@ -40,8 +47,8 @@ export {
   SelectValue,
   SelectTrigger,
   SelectContent,
-  SelectLabel,
   SelectItem,
+  SelectLabel,
   SelectSeparator,
   SelectScrollUpButton,
   SelectScrollDownButton,

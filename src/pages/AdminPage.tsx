@@ -1,580 +1,434 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Loader, LogOut, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
-import { toast } from 'sonner';
-import { useAuth } from '@/hooks/use-auth';
-import { useRequireRole } from '@/hooks/use-require-role';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { useRequireRole } from "@/hooks/use-require-role";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { BarChart3, Users, Home, Briefcase, ShoppingCart, AlertTriangle } from "lucide-react";
 
-interface Property {
-  id: string;
+interface StatCard {
   title: string;
-  location: string;
-  price: number;
-  admin_status: string;
-}
-
-interface Profile {
-  id: string;
-  first_name: string;
-  full_name: string;
-  email: string;
-}
-
-interface UserWithRole extends Profile {
-  role: string;
-}
-
-interface HouseHuntingRequest {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  area: string;
-  budget_min: number;
-  budget_max: number;
-  status: string;
-}
-
-interface AirbnbBooking {
-  id: string;
-  property_id: string;
-  check_in: string;
-  check_out: string;
-  guests: number;
-  total_price: number;
-}
-
-interface CommercialRequest {
-  id: string;
-  name: string;
-  email: string;
-  business_type: string;
-  status: string;
-}
-
-interface SecurityAlert {
-  id: string;
-  alert_type: string;
-  description: string;
-  severity: string;
-  created_at: string;
-}
-
-interface Stat {
-  label: string;
-  value: number | string;
+  value: number;
   icon: React.ReactNode;
+  color: string;
 }
 
-export const AdminPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
-  useRequireRole(['hq', 'admin']);
-
-  // State
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<Stat[]>([]);
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [users, setUsers] = useState<UserWithRole[]>([]);
-  const [houseHunting, setHouseHunting] = useState<HouseHuntingRequest[]>([]);
-  const [airbnbBookings, setAirbnbBookings] = useState<AirbnbBooking[]>([]);
-  const [commercialRequests, setCommercialRequests] = useState<CommercialRequest[]>([]);
-  const [securityAlerts, setSecurityAlerts] = useState<SecurityAlert[]>([]);
-
-  const formatPrice = (price: number) => {
-    return `KES ${price.toLocaleString()}`;
-  };
+export const AdminPage = () => {
+  const { loading, user, role } = useRequireRole(["hq", "admin"]);
+  const [stats, setStats] = useState<StatCard[]>([]);
+  const [properties, setProperties] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [houseHuntingRequests, setHouseHuntingRequests] = useState<any[]>([]);
+  const [airbnbBookings, setAirbnbBookings] = useState<any[]>([]);
+  const [commercialRequests, setCommercialRequests] = useState<any[]>([]);
+  const [securityAlerts, setSecurityAlerts] = useState<any[]>([]);
+  const [pageLoading, setPageLoading] = useState(true);
 
   useEffect(() => {
-    if (!authLoading && user) {
-      fetchAllData();
+    if (!loading && user) {
+      loadData();
     }
-  }, [user, authLoading]);
+  }, [loading, user]);
 
-  const fetchAllData = async () => {
-    setLoading(true);
+  const loadData = async () => {
+    setPageLoading(true);
     try {
-      // Fetch counts for stats
+      // Load stats
       const [propertiesRes, profilesRes, houseHuntingRes, airbnbRes, commercialRes, securityRes] =
         await Promise.all([
-          supabase.from('properties').select('id', { count: 'exact' }),
-          supabase.from('profiles').select('id', { count: 'exact' }),
-          supabase.from('house_hunting_requests').select('id', { count: 'exact' }),
-          supabase.from('airbnb_bookings').select('id', { count: 'exact' }),
-          supabase.from('commercial_requests').select('id', { count: 'exact' }),
-          supabase.from('security_alerts').select('id', { count: 'exact' }),
+          supabase.from("properties").select("id", { count: "exact" }),
+          supabase.from("profiles").select("id", { count: "exact" }),
+          supabase.from("house_hunting_requests").select("id", { count: "exact" }),
+          supabase.from("airbnb_bookings").select("id", { count: "exact" }),
+          supabase.from("commercial_requests").select("id", { count: "exact" }),
+          supabase.from("security_alerts").select("id", { count: "exact" }),
         ]);
 
       setStats([
         {
-          label: 'Total Properties',
+          title: "Total Properties",
           value: propertiesRes.count || 0,
-          icon: <AlertCircle className="w-5 h-5 text-blue-400" />,
+          icon: <Home className="w-6 h-6" />,
+          color: "bg-blue-100 text-blue-600",
         },
         {
-          label: 'Total Users',
+          title: "Total Users",
           value: profilesRes.count || 0,
-          icon: <AlertCircle className="w-5 h-5 text-green-400" />,
+          icon: <Users className="w-6 h-6" />,
+          color: "bg-green-100 text-green-600",
         },
         {
-          label: 'House Hunting Requests',
+          title: "House Hunting Requests",
           value: houseHuntingRes.count || 0,
-          icon: <AlertCircle className="w-5 h-5 text-purple-400" />,
+          icon: <BarChart3 className="w-6 h-6" />,
+          color: "bg-purple-100 text-purple-600",
         },
         {
-          label: 'Airbnb Bookings',
+          title: "Airbnb Bookings",
           value: airbnbRes.count || 0,
-          icon: <AlertCircle className="w-5 h-5 text-orange-400" />,
+          icon: <ShoppingCart className="w-6 h-6" />,
+          color: "bg-orange-100 text-orange-600",
         },
         {
-          label: 'Commercial Requests',
+          title: "Commercial Requests",
           value: commercialRes.count || 0,
-          icon: <AlertCircle className="w-5 h-5 text-pink-400" />,
+          icon: <Briefcase className="w-6 h-6" />,
+          color: "bg-red-100 text-red-600",
         },
         {
-          label: 'Security Alerts',
+          title: "Security Alerts",
           value: securityRes.count || 0,
-          icon: <AlertCircle className="w-5 h-5 text-red-400" />,
+          icon: <AlertTriangle className="w-6 h-6" />,
+          color: "bg-yellow-100 text-yellow-600",
         },
       ]);
 
-      // Fetch properties
-      const { data: propertiesData } = await supabase.from('properties').select('*').limit(20);
-      setProperties(propertiesData || []);
+      // Load properties
+      const { data: propsData } = await supabase
+        .from("properties")
+        .select("id, title, location, price, admin_status")
+        .order("created_at", { ascending: false });
+      setProperties(propsData || []);
 
-      // Fetch users with roles
-      const { data: usersData } = await supabase.from('profiles').select('id, first_name, full_name').limit(20);
-      const { data: rolesData } = await supabase.from('user_roles').select('user_id, role');
+      // Load users
+      const { data: usersData } = await supabase
+        .from("profiles")
+        .select("id, first_name, full_name, created_at")
+        .order("created_at", { ascending: false });
+      setUsers(usersData || []);
 
-      if (usersData && rolesData) {
-        const usersWithRoles = usersData.map((user) => ({
-          ...user,
-          email: '',
-          role: rolesData.find((r) => r.user_id === user.id)?.role || 'unknown',
-        }));
-        setUsers(usersWithRoles);
-      }
+      // Load house hunting requests
+      const { data: hhData } = await supabase
+        .from("house_hunting_requests")
+        .select("id, name, email, area, budget_min, budget_max, created_at")
+        .order("created_at", { ascending: false });
+      setHouseHuntingRequests(hhData || []);
 
-      // Fetch house hunting requests
-      const { data: hhData } = await supabase.from('house_hunting_requests').select('*').limit(20);
-      setHouseHunting(hhData || []);
-
-      // Fetch airbnb bookings
-      const { data: airbnbData } = await supabase.from('airbnb_bookings').select('*').limit(20);
+      // Load airbnb bookings
+      const { data: airbnbData } = await supabase
+        .from("airbnb_bookings")
+        .select("id, property_id, check_in, check_out, guests, created_at")
+        .order("created_at", { ascending: false });
       setAirbnbBookings(airbnbData || []);
 
-      // Fetch commercial requests
-      const { data: commercialData } = await supabase.from('commercial_requests').select('*').limit(20);
-      setCommercialRequests(commercialData || []);
+      // Load commercial requests
+      const { data: commData } = await supabase
+        .from("commercial_requests")
+        .select("id, name, email, business_type, area, budget, created_at")
+        .order("created_at", { ascending: false });
+      setCommercialRequests(commData || []);
 
-      // Fetch security alerts
-      const { data: securityData } = await supabase
-        .from('security_alerts')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(20);
-      setSecurityAlerts(securityData || []);
+      // Load security alerts
+      const { data: secData } = await supabase
+        .from("security_alerts")
+        .select("id, alert_type, description, created_at")
+        .order("created_at", { ascending: false });
+      setSecurityAlerts(secData || []);
     } catch (err) {
-      console.error('Error fetching data:', err);
-      toast.error('Failed to load admin data');
+      toast.error("Failed to load admin data");
     } finally {
-      setLoading(false);
+      setPageLoading(false);
     }
   };
 
   const handleApproveProperty = async (propertyId: string) => {
     try {
       const { error } = await supabase
-        .from('properties')
-        .update({ admin_status: 'approved' })
-        .eq('id', propertyId);
+        .from("properties")
+        .update({ admin_status: "approved" })
+        .eq("id", propertyId);
 
       if (error) {
-        toast.error('Failed to approve property');
+        toast.error(error.message || "Failed to approve property");
       } else {
-        toast.success('Property approved');
-        fetchAllData();
+        toast.success("Property approved!");
+        loadData();
       }
     } catch (err) {
-      toast.error('An error occurred');
+      toast.error("An unexpected error occurred");
     }
   };
 
   const handleRejectProperty = async (propertyId: string) => {
     try {
       const { error } = await supabase
-        .from('properties')
-        .update({ admin_status: 'rejected' })
-        .eq('id', propertyId);
+        .from("properties")
+        .update({ admin_status: "rejected" })
+        .eq("id", propertyId);
 
       if (error) {
-        toast.error('Failed to reject property');
+        toast.error(error.message || "Failed to reject property");
       } else {
-        toast.success('Property rejected');
-        fetchAllData();
+        toast.success("Property rejected!");
+        loadData();
       }
     } catch (err) {
-      toast.error('An error occurred');
+      toast.error("An unexpected error occurred");
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-      toast.success('Logged out successfully');
-      navigate('/');
-    } catch (err) {
-      toast.error('Failed to logout');
-    }
-  };
-
-  if (authLoading || loading) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <Loader className="w-8 h-8 animate-spin text-blue-500" />
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600">Loading admin panel...</p>
+        </div>
       </div>
     );
   }
 
+  if (!user) {
+    return null;
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Header */}
-      <header className="border-b border-slate-700 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-40">
-        <div className="container-app h-16 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-white">HQ Command Center</h1>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleLogout}
-            className="text-slate-300 hover:text-white"
-          >
-            <LogOut className="w-5 h-5" />
-          </Button>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gray-50">
+      <div className="container-app py-8">
+        <h1 className="text-4xl font-bold text-gray-900 mb-8">HQ Command Center</h1>
 
-      {/* Main Content */}
-      <main className="container-app py-12">
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="bg-slate-800 border-slate-700 grid w-full grid-cols-7">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="properties">Properties</TabsTrigger>
-            <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="hunting">Hunting</TabsTrigger>
-            <TabsTrigger value="airbnb">Airbnb</TabsTrigger>
-            <TabsTrigger value="commercial">Commercial</TabsTrigger>
-            <TabsTrigger value="security">Security</TabsTrigger>
-          </TabsList>
-
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {stats.map((stat, idx) => (
-                <Card key={idx} className="border-slate-700 bg-slate-800">
-                  <CardContent className="p-6">
+        {/* Stats Cards */}
+        {pageLoading ? (
+          <div className="text-center py-8">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+              {stats.map((stat) => (
+                <Card key={stat.title}>
+                  <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-slate-400 text-sm">{stat.label}</p>
-                        <p className="text-2xl font-bold text-white mt-2">{stat.value}</p>
+                        <p className="text-sm font-medium text-gray-600">{stat.title}</p>
+                        <p className="text-3xl font-bold text-gray-900 mt-2">{stat.value}</p>
                       </div>
-                      {stat.icon}
+                      <div className={`p-3 rounded-lg ${stat.color}`}>{stat.icon}</div>
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
-          </TabsContent>
 
-          {/* Properties Tab */}
-          <TabsContent value="properties" className="mt-6">
-            <Card className="border-slate-700 bg-slate-800">
-              <CardHeader>
-                <CardTitle>Properties</CardTitle>
-                <CardDescription>Manage and approve property listings</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {properties.length === 0 ? (
-                  <p className="text-slate-400 text-center py-8">No properties found</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="border-b border-slate-700">
-                        <tr>
-                          <th className="text-left py-3 px-3 text-slate-400">Title</th>
-                          <th className="text-left py-3 px-3 text-slate-400">Location</th>
-                          <th className="text-left py-3 px-3 text-slate-400">Price</th>
-                          <th className="text-left py-3 px-3 text-slate-400">Status</th>
-                          <th className="text-left py-3 px-3 text-slate-400">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-700">
+            {/* Admin Tabs */}
+            <Tabs defaultValue="overview" className="w-full">
+              <TabsList className="grid w-full grid-cols-7">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="properties">Properties</TabsTrigger>
+                <TabsTrigger value="users">Users</TabsTrigger>
+                <TabsTrigger value="househunting">House Hunt</TabsTrigger>
+                <TabsTrigger value="airbnb">Airbnb</TabsTrigger>
+                <TabsTrigger value="commercial">Commercial</TabsTrigger>
+                <TabsTrigger value="security">Security</TabsTrigger>
+              </TabsList>
+
+              {/* Overview Tab */}
+              <TabsContent value="overview">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Platform Overview</CardTitle>
+                    <CardDescription>Key metrics and statistics</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {stats.map((stat) => (
+                        <div key={stat.title} className="text-center">
+                          <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                          <p className="text-sm text-gray-600 mt-1">{stat.title}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Properties Tab */}
+              <TabsContent value="properties">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Properties</CardTitle>
+                    <CardDescription>Manage all properties</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {properties.length === 0 ? (
+                      <p className="text-gray-600">No properties found</p>
+                    ) : (
+                      <div className="space-y-3">
                         {properties.map((prop) => (
-                          <tr key={prop.id} className="hover:bg-slate-700/30">
-                            <td className="py-3 px-3 text-white">{prop.title}</td>
-                            <td className="py-3 px-3 text-slate-400">{prop.location}</td>
-                            <td className="py-3 px-3 text-slate-400">{formatPrice(prop.price)}</td>
-                            <td className="py-3 px-3">
-                              <Badge
-                                variant={prop.admin_status === 'approved' ? 'default' : 'secondary'}
-                                className={
-                                  prop.admin_status === 'approved'
-                                    ? 'bg-green-600'
-                                    : prop.admin_status === 'rejected'
-                                      ? 'bg-red-600'
-                                      : 'bg-yellow-600'
-                                }
-                              >
-                                {prop.admin_status || 'pending'}
+                          <div key={prop.id} className="flex items-center justify-between border-b pb-3">
+                            <div>
+                              <p className="font-medium">{prop.title}</p>
+                              <p className="text-sm text-gray-600">{prop.location}</p>
+                              <p className="text-sm font-semibold mt-1">KES {(prop.price || 0).toLocaleString()}</p>
+                            </div>
+                            <div className="flex gap-2 items-center">
+                              <Badge variant={prop.admin_status === "approved" ? "default" : prop.admin_status === "rejected" ? "destructive" : "outline"}>
+                                {prop.admin_status || "pending"}
                               </Badge>
-                            </td>
-                            <td className="py-3 px-3 space-x-2">
-                              <Button
-                                size="sm"
-                                className="bg-green-600 hover:bg-green-700"
-                                onClick={() => handleApproveProperty(prop.id)}
-                              >
-                                <CheckCircle className="w-3 h-3 mr-1" />
-                                Approve
-                              </Button>
-                              <Button
-                                size="sm"
-                                className="bg-red-600 hover:bg-red-700"
-                                onClick={() => handleRejectProperty(prop.id)}
-                              >
-                                <XCircle className="w-3 h-3 mr-1" />
-                                Reject
-                              </Button>
-                            </td>
-                          </tr>
+                              {prop.admin_status !== "approved" && (
+                                <>
+                                  <Button size="sm" onClick={() => handleApproveProperty(prop.id)}>
+                                    Approve
+                                  </Button>
+                                  <Button size="sm" variant="destructive" onClick={() => handleRejectProperty(prop.id)}>
+                                    Reject
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </div>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-          {/* Users Tab */}
-          <TabsContent value="users" className="mt-6">
-            <Card className="border-slate-700 bg-slate-800">
-              <CardHeader>
-                <CardTitle>Users</CardTitle>
-                <CardDescription>View and manage user accounts</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {users.length === 0 ? (
-                  <p className="text-slate-400 text-center py-8">No users found</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="border-b border-slate-700">
-                        <tr>
-                          <th className="text-left py-3 px-3 text-slate-400">Name</th>
-                          <th className="text-left py-3 px-3 text-slate-400">Full Name</th>
-                          <th className="text-left py-3 px-3 text-slate-400">Role</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-700">
-                        {users.map((user) => (
-                          <tr key={user.id} className="hover:bg-slate-700/30">
-                            <td className="py-3 px-3 text-white">{user.first_name}</td>
-                            <td className="py-3 px-3 text-slate-400">{user.full_name}</td>
-                            <td className="py-3 px-3">
-                              <Badge className="bg-blue-600">{user.role}</Badge>
-                            </td>
-                          </tr>
+              {/* Users Tab */}
+              <TabsContent value="users">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Users</CardTitle>
+                    <CardDescription>All registered users</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {users.length === 0 ? (
+                      <p className="text-gray-600">No users found</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {users.map((u) => (
+                          <div key={u.id} className="flex justify-between border-b pb-3">
+                            <div>
+                              <p className="font-medium">{u.full_name || u.first_name || "Unknown"}</p>
+                              <p className="text-sm text-gray-600">{u.id}</p>
+                            </div>
+                            <p className="text-sm text-gray-600">
+                              {new Date(u.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-          {/* House Hunting Tab */}
-          <TabsContent value="hunting" className="mt-6">
-            <Card className="border-slate-700 bg-slate-800">
-              <CardHeader>
-                <CardTitle>House Hunting Requests</CardTitle>
-                <CardDescription>View concierge service requests</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {houseHunting.length === 0 ? (
-                  <p className="text-slate-400 text-center py-8">No requests found</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="border-b border-slate-700">
-                        <tr>
-                          <th className="text-left py-3 px-3 text-slate-400">Name</th>
-                          <th className="text-left py-3 px-3 text-slate-400">Email</th>
-                          <th className="text-left py-3 px-3 text-slate-400">Area</th>
-                          <th className="text-left py-3 px-3 text-slate-400">Budget</th>
-                          <th className="text-left py-3 px-3 text-slate-400">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-700">
-                        {houseHunting.map((req) => (
-                          <tr key={req.id} className="hover:bg-slate-700/30">
-                            <td className="py-3 px-3 text-white">{req.name}</td>
-                            <td className="py-3 px-3 text-slate-400">{req.email}</td>
-                            <td className="py-3 px-3 text-slate-400">{req.area}</td>
-                            <td className="py-3 px-3 text-slate-400">
-                              {formatPrice(req.budget_min)} - {formatPrice(req.budget_max)}
-                            </td>
-                            <td className="py-3 px-3">
-                              <Badge className="bg-blue-600">{req.status || 'pending'}</Badge>
-                            </td>
-                          </tr>
+              {/* House Hunting Tab */}
+              <TabsContent value="househunting">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>House Hunting Requests</CardTitle>
+                    <CardDescription>Concierge service requests</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {houseHuntingRequests.length === 0 ? (
+                      <p className="text-gray-600">No house hunting requests</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {houseHuntingRequests.map((req) => (
+                          <div key={req.id} className="border-b pb-3">
+                            <p className="font-medium">{req.name}</p>
+                            <p className="text-sm text-gray-600">{req.email}</p>
+                            <p className="text-sm text-gray-600">
+                              Area: {req.area} | Budget: KES {req.budget_min?.toLocaleString() || 0} - {req.budget_max?.toLocaleString() || 0}
+                            </p>
+                          </div>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-          {/* Airbnb Tab */}
-          <TabsContent value="airbnb" className="mt-6">
-            <Card className="border-slate-700 bg-slate-800">
-              <CardHeader>
-                <CardTitle>Airbnb Bookings</CardTitle>
-                <CardDescription>View all airbnb bookings</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {airbnbBookings.length === 0 ? (
-                  <p className="text-slate-400 text-center py-8">No bookings found</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="border-b border-slate-700">
-                        <tr>
-                          <th className="text-left py-3 px-3 text-slate-400">Property ID</th>
-                          <th className="text-left py-3 px-3 text-slate-400">Check-in</th>
-                          <th className="text-left py-3 px-3 text-slate-400">Check-out</th>
-                          <th className="text-left py-3 px-3 text-slate-400">Guests</th>
-                          <th className="text-left py-3 px-3 text-slate-400">Total Price</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-700">
+              {/* Airbnb Tab */}
+              <TabsContent value="airbnb">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Airbnb Bookings</CardTitle>
+                    <CardDescription>Short-term bookings</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {airbnbBookings.length === 0 ? (
+                      <p className="text-gray-600">No airbnb bookings</p>
+                    ) : (
+                      <div className="space-y-3">
                         {airbnbBookings.map((booking) => (
-                          <tr key={booking.id} className="hover:bg-slate-700/30">
-                            <td className="py-3 px-3 text-white">{booking.property_id}</td>
-                            <td className="py-3 px-3 text-slate-400">{booking.check_in}</td>
-                            <td className="py-3 px-3 text-slate-400">{booking.check_out}</td>
-                            <td className="py-3 px-3 text-slate-400">{booking.guests}</td>
-                            <td className="py-3 px-3 text-white">{formatPrice(booking.total_price)}</td>
-                          </tr>
+                          <div key={booking.id} className="border-b pb-3">
+                            <p className="font-medium">Booking #{booking.id.slice(0, 8)}</p>
+                            <p className="text-sm text-gray-600">
+                              {booking.check_in} to {booking.check_out} | {booking.guests} guests
+                            </p>
+                          </div>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-          {/* Commercial Tab */}
-          <TabsContent value="commercial" className="mt-6">
-            <Card className="border-slate-700 bg-slate-800">
-              <CardHeader>
-                <CardTitle>Commercial Requests</CardTitle>
-                <CardDescription>View commercial space requests</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {commercialRequests.length === 0 ? (
-                  <p className="text-slate-400 text-center py-8">No requests found</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="border-b border-slate-700">
-                        <tr>
-                          <th className="text-left py-3 px-3 text-slate-400">Name</th>
-                          <th className="text-left py-3 px-3 text-slate-400">Email</th>
-                          <th className="text-left py-3 px-3 text-slate-400">Business Type</th>
-                          <th className="text-left py-3 px-3 text-slate-400">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-700">
+              {/* Commercial Tab */}
+              <TabsContent value="commercial">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Commercial Requests</CardTitle>
+                    <CardDescription>Business space inquiries</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {commercialRequests.length === 0 ? (
+                      <p className="text-gray-600">No commercial requests</p>
+                    ) : (
+                      <div className="space-y-3">
                         {commercialRequests.map((req) => (
-                          <tr key={req.id} className="hover:bg-slate-700/30">
-                            <td className="py-3 px-3 text-white">{req.name}</td>
-                            <td className="py-3 px-3 text-slate-400">{req.email}</td>
-                            <td className="py-3 px-3 text-slate-400">{req.business_type}</td>
-                            <td className="py-3 px-3">
-                              <Badge className="bg-blue-600">{req.status || 'pending'}</Badge>
-                            </td>
-                          </tr>
+                          <div key={req.id} className="border-b pb-3">
+                            <p className="font-medium">{req.name}</p>
+                            <p className="text-sm text-gray-600">{req.email}</p>
+                            <p className="text-sm text-gray-600">
+                              {req.business_type} | Area: {req.area} | Budget: KES {req.budget?.toLocaleString() || 0}
+                            </p>
+                          </div>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-          {/* Security Tab */}
-          <TabsContent value="security" className="mt-6">
-            <Card className="border-slate-700 bg-slate-800">
-              <CardHeader>
-                <CardTitle>Security Alerts</CardTitle>
-                <CardDescription>Monitor system security events</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {securityAlerts.length === 0 ? (
-                  <p className="text-slate-400 text-center py-8">No alerts found</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="border-b border-slate-700">
-                        <tr>
-                          <th className="text-left py-3 px-3 text-slate-400">Type</th>
-                          <th className="text-left py-3 px-3 text-slate-400">Description</th>
-                          <th className="text-left py-3 px-3 text-slate-400">Severity</th>
-                          <th className="text-left py-3 px-3 text-slate-400">Date</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-700">
+              {/* Security Tab */}
+              <TabsContent value="security">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Security Alerts</CardTitle>
+                    <CardDescription>Platform security events</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {securityAlerts.length === 0 ? (
+                      <p className="text-gray-600">No security alerts</p>
+                    ) : (
+                      <div className="space-y-3">
                         {securityAlerts.map((alert) => (
-                          <tr key={alert.id} className="hover:bg-slate-700/30">
-                            <td className="py-3 px-3 text-white">{alert.alert_type}</td>
-                            <td className="py-3 px-3 text-slate-400">{alert.description}</td>
-                            <td className="py-3 px-3">
-                              <Badge
-                                className={
-                                  alert.severity === 'critical'
-                                    ? 'bg-red-600'
-                                    : alert.severity === 'high'
-                                      ? 'bg-orange-600'
-                                      : 'bg-yellow-600'
-                                }
-                              >
-                                {alert.severity}
-                              </Badge>
-                            </td>
-                            <td className="py-3 px-3 text-slate-400">
-                              {new Date(alert.created_at).toLocaleDateString()}
-                            </td>
-                          </tr>
+                          <div key={alert.id} className="border-b pb-3">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <Badge variant="destructive">{alert.alert_type}</Badge>
+                                <p className="text-sm text-gray-600 mt-2">{alert.description}</p>
+                              </div>
+                              <p className="text-xs text-gray-500">
+                                {new Date(alert.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </main>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </>
+        )}
+      </div>
     </div>
   );
 };

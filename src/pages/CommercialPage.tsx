@@ -1,280 +1,250 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
-import { Loader, MapPin, Zap, TrendingUp } from 'lucide-react';
-import { toast } from 'sonner';
-import { useAuth } from '@/hooks/use-auth';
-import { supabase } from '@/integrations/supabase/client';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { School, Hospital, DollarSign, Train } from "lucide-react";
 
-const businessTypes = [
-  'Shop',
-  'Office',
-  'Warehouse',
-  'Salon Space',
-  'Restaurant Space',
+const BUSINESS_TYPES = [
+  "Shop",
+  "Office",
+  "Warehouse",
+  "Salon Space",
+  "Restaurant Space",
 ];
 
-const nearbyAmenities = [
-  { name: 'Schools', icon: '🏫' },
-  { name: 'Hospitals', icon: '🏥' },
-  { name: 'Banks', icon: '🏦' },
-  { name: 'Supermarkets', icon: '🛒' },
-  { name: 'Transport', icon: '🚌' },
+const NEARBY_AMENITIES = [
+  { icon: School, name: "Schools", description: "Quality education institutions" },
+  { icon: Hospital, name: "Hospitals", description: "Healthcare facilities" },
+  { icon: DollarSign, name: "Banks", description: "Financial services" },
+  { icon: Train, name: "Transport", description: "Easy accessibility" },
 ];
 
-export const CommercialPage: React.FC = () => {
+export const CommercialPage = () => {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, firstName } = useAuth();
+  const [loading, setLoading] = useState(false);
 
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [businessType, setBusinessType] = useState('Shop');
-  const [area, setArea] = useState('');
-  const [budget, setBudget] = useState('');
+  // Form state
+  const [name, setName] = useState(firstName || "");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState(user?.email || "");
+  const [businessType, setBusinessType] = useState("");
+  const [area, setArea] = useState("");
+  const [budget, setBudget] = useState("");
   const [parkingNeeded, setParkingNeeded] = useState(false);
   const [groundFloor, setGroundFloor] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [businessScore, setBusinessScore] = useState(65);
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      if (!user) return;
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-      try {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('first_name, full_name, phone')
-          .eq('id', user.id)
-          .single();
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
 
-        if (profileData) {
-          setName(profileData.full_name || profileData.first_name || '');
-          setPhone(profileData.phone || '');
-          setEmail(user.email || '');
-        }
-      } catch (err) {
-        console.error('Error fetching user data:', err);
-      }
-    };
+    if (!name.trim()) newErrors.name = "Business name is required";
+    if (!phone.trim()) newErrors.phone = "Phone is required";
+    if (!email.trim()) newErrors.email = "Email is required";
+    if (!businessType) newErrors.businessType = "Business type is required";
+    if (!area.trim()) newErrors.area = "Area is required";
+    if (!budget) newErrors.budget = "Budget is required";
 
-    if (!authLoading && user) {
-      fetchUserData();
-    }
-  }, [user, authLoading]);
-
-  // Calculate business potential score based on location and amenities
-  const updateBusinessScore = () => {
-    let score = 50;
-    if (area.trim()) score += 15;
-    if (parkingNeeded) score += 10;
-    if (groundFloor) score += 10;
-    setBusinessScore(Math.min(score, 100));
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
-
-  useEffect(() => {
-    updateBusinessScore();
-  }, [area, parkingNeeded, groundFloor]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!name.trim()) {
-      toast.error('Name is required');
-      return;
-    }
-
-    if (!phone.trim()) {
-      toast.error('Phone is required');
-      return;
-    }
-
-    if (!email.trim()) {
-      toast.error('Email is required');
-      return;
-    }
-
-    if (!area.trim()) {
-      toast.error('Area is required');
-      return;
-    }
-
-    if (!budget) {
-      toast.error('Budget is required');
-      return;
-    }
+    if (!validateForm()) return;
 
     setLoading(true);
     try {
-      const { error } = await supabase.from('commercial_requests').insert([
-        {
-          user_id: user?.id,
-          name,
-          phone,
-          email,
-          business_type: businessType,
-          area,
-          budget: parseInt(budget),
-          parking_needed: parkingNeeded,
-          ground_floor: groundFloor,
-          status: 'pending',
-        },
-      ]);
+      const { error } = await supabase.from("commercial_requests").insert({
+        name,
+        phone,
+        email,
+        business_type: businessType,
+        area,
+        budget: parseInt(budget),
+        parking_needed: parkingNeeded,
+        ground_floor: groundFloor,
+        user_id: user?.id || null,
+      });
 
       if (error) {
-        toast.error('Failed to submit request');
+        toast.error(error.message || "Failed to submit request");
       } else {
-        toast.success('Commercial space request submitted! Our team will contact you soon.');
-        navigate('/dashboard');
+        toast.success("Request submitted! We'll connect you with available spaces.");
+        navigate("/dashboard");
       }
     } catch (err) {
-      toast.error('An error occurred');
+      toast.error("An unexpected error occurred");
     } finally {
       setLoading(false);
     }
   };
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <Loader className="w-8 h-8 animate-spin text-blue-500" />
-      </div>
-    );
-  }
+  // Calculate business potential score
+  const calculateScore = (): number => {
+    let score = 50; // Base score
+    if (parkingNeeded) score += 15;
+    if (groundFloor) score += 25;
+    if (budget && parseInt(budget) > 100000) score += 10;
+    return Math.min(score, 100);
+  };
+
+  const businessPotentialScore = calculateScore();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Header */}
-      <header className="border-b border-slate-700 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-40">
-        <div className="container-app h-16 flex items-center">
-          <h1 className="text-2xl font-bold text-white">KejaHub - Commercial Spaces</h1>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-100 py-8">
+      <div className="container-app">
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="mb-8 text-center">
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">Commercial Spaces</h1>
+            <p className="text-gray-600">Find the perfect space for your business</p>
+          </div>
 
-      {/* Main Content */}
-      <main className="container-app py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Form Section */}
-          <div className="lg:col-span-2">
-            <Card className="border-slate-700 bg-slate-800">
-              <CardHeader className="space-y-2">
-                <CardTitle className="text-3xl">Find Your Commercial Space</CardTitle>
-                <CardDescription>
-                  We'll help you find the perfect location for your business
-                </CardDescription>
-              </CardHeader>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Form */}
+            <div className="lg:col-span-2">
+              <Card>
+                <CardHeader className="bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-t-lg">
+                  <CardTitle>Find Your Business Space</CardTitle>
+                  <CardDescription className="text-orange-100">
+                    Tell us about your business needs and we'll match you with the perfect space
+                  </CardDescription>
+                </CardHeader>
 
-              <form onSubmit={handleSubmit}>
-                <CardContent className="space-y-6">
-                  {/* Personal Information */}
-                  <div>
-                    <h3 className="text-lg font-semibold text-white mb-4">Business Details</h3>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="name">Name</Label>
-                          <Input
-                            id="name"
-                            type="text"
-                            placeholder="John Doe"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            className="border-slate-600 bg-slate-700 text-white placeholder:text-slate-400"
-                            disabled={loading}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="phone">Phone</Label>
-                          <Input
-                            id="phone"
-                            type="tel"
-                            placeholder="+254..."
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            className="border-slate-600 bg-slate-700 text-white placeholder:text-slate-400"
-                            disabled={loading}
-                          />
-                        </div>
+                <CardContent className="pt-8">
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Business Name */}
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Business Name *</Label>
+                      <Input
+                        id="name"
+                        placeholder="Your Business Name"
+                        value={name}
+                        onChange={(e) => {
+                          setName(e.target.value);
+                          if (errors.name) setErrors({ ...errors, name: undefined });
+                        }}
+                        className={errors.name ? "border-red-500" : ""}
+                      />
+                      {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
+                    </div>
+
+                    {/* Contact Info Row */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone *</Label>
+                        <Input
+                          id="phone"
+                          type="tel"
+                          placeholder="+254 712 345 678"
+                          value={phone}
+                          onChange={(e) => {
+                            setPhone(e.target.value);
+                            if (errors.phone) setErrors({ ...errors, phone: undefined });
+                          }}
+                          className={errors.phone ? "border-red-500" : ""}
+                        />
+                        {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
+                        <Label htmlFor="email">Email *</Label>
                         <Input
                           id="email"
                           type="email"
-                          placeholder="you@example.com"
+                          placeholder="you@business.com"
                           value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          className="border-slate-600 bg-slate-700 text-white placeholder:text-slate-400"
-                          disabled={loading}
+                          onChange={(e) => {
+                            setEmail(e.target.value);
+                            if (errors.email) setErrors({ ...errors, email: undefined });
+                          }}
+                          className={errors.email ? "border-red-500" : ""}
                         />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="businessType">Business Type</Label>
-                        <Select value={businessType} onValueChange={setBusinessType} disabled={loading}>
-                          <SelectTrigger className="border-slate-600 bg-slate-700 text-white">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-slate-700 border-slate-600">
-                            {businessTypes.map((type) => (
-                              <SelectItem key={type} value={type}>
-                                {type}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
                       </div>
                     </div>
-                  </div>
 
-                  {/* Space Requirements */}
-                  <div>
-                    <h3 className="text-lg font-semibold text-white mb-4">Space Requirements</h3>
-                    <div className="space-y-4">
+                    {/* Business Type */}
+                    <div className="space-y-2">
+                      <Label htmlFor="businessType">Business Type *</Label>
+                      <Select value={businessType} onValueChange={(value) => {
+                        setBusinessType(value);
+                        if (errors.businessType) setErrors({ ...errors, businessType: undefined });
+                      }}>
+                        <SelectTrigger id="businessType" className={errors.businessType ? "border-red-500" : ""}>
+                          <SelectValue placeholder="Select business type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {BUSINESS_TYPES.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors.businessType && <p className="text-sm text-red-500">{errors.businessType}</p>}
+                    </div>
+
+                    {/* Area */}
+                    <div className="space-y-2">
+                      <Label htmlFor="area">Preferred Area *</Label>
+                      <Input
+                        id="area"
+                        placeholder="e.g., CBD, Westlands, Industrial Area"
+                        value={area}
+                        onChange={(e) => {
+                          setArea(e.target.value);
+                          if (errors.area) setErrors({ ...errors, area: undefined });
+                        }}
+                        className={errors.area ? "border-red-500" : ""}
+                      />
+                      {errors.area && <p className="text-sm text-red-500">{errors.area}</p>}
+                    </div>
+
+                    {/* Budget */}
+                    <div className="space-y-2">
+                      <Label htmlFor="budget">Monthly Budget (KES) *</Label>
+                      <Input
+                        id="budget"
+                        type="number"
+                        placeholder="100000"
+                        value={budget}
+                        onChange={(e) => {
+                          setBudget(e.target.value);
+                          if (errors.budget) setErrors({ ...errors, budget: undefined });
+                        }}
+                        className={errors.budget ? "border-red-500" : ""}
+                      />
+                      {errors.budget && <p className="text-sm text-red-500">{errors.budget}</p>}
+                    </div>
+
+                    {/* Preferences */}
+                    <div className="space-y-3">
+                      <Label>Space Preferences</Label>
                       <div className="space-y-2">
-                        <Label htmlFor="area">Preferred Area/Location</Label>
-                        <Input
-                          id="area"
-                          type="text"
-                          placeholder="e.g., CBD, Westlands, Industrial Area"
-                          value={area}
-                          onChange={(e) => setArea(e.target.value)}
-                          className="border-slate-600 bg-slate-700 text-white placeholder:text-slate-400"
-                          disabled={loading}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="budget">Monthly Budget (KES)</Label>
-                        <Input
-                          id="budget"
-                          type="number"
-                          placeholder="50000"
-                          value={budget}
-                          onChange={(e) => setBudget(e.target.value)}
-                          className="border-slate-600 bg-slate-700 text-white placeholder:text-slate-400"
-                          disabled={loading}
-                        />
-                      </div>
-
-                      <div className="space-y-3">
                         <div className="flex items-center space-x-2">
                           <Checkbox
                             id="parking"
                             checked={parkingNeeded}
                             onCheckedChange={(checked) => setParkingNeeded(checked as boolean)}
-                            disabled={loading}
                           />
-                          <Label htmlFor="parking" className="cursor-pointer text-slate-300">
-                            Parking Space Required
-                          </Label>
+                          <label
+                            htmlFor="parking"
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            Parking Required
+                          </label>
                         </div>
 
                         <div className="flex items-center space-x-2">
@@ -282,130 +252,111 @@ export const CommercialPage: React.FC = () => {
                             id="groundFloor"
                             checked={groundFloor}
                             onCheckedChange={(checked) => setGroundFloor(checked as boolean)}
-                            disabled={loading}
                           />
-                          <Label htmlFor="groundFloor" className="cursor-pointer text-slate-300">
+                          <label
+                            htmlFor="groundFloor"
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
                             Ground Floor Preferred
-                          </Label>
+                          </label>
                         </div>
                       </div>
                     </div>
-                  </div>
+
+                    {/* Submit Button */}
+                    <Button type="submit" disabled={loading} className="w-full bg-orange-600 hover:bg-orange-700 text-white">
+                      {loading ? "Submitting..." : "Submit Request"}
+                    </Button>
+                  </form>
                 </CardContent>
+              </Card>
+            </div>
 
-                <CardFooter className="flex gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex-1 border-slate-600 text-white hover:bg-slate-700"
-                    onClick={() => navigate('/dashboard')}
-                    disabled={loading}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="flex-1 bg-blue-600 hover:bg-blue-700"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader className="w-4 h-4 mr-2 animate-spin" />
-                        Submitting...
-                      </>
-                    ) : (
-                      'Submit Request'
-                    )}
-                  </Button>
-                </CardFooter>
-              </form>
-            </Card>
-          </div>
-
-          {/* Info Section */}
-          <div className="space-y-6">
-            {/* Business Potential Score */}
-            <Card className="border-slate-700 bg-slate-800">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-green-500" />
-                  Business Potential
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400">Potential Score</span>
-                    <span className="text-2xl font-bold text-green-400">{businessScore}%</span>
+            {/* Sidebar Info */}
+            <div className="lg:col-span-1 space-y-6">
+              {/* Business Potential Score */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Business Potential Score</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-center">
+                    <div className="relative w-24 h-24">
+                      <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="45"
+                          stroke="#e5e7eb"
+                          strokeWidth="8"
+                          fill="none"
+                        />
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="45"
+                          stroke="#f97316"
+                          strokeWidth="8"
+                          fill="none"
+                          strokeDasharray={`${(businessPotentialScore / 100) * 283} 283`}
+                          className="transition-all"
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-2xl font-bold text-orange-600">{businessPotentialScore}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="w-full bg-slate-700 rounded-full h-3">
-                    <div
-                      className="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full transition-all"
-                      style={{ width: `${businessScore}%` }}
-                    ></div>
-                  </div>
-                </div>
-                <p className="text-sm text-slate-400">
-                  Score based on location, amenities, and space preferences
-                </p>
-              </CardContent>
-            </Card>
+                  <p className="text-sm text-gray-600 text-center">
+                    Score based on your requirements and preferences
+                  </p>
+                </CardContent>
+              </Card>
 
-            {/* Nearby Amenities */}
-            <Card className="border-slate-700 bg-slate-800">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-blue-500" />
-                  Nearby Amenities
-                </CardTitle>
-                <CardDescription>
-                  Typical amenities in commercial areas
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {nearbyAmenities.map((amenity) => (
-                    <div key={amenity.name} className="flex items-center gap-3">
-                      <span className="text-2xl">{amenity.icon}</span>
-                      <span className="text-slate-300">{amenity.name}</span>
+              {/* Nearby Amenities */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Nearby Amenities</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {NEARBY_AMENITIES.map(({ icon: Icon, name, description }) => (
+                    <div key={name} className="flex gap-3">
+                      <div className="flex-shrink-0">
+                        <Icon className="w-5 h-5 text-orange-600 mt-0.5" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{name}</p>
+                        <p className="text-xs text-gray-600">{description}</p>
+                      </div>
                     </div>
                   ))}
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            {/* Benefits */}
-            <Card className="border-slate-700 bg-slate-800">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-yellow-500" />
-                  Why Choose KejaHub
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 text-sm text-slate-300">
-                  <li className="flex items-start gap-2">
-                    <span className="text-green-500 mt-1">✓</span>
-                    <span>Access to best commercial spaces</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-green-500 mt-1">✓</span>
-                    <span>Expert location recommendations</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-green-500 mt-1">✓</span>
-                    <span>Transparent pricing & terms</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-green-500 mt-1">✓</span>
-                    <span>Fast negotiation support</span>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
+              {/* Quick Stats */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Available Spaces</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-gray-600">In Nairobi</p>
+                    <Badge>145+</Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-gray-600">Budget Range</p>
+                    <Badge variant="outline">50K-500K</Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-gray-600">Average Lead Time</p>
+                    <Badge variant="outline">24hrs</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 };
