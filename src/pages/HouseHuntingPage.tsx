@@ -1,351 +1,304 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Loader } from 'lucide-react';
-import { toast } from 'sonner';
-import { useAuth } from '@/hooks/use-auth';
-import { supabase } from '@/integrations/supabase/client';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-const propertyTypes = [
-  'Single Room',
-  'Bedsitter',
-  'Studio',
-  '1 Bedroom',
-  '2 Bedroom',
-  '3 Bedroom',
-  '4 Bedroom',
-  'Maisonette',
-  'Penthouse',
+const PROPERTY_TYPES = [
+  "Single Room",
+  "Bedsitter",
+  "Studio",
+  "1 Bedroom",
+  "2 Bedroom",
+  "3 Bedroom",
+  "4 Bedroom",
+  "Maisonette",
+  "Penthouse",
 ];
 
-const amenities = [
-  'Parking',
-  'Security',
-  'Water',
-  'WiFi',
-  'Furnished',
-  'Balcony',
-  'Gym',
-  'Swimming Pool',
-  'Pets Allowed',
+const AMENITIES = [
+  "Parking",
+  "Security",
+  "Water",
+  "WiFi",
+  "Furnished",
+  "Balcony",
+  "Gym",
+  "Swimming Pool",
+  "Pets Allowed",
 ];
 
-export const HouseHuntingPage: React.FC = () => {
+export const HouseHuntingPage = () => {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
-
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [area, setArea] = useState('');
-  const [budgetMin, setBudgetMin] = useState('');
-  const [budgetMax, setBudgetMax] = useState('');
-  const [propertyType, setPropertyType] = useState('1 Bedroom');
-  const [moveInDate, setMoveInDate] = useState('');
-  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
+  const { user, firstName } = useAuth();
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      if (!user) return;
+  // Form state
+  const [name, setName] = useState(firstName || "");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState(user?.email || "");
+  const [area, setArea] = useState("");
+  const [budgetMin, setBudgetMin] = useState("");
+  const [budgetMax, setBudgetMax] = useState("");
+  const [propertyType, setPropertyType] = useState("");
+  const [moveInDate, setMoveInDate] = useState("");
+  const [amenities, setAmenities] = useState<string[]>([]);
 
-      try {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('first_name, full_name, phone')
-          .eq('id', user.id)
-          .single();
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-        if (profileData) {
-          setName(profileData.full_name || profileData.first_name || '');
-          setPhone(profileData.phone || '');
-          setEmail(user.email || '');
-        }
-      } catch (err) {
-        console.error('Error fetching user data:', err);
-      }
-    };
-
-    if (!authLoading && user) {
-      fetchUserData();
-    }
-  }, [user, authLoading]);
-
-  const toggleAmenity = (amenity: string) => {
-    setSelectedAmenities((prev) =>
+  const handleAmenityToggle = (amenity: string) => {
+    setAmenities((prev) =>
       prev.includes(amenity) ? prev.filter((a) => a !== amenity) : [...prev, amenity]
     );
+  };
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!name.trim()) newErrors.name = "Name is required";
+    if (!phone.trim()) newErrors.phone = "Phone is required";
+    if (!email.trim()) newErrors.email = "Email is required";
+    if (!area.trim()) newErrors.area = "Area is required";
+    if (!budgetMin) newErrors.budgetMin = "Minimum budget is required";
+    if (!budgetMax) newErrors.budgetMax = "Maximum budget is required";
+    if (!propertyType) newErrors.propertyType = "Property type is required";
+    if (!moveInDate) newErrors.moveInDate = "Move-in date is required";
+
+    const minBudget = parseInt(budgetMin);
+    const maxBudget = parseInt(budgetMax);
+    if (minBudget > maxBudget) {
+      newErrors.budgetMin = "Minimum budget must be less than maximum budget";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!name.trim()) {
-      toast.error('Name is required');
-      return;
-    }
-
-    if (!phone.trim()) {
-      toast.error('Phone is required');
-      return;
-    }
-
-    if (!email.trim()) {
-      toast.error('Email is required');
-      return;
-    }
-
-    if (!area.trim()) {
-      toast.error('Area is required');
-      return;
-    }
-
-    if (!budgetMin || !budgetMax) {
-      toast.error('Budget range is required');
-      return;
-    }
-
-    if (parseInt(budgetMin) > parseInt(budgetMax)) {
-      toast.error('Minimum budget cannot be greater than maximum budget');
-      return;
-    }
+    if (!validateForm()) return;
 
     setLoading(true);
     try {
-      const { error } = await supabase.from('house_hunting_requests').insert([
-        {
-          user_id: user?.id,
-          name,
-          phone,
-          email,
-          area,
-          budget_min: parseInt(budgetMin),
-          budget_max: parseInt(budgetMax),
-          property_type: propertyType,
-          move_in_date: moveInDate || null,
-          amenities: selectedAmenities.length > 0 ? selectedAmenities : null,
-          status: 'pending',
-        },
-      ]);
+      const { error } = await supabase.from("house_hunting_requests").insert({
+        name,
+        phone,
+        email,
+        area,
+        budget_min: parseInt(budgetMin),
+        budget_max: parseInt(budgetMax),
+        property_type: propertyType,
+        move_in_date: moveInDate,
+        amenities: amenities,
+        user_id: user?.id || null,
+      });
 
       if (error) {
-        toast.error('Failed to submit request');
+        toast.error(error.message || "Failed to submit request");
       } else {
-        toast.success('House hunting request submitted! Our team will contact you soon.');
-        navigate('/dashboard');
+        toast.success("Request submitted! Our team will contact you soon.");
+        navigate("/dashboard");
       }
     } catch (err) {
-      toast.error('An error occurred');
+      toast.error("An unexpected error occurred");
     } finally {
       setLoading(false);
     }
   };
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <Loader className="w-8 h-8 animate-spin text-blue-500" />
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Header */}
-      <header className="border-b border-slate-700 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-40">
-        <div className="container-app h-16 flex items-center">
-          <h1 className="text-2xl font-bold text-white">KejaHub - House Hunting</h1>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 py-8">
+      <div className="container-app max-w-2xl">
+        <Card>
+          <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-t-lg">
+            <CardTitle>House Hunting Concierge Service</CardTitle>
+            <CardDescription className="text-green-100">
+              Tell us what you're looking for, and our team will help you find the perfect home
+            </CardDescription>
+          </CardHeader>
 
-      {/* Main Content */}
-      <main className="container-app py-12">
-        <div className="max-w-2xl mx-auto">
-          <Card className="border-slate-700 bg-slate-800">
-            <CardHeader className="space-y-2">
-              <CardTitle className="text-3xl">Find Your Dream Home</CardTitle>
-              <CardDescription>
-                Fill out this form and our concierge team will help you find the perfect property
-              </CardDescription>
-            </CardHeader>
+          <CardContent className="pt-8">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Name */}
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name *</Label>
+                <Input
+                  id="name"
+                  placeholder="John Doe"
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    if (errors.name) setErrors({ ...errors, name: undefined });
+                  }}
+                  className={errors.name ? "border-red-500" : ""}
+                />
+                {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
+              </div>
 
-            <form onSubmit={handleSubmit}>
-              <CardContent className="space-y-6">
-                {/* Personal Information */}
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Personal Information</h3>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Full Name</Label>
-                        <Input
-                          id="name"
-                          type="text"
-                          placeholder="John Doe"
-                          value={name}
-                          onChange={(e) => setName(e.target.value)}
-                          className="border-slate-600 bg-slate-700 text-white placeholder:text-slate-400"
-                          disabled={loading}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Phone</Label>
-                        <Input
-                          id="phone"
-                          type="tel"
-                          placeholder="+254..."
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                          className="border-slate-600 bg-slate-700 text-white placeholder:text-slate-400"
-                          disabled={loading}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="you@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="border-slate-600 bg-slate-700 text-white placeholder:text-slate-400"
-                        disabled={loading}
-                      />
-                    </div>
-                  </div>
+              {/* Contact Info Row */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone *</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="+254 712 345 678"
+                    value={phone}
+                    onChange={(e) => {
+                      setPhone(e.target.value);
+                      if (errors.phone) setErrors({ ...errors, phone: undefined });
+                    }}
+                    className={errors.phone ? "border-red-500" : ""}
+                  />
+                  {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
                 </div>
 
-                {/* Property Preferences */}
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Property Preferences</h3>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="area">Area/Location</Label>
-                      <Input
-                        id="area"
-                        type="text"
-                        placeholder="e.g., Westlands, Kilimani, Upper Hill"
-                        value={area}
-                        onChange={(e) => setArea(e.target.value)}
-                        className="border-slate-600 bg-slate-700 text-white placeholder:text-slate-400"
-                        disabled={loading}
-                      />
-                    </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (errors.email) setErrors({ ...errors, email: undefined });
+                    }}
+                    className={errors.email ? "border-red-500" : ""}
+                  />
+                  {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
+                </div>
+              </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="budgetMin">Minimum Budget (KES)</Label>
-                        <Input
-                          id="budgetMin"
-                          type="number"
-                          placeholder="10000"
-                          value={budgetMin}
-                          onChange={(e) => setBudgetMin(e.target.value)}
-                          className="border-slate-600 bg-slate-700 text-white placeholder:text-slate-400"
-                          disabled={loading}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="budgetMax">Maximum Budget (KES)</Label>
-                        <Input
-                          id="budgetMax"
-                          type="number"
-                          placeholder="100000"
-                          value={budgetMax}
-                          onChange={(e) => setBudgetMax(e.target.value)}
-                          className="border-slate-600 bg-slate-700 text-white placeholder:text-slate-400"
-                          disabled={loading}
-                        />
-                      </div>
-                    </div>
+              {/* Area */}
+              <div className="space-y-2">
+                <Label htmlFor="area">Preferred Area/Location *</Label>
+                <Input
+                  id="area"
+                  placeholder="e.g., Westlands, Kilimani, Upper Hill"
+                  value={area}
+                  onChange={(e) => {
+                    setArea(e.target.value);
+                    if (errors.area) setErrors({ ...errors, area: undefined });
+                  }}
+                  className={errors.area ? "border-red-500" : ""}
+                />
+                {errors.area && <p className="text-sm text-red-500">{errors.area}</p>}
+              </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="propertyType">Property Type</Label>
-                      <Select value={propertyType} onValueChange={setPropertyType} disabled={loading}>
-                        <SelectTrigger className="border-slate-600 bg-slate-700 text-white">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-slate-700 border-slate-600">
-                          {propertyTypes.map((type) => (
-                            <SelectItem key={type} value={type}>
-                              {type}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="moveInDate">Move-in Date</Label>
-                      <Input
-                        id="moveInDate"
-                        type="date"
-                        value={moveInDate}
-                        onChange={(e) => setMoveInDate(e.target.value)}
-                        className="border-slate-600 bg-slate-700 text-white"
-                        disabled={loading}
-                      />
-                    </div>
-                  </div>
+              {/* Budget Row */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="budgetMin">Budget Min (KES) *</Label>
+                  <Input
+                    id="budgetMin"
+                    type="number"
+                    placeholder="50000"
+                    value={budgetMin}
+                    onChange={(e) => {
+                      setBudgetMin(e.target.value);
+                      if (errors.budgetMin) setErrors({ ...errors, budgetMin: undefined });
+                    }}
+                    className={errors.budgetMin ? "border-red-500" : ""}
+                  />
+                  {errors.budgetMin && <p className="text-sm text-red-500">{errors.budgetMin}</p>}
                 </div>
 
-                {/* Amenities */}
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Desired Amenities</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {amenities.map((amenity) => (
-                      <div key={amenity} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={amenity}
-                          checked={selectedAmenities.includes(amenity)}
-                          onCheckedChange={() => toggleAmenity(amenity)}
-                          disabled={loading}
-                        />
-                        <Label htmlFor={amenity} className="cursor-pointer text-slate-300">
-                          {amenity}
-                        </Label>
-                      </div>
+                <div className="space-y-2">
+                  <Label htmlFor="budgetMax">Budget Max (KES) *</Label>
+                  <Input
+                    id="budgetMax"
+                    type="number"
+                    placeholder="150000"
+                    value={budgetMax}
+                    onChange={(e) => {
+                      setBudgetMax(e.target.value);
+                      if (errors.budgetMax) setErrors({ ...errors, budgetMax: undefined });
+                    }}
+                    className={errors.budgetMax ? "border-red-500" : ""}
+                  />
+                  {errors.budgetMax && <p className="text-sm text-red-500">{errors.budgetMax}</p>}
+                </div>
+              </div>
+
+              {/* Property Type */}
+              <div className="space-y-2">
+                <Label htmlFor="propertyType">Property Type *</Label>
+                <Select value={propertyType} onValueChange={(value) => {
+                  setPropertyType(value);
+                  if (errors.propertyType) setErrors({ ...errors, propertyType: undefined });
+                }}>
+                  <SelectTrigger id="propertyType" className={errors.propertyType ? "border-red-500" : ""}>
+                    <SelectValue placeholder="Select property type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PROPERTY_TYPES.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
                     ))}
-                  </div>
-                </div>
-              </CardContent>
+                  </SelectContent>
+                </Select>
+                {errors.propertyType && <p className="text-sm text-red-500">{errors.propertyType}</p>}
+              </div>
 
-              <CardFooter className="flex gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1 border-slate-600 text-white hover:bg-slate-700"
-                  onClick={() => navigate('/dashboard')}
-                  disabled={loading}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader className="w-4 h-4 mr-2 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    'Submit Request'
-                  )}
-                </Button>
-              </CardFooter>
+              {/* Move-in Date */}
+              <div className="space-y-2">
+                <Label htmlFor="moveInDate">Move-in Date *</Label>
+                <Input
+                  id="moveInDate"
+                  type="date"
+                  value={moveInDate}
+                  onChange={(e) => {
+                    setMoveInDate(e.target.value);
+                    if (errors.moveInDate) setErrors({ ...errors, moveInDate: undefined });
+                  }}
+                  className={errors.moveInDate ? "border-red-500" : ""}
+                />
+                {errors.moveInDate && <p className="text-sm text-red-500">{errors.moveInDate}</p>}
+              </div>
+
+              {/* Amenities */}
+              <div className="space-y-4">
+                <Label>Preferred Amenities</Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {AMENITIES.map((amenity) => (
+                    <div key={amenity} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={amenity}
+                        checked={amenities.includes(amenity)}
+                        onCheckedChange={() => handleAmenityToggle(amenity)}
+                      />
+                      <label
+                        htmlFor={amenity}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        {amenity}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <Button type="submit" disabled={loading} className="w-full bg-green-600 hover:bg-green-700 text-white">
+                {loading ? "Submitting..." : "Submit Request"}
+              </Button>
+
+              <p className="text-sm text-gray-600 text-center">
+                Our concierge team will review your request and contact you within 24 hours.
+              </p>
             </form>
-          </Card>
-        </div>
-      </main>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

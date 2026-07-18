@@ -1,220 +1,203 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Loader, MapPin, Bed, Bath, Home } from 'lucide-react';
-import { toast } from 'sonner';
-import { useAuth } from '@/hooks/use-auth';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { MapPin, Bed, Bath, Home, Search } from "lucide-react";
 
 interface Property {
   id: string;
   title: string;
-  description: string;
-  location: string;
+  description?: string;
   price: number;
-  bedrooms: number;
-  bathrooms: number;
-  property_type: string;
-  image_url: string;
+  location: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  property_type?: string;
 }
 
-export const RentalsPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
-
+export const RentalsPage = () => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    fetchProperties();
+    loadProperties();
   }, []);
 
+  // Filter properties when search term changes
   useEffect(() => {
-    const filtered = properties.filter((prop) => {
-      const query = searchQuery.toLowerCase();
-      return (
-        prop.title.toLowerCase().includes(query) ||
-        prop.location.toLowerCase().includes(query) ||
-        prop.description.toLowerCase().includes(query)
+    if (!searchTerm.trim()) {
+      setFilteredProperties(properties);
+    } else {
+      const term = searchTerm.toLowerCase();
+      const filtered = properties.filter(
+        (prop) =>
+          prop.title.toLowerCase().includes(term) ||
+          prop.location.toLowerCase().includes(term) ||
+          prop.description?.toLowerCase().includes(term)
       );
-    });
-    setFilteredProperties(filtered);
-  }, [searchQuery, properties]);
+      setFilteredProperties(filtered);
+    }
+  }, [searchTerm, properties]);
 
-  const fetchProperties = async () => {
+  const loadProperties = async () => {
     setLoading(true);
     try {
-      const { data } = await supabase
-        .from('properties')
-        .select('*')
-        .neq('property_type', 'airbnb')
-        .limit(50);
+      const { data, error } = await supabase
+        .from("properties")
+        .select("id, title, description, price, location, bedrooms, bathrooms, property_type")
+        .neq("property_type", "airbnb")
+        .order("created_at", { ascending: false });
 
-      setProperties(data || []);
-      setFilteredProperties(data || []);
+      if (error) {
+        toast.error("Failed to load properties");
+      } else {
+        setProperties(data as Property[]);
+        setFilteredProperties(data as Property[]);
+      }
     } catch (err) {
-      console.error('Error fetching properties:', err);
-      toast.error('Failed to load properties');
+      toast.error("An unexpected error occurred");
     } finally {
       setLoading(false);
     }
   };
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number): string => {
     return `KES ${price.toLocaleString()}`;
   };
 
-  if (authLoading || loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <Loader className="w-8 h-8 animate-spin text-blue-500" />
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Header */}
-      <header className="border-b border-slate-700 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-40">
-        <div className="container-app h-16 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-white">KejaHub - Rentals</h1>
-          <Button
-            variant="outline"
-            className="border-slate-600 text-white hover:bg-slate-700"
-            onClick={() => navigate('/dashboard')}
-          >
-            Back to Dashboard
-          </Button>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="container-app">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Rental Properties</h1>
+          <p className="text-gray-600 mb-6">Find apartments, houses, and more to rent across Kenya</p>
 
-      {/* Main Content */}
-      <main className="container-app py-12">
-        {/* Search Section */}
-        <div className="mb-12">
-          <div className="relative">
+          {/* Search Bar */}
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
             <Input
               type="text"
-              placeholder="Search by title, location, or description..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full border-slate-600 bg-slate-800 text-white placeholder:text-slate-400 py-6 px-4 text-base"
+              placeholder="Search by title or location..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
             />
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </span>
           </div>
-          <p className="mt-2 text-slate-400 text-sm">
-            Showing {filteredProperties.length} of {properties.length} properties
-          </p>
         </div>
 
-        {/* Properties Grid */}
-        {filteredProperties.length === 0 ? (
-          <div className="text-center py-12">
-            <Home className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-white mb-2">
-              {searchQuery ? 'No properties found' : 'No properties available'}
-            </h2>
-            <p className="text-slate-400 mb-6">
-              {searchQuery
-                ? `We couldn't find any properties matching "${searchQuery}". Try a different search.`
-                : 'Check back soon for available listings'}
-            </p>
-            {searchQuery && (
-              <Button
-                variant="outline"
-                className="border-slate-600 text-white hover:bg-slate-700"
-                onClick={() => setSearchQuery('')}
-              >
-                Clear Search
-              </Button>
-            )}
+        {/* Loading State */}
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              <p className="mt-4 text-gray-600">Loading properties...</p>
+            </div>
           </div>
+        ) : filteredProperties.length === 0 ? (
+          /* Empty State */
+          <Card className="text-center py-12">
+            <CardContent>
+              {searchTerm ? (
+                <>
+                  <p className="text-gray-600 mb-2">No properties found matching "{searchTerm}"</p>
+                  <Button variant="outline" onClick={() => setSearchTerm("")}>
+                    Clear Search
+                  </Button>
+                </>
+              ) : (
+                <p className="text-gray-600">No rental properties available at the moment</p>
+              )}
+            </CardContent>
+          </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProperties.map((property) => (
-              <Card
-                key={property.id}
-                className="border-slate-700 bg-slate-800 overflow-hidden hover:border-slate-600 transition-colors cursor-pointer hover:shadow-lg hover:shadow-blue-500/10"
-              >
-                {property.image_url && (
-                  <div className="w-full h-48 bg-slate-700 flex items-center justify-center overflow-hidden">
-                    <img
-                      src={property.image_url}
-                      alt={property.title}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                  </div>
-                )}
+          /* Properties Grid */
+          <>
+            <div className="mb-6">
+              <p className="text-sm text-gray-600">
+                Showing {filteredProperties.length} of {properties.length} properties
+              </p>
+            </div>
 
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-lg font-semibold text-white flex-1">{property.title}</h3>
-                    <Badge className="bg-blue-600 ml-2">{property.property_type}</Badge>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-sm text-slate-400 mb-4">
-                    <MapPin className="w-4 h-4 flex-shrink-0" />
-                    <span className="truncate">{property.location}</span>
-                  </div>
-
-                  <p className="text-slate-400 text-sm mb-4 line-clamp-2">{property.description}</p>
-
-                  {/* Property Features */}
-                  <div className="flex gap-4 mb-4 py-3 border-y border-slate-700">
-                    <div className="flex items-center gap-2 text-slate-300 text-sm">
-                      <Bed className="w-4 h-4" />
-                      <span>{property.bedrooms || 'N/A'} bed{(property.bedrooms || 0) > 1 ? 's' : ''}</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredProperties.map((property) => (
+                <Card key={property.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                  {/* Header with Property Type Badge */}
+                  <CardHeader className="pb-4">
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="flex-1">
+                        <CardTitle className="line-clamp-2 text-lg">{property.title}</CardTitle>
+                        <CardDescription className="line-clamp-2 mt-1">
+                          {property.description || "No description available"}
+                        </CardDescription>
+                      </div>
+                      {property.property_type && (
+                        <Badge variant="outline" className="flex-shrink-0">
+                          {property.property_type}
+                        </Badge>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2 text-slate-300 text-sm">
-                      <Bath className="w-4 h-4" />
-                      <span>{property.bathrooms || 'N/A'} bath{(property.bathrooms || 0) > 1 ? 's' : ''}</span>
-                    </div>
-                  </div>
+                  </CardHeader>
 
-                  {/* Price */}
-                  <div className="flex items-baseline justify-between">
-                    <div>
-                      <span className="text-2xl font-bold text-white">{formatPrice(property.price)}</span>
-                      <span className="text-slate-400 text-sm ml-1">/month</span>
+                  <CardContent className="space-y-4">
+                    {/* Location */}
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <MapPin className="w-4 h-4 flex-shrink-0" />
+                      <span className="text-sm">{property.location}</span>
                     </div>
-                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+
+                    {/* Bedrooms and Bathrooms */}
+                    <div className="flex gap-4">
+                      {property.bedrooms !== null && property.bedrooms !== undefined && (
+                        <div className="flex items-center gap-2">
+                          <Bed className="w-4 h-4 text-blue-600" />
+                          <span className="text-sm">
+                            {property.bedrooms} Bedroom{property.bedrooms !== 1 ? "s" : ""}
+                          </span>
+                        </div>
+                      )}
+                      {property.bathrooms !== null && property.bathrooms !== undefined && (
+                        <div className="flex items-center gap-2">
+                          <Bath className="w-4 h-4 text-blue-600" />
+                          <span className="text-sm">
+                            {property.bathrooms} Bathroom{property.bathrooms !== 1 ? "s" : ""}
+                          </span>
+                        </div>
+                      )}
+                      {(!property.bedrooms && !property.bathrooms) && (
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Home className="w-4 h-4" />
+                          <span className="text-sm">Property details available upon inquiry</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Price */}
+                    <div className="pt-4 border-t">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-2xl font-bold text-blue-600">
+                          {formatPrice(property.price)}
+                        </span>
+                        <span className="text-sm text-gray-600">/ month</span>
+                      </div>
+                    </div>
+
+                    {/* Action Button */}
+                    <Button className="w-full mt-2 bg-blue-600 hover:bg-blue-700">
                       View Details
                     </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </>
         )}
-
-        {/* Load More */}
-        {filteredProperties.length > 0 && filteredProperties.length < properties.length && (
-          <div className="text-center mt-12">
-            <Button
-              variant="outline"
-              className="border-slate-600 text-white hover:bg-slate-700"
-              onClick={() => {
-                // In a real app, this would load more properties
-                toast.info('More properties coming soon');
-              }}
-            >
-              Load More Properties
-            </Button>
-          </div>
-        )}
-      </main>
+      </div>
     </div>
   );
 };
