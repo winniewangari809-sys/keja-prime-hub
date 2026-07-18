@@ -52,6 +52,7 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
@@ -64,23 +65,17 @@
   padding-left: 1rem;
   padding-right: 1rem;
 }
-
 @media (min-width: 768px) {
   .container-app { padding-left: 2rem; padding-right: 2rem; }
 }
 
-.gradient-primary {
-  background: linear-gradient(135deg, var(--color-primary), oklch(0.45 0.15 220));
-}
-
+.gradient-primary { background: linear-gradient(135deg, var(--color-primary), oklch(0.45 0.15 220)); }
 .hover-lift { transition: transform 0.2s ease, box-shadow 0.2s ease; }
 .hover-lift:hover { transform: translateY(-2px); }
-
 .shadow-soft { box-shadow: 0 2px 8px oklch(0 0 0 / 0.08); }
 .shadow-elegant { box-shadow: 0 4px 24px oklch(0 0 0 / 0.12); }
 
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
 .animate-fade-in { animation: fade-in 0.2s ease-out; }
 .animate-fade-up { animation: fade-up 0.3s ease-out; }

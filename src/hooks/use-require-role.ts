@@ -1,25 +1,15 @@
 import { useEffect } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "react-router-dom";
 import { useAuth, type AppRole } from "./use-auth";
 
-interface RequireRoleResult {
-  loading: boolean;
-  user: ReturnType<typeof useAuth>["user"];
-  role: AppRole | null;
-  firstName: string | null;
-}
-
-export function useRequireRole(roles: AppRole[]): RequireRoleResult {
+export function useRequireRole(roles: AppRole[]) {
   const navigate = useNavigate();
   const { user, role, firstName, loading } = useAuth();
 
   useEffect(() => {
     if (!loading) {
-      if (!user) {
-        navigate({ to: "/login" });
-      } else if (!roles.includes(role as AppRole)) {
-        navigate({ to: "/" });
-      }
+      if (!user) navigate("/login");
+      else if (!roles.includes(role as AppRole)) navigate("/");
     }
   }, [loading, user, role, roles, navigate]);
 
