@@ -1,136 +1,97 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
-import { LogOut } from 'lucide-react';
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/use-auth';
+} from "@/components/ui/dialog";
+import { LogOut } from "lucide-react";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const { user, firstName, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const [loading, setLoading] = useState(false);
 
-  // Profile tab state
-  const [profileData, setProfileData] = useState({
-    firstName: '',
-    fullName: '',
-    phone: '',
-    avatarUrl: '',
-  });
+  // Profile tab
+  const [firstName, setFirstName] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
 
-  // Security tab state
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  // Security tab
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
-  // Notification tab state
-  const [emailNotifications, setEmailNotifications] = useState(() => {
-    const stored = localStorage.getItem('emailNotifications');
-    return stored !== null ? JSON.parse(stored) : true;
-  });
-  const [pushNotifications, setPushNotifications] = useState(() => {
-    const stored = localStorage.getItem('pushNotifications');
-    return stored !== null ? JSON.parse(stored) : true;
-  });
+  // Notifications
+  const [emailNotifications, setEmailNotifications] = useState(
+    JSON.parse(localStorage.getItem("emailNotifications") || "true")
+  );
+  const [pushNotifications, setPushNotifications] = useState(
+    JSON.parse(localStorage.getItem("pushNotifications") || "true")
+  );
 
-  // Privacy tab state
-  const [profileVisible, setProfileVisible] = useState(() => {
-    const stored = localStorage.getItem('profileVisible');
-    return stored !== null ? JSON.parse(stored) : true;
-  });
-  const [showContactInfo, setShowContactInfo] = useState(() => {
-    const stored = localStorage.getItem('showContactInfo');
-    return stored !== null ? JSON.parse(stored) : false;
-  });
+  // Privacy
+  const [profileVisible, setProfileVisible] = useState(
+    JSON.parse(localStorage.getItem("profileVisible") || "true")
+  );
+  const [showContactInfo, setShowContactInfo] = useState(
+    JSON.parse(localStorage.getItem("showContactInfo") || "true")
+  );
 
   useEffect(() => {
-    const fetchProfileData = async () => {
-      if (!user) return;
-
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (error) {
-          console.error('Error fetching profile:', error);
-          return;
-        }
-
-        if (data) {
-          setProfileData({
-            firstName: data.first_name || '',
-            fullName: data.full_name || '',
-            phone: data.phone || '',
-            avatarUrl: data.avatar_url || '',
-          });
-        }
-      } catch (err) {
-        console.error('Error:', err);
-      }
-    };
-
-    fetchProfileData();
+    if (user) {
+      fetchProfile();
+    }
   }, [user]);
 
-  // Handle notification preferences change
-  useEffect(() => {
-    localStorage.setItem('emailNotifications', JSON.stringify(emailNotifications));
-  }, [emailNotifications]);
-
-  useEffect(() => {
-    localStorage.setItem('pushNotifications', JSON.stringify(pushNotifications));
-  }, [pushNotifications]);
-
-  // Handle privacy preferences change
-  useEffect(() => {
-    localStorage.setItem('profileVisible', JSON.stringify(profileVisible));
-  }, [profileVisible]);
-
-  useEffect(() => {
-    localStorage.setItem('showContactInfo', JSON.stringify(showContactInfo));
-  }, [showContactInfo]);
+  const fetchProfile = async () => {
+    if (!user) return;
+    try {
+      const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+      if (data) {
+        setFirstName(data.first_name || "");
+        setFullName(data.full_name || "");
+        setPhone(data.phone || "");
+        setAvatarUrl(data.avatar_url || "");
+      }
+    } catch (err) {
+      console.error("Error fetching profile:", err);
+    }
+  };
 
   const handleSaveProfile = async () => {
     if (!user) return;
-
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          first_name: profileData.firstName,
-          full_name: profileData.fullName,
-          phone: profileData.phone,
-          avatar_url: profileData.avatarUrl,
-        });
+      const { error } = await supabase.from("profiles").upsert({
+        id: user.id,
+        first_name: firstName,
+        full_name: fullName,
+        phone,
+        avatar_url: avatarUrl,
+      });
 
       if (error) {
-        toast.error('Failed to update profile');
-        return;
+        toast.error("Failed to update profile");
+      } else {
+        toast.success("Profile updated successfully");
       }
-
-      toast.success('Profile updated successfully');
     } catch (err) {
-      toast.error('An error occurred');
+      toast.error("An error occurred");
     } finally {
       setLoading(false);
     }
@@ -138,17 +99,12 @@ export default function SettingsPage() {
 
   const handleChangePassword = async () => {
     if (!newPassword || !confirmPassword) {
-      toast.error('Please fill in all password fields');
+      toast.error("Please fill in both password fields");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      toast.error('Password must be at least 8 characters');
+      toast.error("Passwords do not match");
       return;
     }
 
@@ -159,325 +115,287 @@ export default function SettingsPage() {
       });
 
       if (error) {
-        toast.error(error.message || 'Failed to change password');
-        return;
+        toast.error("Failed to change password");
+      } else {
+        toast.success("Password changed successfully");
+        setNewPassword("");
+        setConfirmPassword("");
       }
-
-      toast.success('Password changed successfully');
-      setNewPassword('');
-      setConfirmPassword('');
     } catch (err) {
-      toast.error('An error occurred');
+      toast.error("An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleEmailNotifications = (checked: boolean) => {
+    setEmailNotifications(checked);
+    localStorage.setItem("emailNotifications", JSON.stringify(checked));
+  };
+
+  const handleTogglePushNotifications = (checked: boolean) => {
+    setPushNotifications(checked);
+    localStorage.setItem("pushNotifications", JSON.stringify(checked));
+  };
+
+  const handleToggleProfileVisible = (checked: boolean) => {
+    setProfileVisible(checked);
+    localStorage.setItem("profileVisible", JSON.stringify(checked));
+  };
+
+  const handleToggleShowContactInfo = (checked: boolean) => {
+    setShowContactInfo(checked);
+    localStorage.setItem("showContactInfo", JSON.stringify(checked));
+  };
+
+  const handlePauseAccount = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ paused: true })
+        .eq("id", user.id);
+
+      if (error) {
+        toast.error("Failed to pause account");
+      } else {
+        toast.success("Account paused");
+        navigate("/");
+      }
+    } catch (err) {
+      toast.error("An error occurred");
     } finally {
       setLoading(false);
     }
   };
 
   const handleLogout = async () => {
-    try {
-      await signOut();
-      toast.success('Logged out successfully');
-      navigate('/');
-    } catch (err) {
-      toast.error('Failed to logout');
-    }
-  };
-
-  const handlePauseAccount = async () => {
-    if (!user) return;
-
-    setLoading(true);
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ paused: true })
-        .eq('id', user.id);
-
-      if (error) {
-        toast.error('Failed to pause account');
-        return;
-      }
-
-      toast.success('Account paused successfully');
-      await handleLogout();
-    } catch (err) {
-      toast.error('An error occurred');
-    } finally {
-      setLoading(false);
-    }
+    await signOut();
+    navigate("/");
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200">
-        <div className="container-app">
-          <div className="flex items-center justify-between py-6">
-            <h1 className="text-3xl font-bold text-slate-900">Settings</h1>
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              size="sm"
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       <div className="container-app py-8">
-        <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="security">Security</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            <TabsTrigger value="privacy">Privacy</TabsTrigger>
-            <TabsTrigger value="account">Account</TabsTrigger>
-          </TabsList>
+        <div className="flex justify-between items-start mb-8">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Settings</h1>
+            <p className="text-gray-600">Manage your account settings and preferences</p>
+          </div>
+          <Button onClick={handleLogout} variant="destructive" size="sm">
+            <LogOut className="w-4 h-4 mr-2" />
+            Logout
+          </Button>
+        </div>
 
-          {/* Profile Tab */}
-          <TabsContent value="profile" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Profile Information</CardTitle>
-                <CardDescription>Update your personal details</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input
-                      id="firstName"
-                      value={profileData.firstName}
-                      onChange={(e) =>
-                        setProfileData({ ...profileData, firstName: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="fullName">Full Name</Label>
-                    <Input
-                      id="fullName"
-                      value={profileData.fullName}
-                      onChange={(e) =>
-                        setProfileData({ ...profileData, fullName: e.target.value })
-                      }
-                    />
-                  </div>
+        <Card>
+          <CardContent className="p-0">
+            <Tabs defaultValue="profile" className="w-full">
+              <TabsList className="w-full justify-start border-b rounded-none bg-transparent p-4">
+                <TabsTrigger value="profile">Profile</TabsTrigger>
+                <TabsTrigger value="security">Security</TabsTrigger>
+                <TabsTrigger value="notifications">Notifications</TabsTrigger>
+                <TabsTrigger value="privacy">Privacy</TabsTrigger>
+                <TabsTrigger value="account">Account</TabsTrigger>
+              </TabsList>
+
+              {/* Profile Tab */}
+              <TabsContent value="profile" className="p-6 space-y-4">
+                <div>
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    id="firstName"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    disabled={loading}
+                    placeholder="John"
+                  />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
+                <div>
+                  <Label htmlFor="fullName">Full Name</Label>
+                  <Input
+                    id="fullName"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    disabled={loading}
+                    placeholder="John Doe"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="phone">Phone Number</Label>
                   <Input
                     id="phone"
-                    type="tel"
-                    value={profileData.phone}
-                    onChange={(e) =>
-                      setProfileData({ ...profileData, phone: e.target.value })
-                    }
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    disabled={loading}
+                    placeholder="+254 700 000000"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="avatar">Avatar URL</Label>
+                <div>
+                  <Label htmlFor="avatarUrl">Avatar URL</Label>
                   <Input
-                    id="avatar"
-                    type="url"
-                    value={profileData.avatarUrl}
-                    onChange={(e) =>
-                      setProfileData({ ...profileData, avatarUrl: e.target.value })
-                    }
+                    id="avatarUrl"
+                    value={avatarUrl}
+                    onChange={(e) => setAvatarUrl(e.target.value)}
+                    disabled={loading}
+                    placeholder="https://example.com/avatar.jpg"
                   />
                 </div>
 
-                <Button onClick={handleSaveProfile} disabled={loading}>
-                  {loading ? 'Saving...' : 'Save Changes'}
+                <Button onClick={handleSaveProfile} disabled={loading} className="mt-4">
+                  {loading ? "Saving..." : "Save Changes"}
                 </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </TabsContent>
 
-          {/* Security Tab */}
-          <TabsContent value="security" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Change Password</CardTitle>
-                <CardDescription>Update your account password</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
+              {/* Security Tab */}
+              <TabsContent value="security" className="p-6 space-y-4">
+                <div>
                   <Label htmlFor="newPassword">New Password</Label>
                   <Input
                     id="newPassword"
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
+                    disabled={loading}
+                    placeholder="••••••••"
                   />
                 </div>
 
-                <div className="space-y-2">
+                <div>
                   <Label htmlFor="confirmPassword">Confirm Password</Label>
                   <Input
                     id="confirmPassword"
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
+                    disabled={loading}
+                    placeholder="••••••••"
                   />
                 </div>
 
-                <Button onClick={handleChangePassword} disabled={loading}>
-                  {loading ? 'Updating...' : 'Update Password'}
+                <Button onClick={handleChangePassword} disabled={loading} className="mt-4">
+                  {loading ? "Changing..." : "Change Password"}
                 </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </TabsContent>
 
-          {/* Notifications Tab */}
-          <TabsContent value="notifications" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Notification Preferences</CardTitle>
-                <CardDescription>Manage how you receive notifications</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
+              {/* Notifications Tab */}
+              <TabsContent value="notifications" className="p-6 space-y-4">
+                <div className="flex items-center justify-between py-4 border-b">
                   <div>
-                    <Label htmlFor="emailNotifications">Email Notifications</Label>
-                    <p className="text-sm text-slate-600 mt-1">
-                      Receive email updates about your properties and inquiries
-                    </p>
+                    <h3 className="font-medium">Email Notifications</h3>
+                    <p className="text-sm text-gray-600">Receive updates via email</p>
                   </div>
                   <Switch
-                    id="emailNotifications"
                     checked={emailNotifications}
-                    onCheckedChange={setEmailNotifications}
+                    onCheckedChange={handleToggleEmailNotifications}
+                    disabled={loading}
                   />
                 </div>
 
-                <Separator />
-
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between py-4">
                   <div>
-                    <Label htmlFor="pushNotifications">Push Notifications</Label>
-                    <p className="text-sm text-slate-600 mt-1">
-                      Receive push notifications on your device
-                    </p>
+                    <h3 className="font-medium">Push Notifications</h3>
+                    <p className="text-sm text-gray-600">Receive push notifications</p>
                   </div>
                   <Switch
-                    id="pushNotifications"
                     checked={pushNotifications}
-                    onCheckedChange={setPushNotifications}
+                    onCheckedChange={handleTogglePushNotifications}
+                    disabled={loading}
                   />
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </TabsContent>
 
-          {/* Privacy Tab */}
-          <TabsContent value="privacy" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Privacy Settings</CardTitle>
-                <CardDescription>Control who can see your information</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
+              {/* Privacy Tab */}
+              <TabsContent value="privacy" className="p-6 space-y-4">
+                <div className="flex items-center justify-between py-4 border-b">
                   <div>
-                    <Label htmlFor="profileVisible">Profile Visibility</Label>
-                    <p className="text-sm text-slate-600 mt-1">
-                      Allow other users to see your profile
-                    </p>
+                    <h3 className="font-medium">Profile Visibility</h3>
+                    <p className="text-sm text-gray-600">Make your profile visible to others</p>
                   </div>
                   <Switch
-                    id="profileVisible"
                     checked={profileVisible}
-                    onCheckedChange={setProfileVisible}
+                    onCheckedChange={handleToggleProfileVisible}
+                    disabled={loading}
                   />
                 </div>
 
-                <Separator />
-
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between py-4">
                   <div>
-                    <Label htmlFor="contactInfo">Show Contact Information</Label>
-                    <p className="text-sm text-slate-600 mt-1">
-                      Display your phone number and email to interested buyers
-                    </p>
+                    <h3 className="font-medium">Show Contact Information</h3>
+                    <p className="text-sm text-gray-600">Display your contact details publicly</p>
                   </div>
                   <Switch
-                    id="contactInfo"
                     checked={showContactInfo}
-                    onCheckedChange={setShowContactInfo}
+                    onCheckedChange={handleToggleShowContactInfo}
+                    disabled={loading}
                   />
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </TabsContent>
 
-          {/* Account Tab */}
-          <TabsContent value="account" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Account Management</CardTitle>
-                <CardDescription>Manage your account status</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" className="w-full text-amber-600 hover:text-amber-700 hover:bg-amber-50">
-                        Pause Account
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Pause Your Account?</DialogTitle>
-                        <DialogDescription>
-                          Your account will be temporarily disabled. You can reactivate it anytime by logging in.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <DialogFooter>
-                        <Button variant="outline">Cancel</Button>
-                        <Button
-                          onClick={handlePauseAccount}
-                          disabled={loading}
-                          className="bg-amber-600 hover:bg-amber-700"
-                        >
-                          {loading ? 'Processing...' : 'Pause Account'}
+              {/* Account Tab */}
+              <TabsContent value="account" className="p-6 space-y-4">
+                <Card className="bg-yellow-50 border-yellow-200">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Account Actions</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="w-full">
+                          Pause Account
                         </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Pause Account</DialogTitle>
+                          <DialogDescription>
+                            Your account will be temporarily paused. You can reactivate it anytime.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                          <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                          </DialogClose>
+                          <Button onClick={handlePauseAccount} disabled={loading}>
+                            {loading ? "Pausing..." : "Pause Account"}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
 
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" className="w-full text-red-600 hover:text-red-700 hover:bg-red-50">
-                        Delete Account
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Delete Your Account?</DialogTitle>
-                        <DialogDescription>
-                          Account deletion is permanent and cannot be undone.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="bg-red-50 border border-red-200 rounded-md p-4 text-sm text-red-700">
-                        To delete your account, please contact our support team at support@kejahub.com with your request.
-                      </div>
-                      <DialogFooter>
-                        <Button variant="outline">Cancel</Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="destructive" size="sm" className="w-full">
+                          Delete Account
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Delete Account</DialogTitle>
+                          <DialogDescription>
+                            This action cannot be undone. Contact support to delete your account.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                          <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                          </DialogClose>
+                          <Button variant="destructive" onClick={handleLogout}>
+                            Understood
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

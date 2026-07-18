@@ -1,372 +1,335 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/use-auth';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { MapPin, TrendingUp, Landmark } from "lucide-react";
 
 const BUSINESS_TYPES = [
-  'Shop',
-  'Office',
-  'Warehouse',
-  'Salon Space',
-  'Restaurant Space',
+  "Shop",
+  "Office",
+  "Warehouse",
+  "Salon Space",
+  "Restaurant Space",
 ];
 
-const NEARBY_AMENITIES = [
-  { name: 'Schools', icon: '🏫' },
-  { name: 'Hospitals', icon: '🏥' },
-  { name: 'Banks', icon: '🏦' },
-  { name: 'Supermarkets', icon: '🛒' },
-  { name: 'Transport', icon: '🚌' },
-];
+interface FormData {
+  name: string;
+  phone: string;
+  email: string;
+  business_type: string;
+  area: string;
+  budget: string;
+  parking_needed: boolean;
+  ground_floor: boolean;
+}
 
 export default function CommercialPage() {
   const navigate = useNavigate();
-  const { user, firstName } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    name: firstName || '',
-    phone: '',
-    email: user?.email || '',
-    businessType: '',
-    area: '',
-    budget: '',
-    parkingNeeded: false,
-    groundFloor: false,
+
+  const [formData, setFormData] = useState<FormData>({
+    name: "",
+    phone: "",
+    email: "",
+    business_type: "",
+    area: "",
+    budget: "",
+    parking_needed: false,
+    ground_floor: false,
   });
 
-  const validateForm = () => {
-    if (!formData.name.trim()) {
-      toast.error('Name is required');
-      return false;
-    }
-    if (!formData.phone.trim()) {
-      toast.error('Phone is required');
-      return false;
-    }
-    if (!formData.email.trim()) {
-      toast.error('Email is required');
-      return false;
-    }
-    if (!formData.businessType) {
-      toast.error('Business type is required');
-      return false;
-    }
-    if (!formData.area.trim()) {
-      toast.error('Area is required');
-      return false;
-    }
-    if (!formData.budget) {
-      toast.error('Budget is required');
-      return false;
-    }
-    return true;
+  const [loading, setLoading] = useState(false);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleBusinessTypeChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, business_type: value }));
+  };
+
+  const handleCheckboxChange = (field: "parking_needed" | "ground_floor") => {
+    setFormData((prev) => ({ ...prev, [field]: !prev[field] }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
+
+    if (
+      !formData.name ||
+      !formData.phone ||
+      !formData.email ||
+      !formData.business_type ||
+      !formData.area ||
+      !formData.budget
+    ) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
 
     setLoading(true);
     try {
-      const { error } = await supabase.from('commercial_requests').insert({
-        requester_id: user?.id,
+      const { error } = await supabase.from("commercial_requests").insert({
         name: formData.name,
         phone: formData.phone,
         email: formData.email,
-        business_type: formData.businessType,
+        business_type: formData.business_type,
         area: formData.area,
         budget: parseInt(formData.budget),
-        parking_needed: formData.parkingNeeded,
-        ground_floor: formData.groundFloor,
+        parking_needed: formData.parking_needed,
+        ground_floor: formData.ground_floor,
       });
 
       if (error) {
-        toast.error('Failed to submit commercial request');
-        console.error(error);
-        return;
+        toast.error("Failed to submit request");
+      } else {
+        toast.success("Commercial request submitted successfully!");
+        navigate("/dashboard");
       }
-
-      toast.success('Commercial request submitted! We will contact you soon.');
-      navigate('/dashboard');
     } catch (err) {
-      toast.error('An error occurred');
-      console.error(err);
+      toast.error("An error occurred");
     } finally {
       setLoading(false);
     }
   };
 
-  const getBusinessPotentialScore = () => {
-    if (!formData.businessType || !formData.area) return null;
-    const scores: { [key: string]: string } = {
-      'Shop': 'High',
-      'Office': 'High',
-      'Warehouse': 'Medium',
-      'Salon Space': 'Medium',
-      'Restaurant Space': 'High',
-    };
-    return scores[formData.businessType] || 'Medium';
-  };
-
-  const scoreColor: { [key: string]: string } = {
-    High: 'bg-green-100 text-green-800',
-    Medium: 'bg-amber-100 text-amber-800',
-    Low: 'bg-red-100 text-red-800',
+  const getBusinessPotentialScore = (): "High" | "Medium" | "Low" => {
+    // Mock scoring based on business type
+    const highPotential = ["Shop", "Office", "Restaurant Space"];
+    return highPotential.includes(formData.business_type) ? "High" : "Medium";
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200">
-        <div className="container-app">
-          <div className="py-6">
-            <h1 className="text-3xl font-bold text-slate-900">Commercial Spaces</h1>
-            <p className="text-slate-600 mt-1">Find the perfect business location</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       <div className="container-app py-8">
+        <h1 className="text-3xl font-bold mb-2">Commercial Spaces</h1>
+        <p className="text-gray-600 mb-8">Find the perfect space for your business</p>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Form */}
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
                 <CardTitle>Commercial Space Request</CardTitle>
-                <CardDescription>
-                  Tell us about your business needs and we'll find suitable spaces
-                </CardDescription>
+                <CardDescription>Tell us about your business needs</CardDescription>
               </CardHeader>
-              <form onSubmit={handleSubmit}>
-                <CardContent className="space-y-6">
-                  {/* Name and Phone */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Business Owner Name</Label>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) =>
-                          setFormData({ ...formData, name: e.target.value })
-                        }
-                      />
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Personal Information */}
+                  <div>
+                    <h3 className="font-semibold mb-4">Business Information</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="name">Business Owner Name *</Label>
+                        <Input
+                          id="name"
+                          name="name"
+                          value={formData.name}
+                          onChange={handleInputChange}
+                          placeholder="Your name"
+                          disabled={loading}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="phone">Phone Number *</Label>
+                        <Input
+                          id="phone"
+                          name="phone"
+                          value={formData.phone}
+                          onChange={handleInputChange}
+                          placeholder="+254 700 000000"
+                          disabled={loading}
+                          required
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label htmlFor="email">Email Address *</Label>
+                        <Input
+                          id="email"
+                          name="email"
+                          type="email"
+                          value={formData.email}
+                          onChange={handleInputChange}
+                          placeholder="you@business.com"
+                          disabled={loading}
+                          required
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="+254..."
-                        value={formData.phone}
-                        onChange={(e) =>
-                          setFormData({ ...formData, phone: e.target.value })
-                        }
-                      />
+                  </div>
+
+                  <Separator />
+
+                  {/* Business Requirements */}
+                  <div>
+                    <h3 className="font-semibold mb-4">Space Requirements</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="businessType">Business Type *</Label>
+                        <Select
+                          value={formData.business_type}
+                          onValueChange={handleBusinessTypeChange}
+                          disabled={loading}
+                        >
+                          <SelectTrigger id="businessType">
+                            <SelectValue placeholder="Select business type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {BUSINESS_TYPES.map((type) => (
+                              <SelectItem key={type} value={type}>
+                                {type}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="area">Preferred Area *</Label>
+                        <Input
+                          id="area"
+                          name="area"
+                          value={formData.area}
+                          onChange={handleInputChange}
+                          placeholder="e.g., Nairobi CBD, Westlands"
+                          disabled={loading}
+                          required
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label htmlFor="budget">Monthly Budget (KES) *</Label>
+                        <Input
+                          id="budget"
+                          name="budget"
+                          type="number"
+                          value={formData.budget}
+                          onChange={handleInputChange}
+                          placeholder="0"
+                          disabled={loading}
+                          required
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  {/* Email */}
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) =>
-                        setFormData({ ...formData, email: e.target.value })
-                      }
-                    />
-                  </div>
-
-                  {/* Business Type */}
-                  <div className="space-y-2">
-                    <Label htmlFor="businessType">Business Type</Label>
-                    <Select
-                      value={formData.businessType}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, businessType: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select business type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {BUSINESS_TYPES.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Area */}
-                  <div className="space-y-2">
-                    <Label htmlFor="area">Preferred Area</Label>
-                    <Input
-                      id="area"
-                      placeholder="e.g., Nairobi CBD, Westlands, Mombasa"
-                      value={formData.area}
-                      onChange={(e) =>
-                        setFormData({ ...formData, area: e.target.value })
-                      }
-                    />
-                  </div>
-
-                  {/* Budget */}
-                  <div className="space-y-2">
-                    <Label htmlFor="budget">Monthly Budget (KES)</Label>
-                    <Input
-                      id="budget"
-                      type="number"
-                      placeholder="100000"
-                      value={formData.budget}
-                      onChange={(e) =>
-                        setFormData({ ...formData, budget: e.target.value })
-                      }
-                    />
-                  </div>
-
-                  {/* Requirements */}
-                  <div className="space-y-3">
-                    <Label>Requirements</Label>
-                    <div className="space-y-2">
+                  {/* Preferences */}
+                  <div>
+                    <h3 className="font-semibold mb-4">Preferences</h3>
+                    <div className="space-y-3">
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id="parking"
-                          checked={formData.parkingNeeded}
-                          onCheckedChange={(checked) =>
-                            setFormData({
-                              ...formData,
-                              parkingNeeded: checked as boolean,
-                            })
-                          }
+                          checked={formData.parking_needed}
+                          onCheckedChange={() => handleCheckboxChange("parking_needed")}
+                          disabled={loading}
                         />
-                        <label
+                        <Label
                           htmlFor="parking"
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          className="text-sm font-normal cursor-pointer"
                         >
-                          Parking Required
-                        </label>
+                          Parking space needed
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id="groundFloor"
-                          checked={formData.groundFloor}
-                          onCheckedChange={(checked) =>
-                            setFormData({
-                              ...formData,
-                              groundFloor: checked as boolean,
-                            })
-                          }
+                          checked={formData.ground_floor}
+                          onCheckedChange={() => handleCheckboxChange("ground_floor")}
+                          disabled={loading}
                         />
-                        <label
+                        <Label
                           htmlFor="groundFloor"
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          className="text-sm font-normal cursor-pointer"
                         >
-                          Ground Floor Only
-                        </label>
+                          Ground floor preferred
+                        </Label>
                       </div>
                     </div>
                   </div>
-                </CardContent>
 
-                {/* Footer */}
-                <div className="bg-slate-50 border-t border-slate-200 p-6 flex gap-4">
-                  <Button
-                    type="submit"
-                    disabled={loading}
-                    className="flex-1"
-                  >
-                    {loading ? 'Submitting...' : 'Submit Request'}
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? "Submitting..." : "Submit Request"}
                   </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => navigate('/dashboard')}
-                    disabled={loading}
-                    className="flex-1"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </form>
+                </form>
+              </CardContent>
             </Card>
           </div>
 
-          {/* Info Section */}
+          {/* Info Sections */}
           <div className="space-y-6">
-            {/* Business Potential Score */}
-            {getBusinessPotentialScore() && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Business Potential</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Badge className={`text-lg px-4 py-2 ${scoreColor[getBusinessPotentialScore() || 'Medium']}`}>
-                    {getBusinessPotentialScore()} Score
-                  </Badge>
-                  <p className="text-sm text-slate-600 mt-3">
-                    Based on the {formData.businessType} business type in {formData.area || 'your selected area'}, the commercial space potential is rated {getBusinessPotentialScore()?.toLowerCase()}.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Nearby Amenities */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Nearby Amenities</CardTitle>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Landmark className="w-5 h-5" />
+                  Nearby Amenities
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-sm text-slate-600 mb-4">
-                  Typical amenities you'll find in commercial areas:
-                </p>
-                <div className="space-y-3">
-                  {NEARBY_AMENITIES.map((amenity) => (
-                    <div key={amenity.name} className="flex items-center gap-3">
-                      <span className="text-2xl">{amenity.icon}</span>
-                      <span className="text-sm font-medium text-slate-700">
-                        {amenity.name}
-                      </span>
-                    </div>
-                  ))}
+              <CardContent className="space-y-3">
+                <div>
+                  <p className="font-medium text-sm">Schools</p>
+                  <p className="text-sm text-gray-600">Various schools nearby</p>
+                </div>
+                <div>
+                  <p className="font-medium text-sm">Hospitals</p>
+                  <p className="text-sm text-gray-600">Healthcare facilities</p>
+                </div>
+                <div>
+                  <p className="font-medium text-sm">Banks</p>
+                  <p className="text-sm text-gray-600">Financial institutions</p>
+                </div>
+                <div>
+                  <p className="font-medium text-sm">Supermarkets</p>
+                  <p className="text-sm text-gray-600">Retail shopping</p>
+                </div>
+                <div>
+                  <p className="font-medium text-sm">Transport</p>
+                  <p className="text-sm text-gray-600">Public transport access</p>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Tips */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Quick Tips</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <p className="font-medium text-sm text-slate-900">Location is Key</p>
-                  <p className="text-xs text-slate-600">Choose areas with high foot traffic</p>
-                </div>
-                <Separator />
-                <div>
-                  <p className="font-medium text-sm text-slate-900">Budget Wisely</p>
-                  <p className="text-xs text-slate-600">Leave room for utilities and maintenance</p>
-                </div>
-                <Separator />
-                <div>
-                  <p className="font-medium text-sm text-slate-900">Plan Ahead</p>
-                  <p className="text-xs text-slate-600">Secure your space before peak seasons</p>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Business Potential Score */}
+            {formData.business_type && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5" />
+                    Business Potential
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-gray-600">Score</p>
+                    <Badge
+                      variant={
+                        getBusinessPotentialScore() === "High"
+                          ? "default"
+                          : getBusinessPotentialScore() === "Medium"
+                            ? "outline"
+                            : "secondary"
+                      }
+                    >
+                      {getBusinessPotentialScore()}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>

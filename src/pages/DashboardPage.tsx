@@ -1,187 +1,179 @@
-import { useNavigate, Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogOut, Home, Building, Briefcase, Building2, Settings } from 'lucide-react';
-import { toast } from 'sonner';
-import { useAuth } from '@/hooks/use-auth';
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "@/hooks/use-auth";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Home, Building2, Plane, Store, LogOut, Settings, Shield } from "lucide-react";
 
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { user, role, firstName, signOut } = useAuth();
 
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-slate-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
   const handleLogout = async () => {
-    try {
-      await signOut();
-      toast.success('Logged out successfully');
-      navigate('/');
-    } catch (err) {
-      toast.error('Failed to logout');
-    }
-  };
-
-  const getRoleLabel = (role?: string) => {
-    if (!role) return 'User';
-    return role.charAt(0).toUpperCase() + role.slice(1);
+    await signOut();
+    navigate("/");
   };
 
   const renderRoleContent = () => {
-    if (!role) return null;
-
-    if (role === 'hq' || role === 'admin') {
-      return (
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-slate-800">Admin Controls</h2>
-          <Link to="/admin">
-            <Card className="cursor-pointer hover:shadow-lg hover:bg-slate-50 transition-all">
-              <CardContent className="p-6">
-                <Building className="w-12 h-12 text-blue-600 mb-4" />
-                <h3 className="text-xl font-semibold text-slate-800">HQ Command Center</h3>
-                <p className="text-slate-600 mt-2">Manage platform operations</p>
-              </CardContent>
-            </Card>
-          </Link>
-        </div>
-      );
-    }
-
-    if (role === 'buyer' || role === 'tenant') {
-      return (
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-slate-800">Find Properties</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Link to="/house-hunting">
-              <Card className="h-full cursor-pointer hover:shadow-lg hover:bg-slate-50 transition-all">
-                <CardContent className="p-6">
-                  <Home className="w-12 h-12 text-purple-600 mb-4" />
-                  <h3 className="text-xl font-semibold text-slate-800">House Hunting</h3>
-                  <p className="text-slate-600 mt-2">Let us find your dream home</p>
-                </CardContent>
-              </Card>
-            </Link>
-            <Link to="/rentals">
-              <Card className="h-full cursor-pointer hover:shadow-lg hover:bg-slate-50 transition-all">
-                <CardContent className="p-6">
-                  <Building className="w-12 h-12 text-blue-600 mb-4" />
-                  <h3 className="text-xl font-semibold text-slate-800">Rentals</h3>
-                  <p className="text-slate-600 mt-2">Browse available rentals</p>
-                </CardContent>
-              </Card>
-            </Link>
+    switch (role) {
+      case "hq":
+      case "admin":
+        return (
+          <div>
+            <h2 className="text-2xl font-bold mb-6">Admin Dashboard</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Link to="/admin">
+                <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
+                  <CardHeader>
+                    <Shield className="w-10 h-10 text-red-600 mb-2" />
+                    <CardTitle>HQ Command Center</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription>Manage platform, properties, and users</CardDescription>
+                  </CardContent>
+                </Card>
+              </Link>
+            </div>
           </div>
-        </div>
-      );
-    }
+        );
 
-    if (role === 'seller' || role === 'landlord') {
-      return (
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-slate-800">Manage Listings</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="cursor-pointer hover:shadow-lg hover:bg-slate-50 transition-all">
-              <CardContent className="p-6">
-                <Building className="w-12 h-12 text-green-600 mb-4" />
-                <h3 className="text-xl font-semibold text-slate-800">My Listings</h3>
-                <p className="text-slate-600 mt-2">Manage your properties</p>
-              </CardContent>
-            </Card>
-            <Link to="/rentals">
-              <Card className="h-full cursor-pointer hover:shadow-lg hover:bg-slate-50 transition-all">
-                <CardContent className="p-6">
-                  <Home className="w-12 h-12 text-blue-600 mb-4" />
-                  <h3 className="text-xl font-semibold text-slate-800">Rentals</h3>
-                  <p className="text-slate-600 mt-2">Browse rental market</p>
+      case "buyer":
+      case "tenant":
+        return (
+          <div>
+            <h2 className="text-2xl font-bold mb-6">Welcome, {firstName}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Link to="/house-hunting">
+                <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
+                  <CardHeader>
+                    <Home className="w-10 h-10 text-green-600 mb-2" />
+                    <CardTitle>House Hunting</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription>Get personalized assistance finding your dream home</CardDescription>
+                  </CardContent>
+                </Card>
+              </Link>
+              <Link to="/rentals">
+                <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
+                  <CardHeader>
+                    <Home className="w-10 h-10 text-blue-600 mb-2" />
+                    <CardTitle>Rentals</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription>Browse available rental properties</CardDescription>
+                  </CardContent>
+                </Card>
+              </Link>
+            </div>
+          </div>
+        );
+
+      case "seller":
+      case "landlord":
+        return (
+          <div>
+            <h2 className="text-2xl font-bold mb-6">Welcome, {firstName}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="h-full">
+                <CardHeader>
+                  <Home className="w-10 h-10 text-purple-600 mb-2" />
+                  <CardTitle>My Listings</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription>Manage and view your property listings</CardDescription>
                 </CardContent>
               </Card>
-            </Link>
+              <Link to="/rentals">
+                <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
+                  <CardHeader>
+                    <Home className="w-10 h-10 text-blue-600 mb-2" />
+                    <CardTitle>View Market</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription>See what's available in the market</CardDescription>
+                  </CardContent>
+                </Card>
+              </Link>
+            </div>
           </div>
-        </div>
-      );
-    }
+        );
 
-    if (role === 'airbnb') {
-      return (
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-slate-800">Airbnb Management</h2>
-          <Link to="/airbnb">
-            <Card className="cursor-pointer hover:shadow-lg hover:bg-slate-50 transition-all">
-              <CardContent className="p-6">
-                <Briefcase className="w-12 h-12 text-pink-600 mb-4" />
-                <h3 className="text-xl font-semibold text-slate-800">Airbnb Listings</h3>
-                <p className="text-slate-600 mt-2">Browse and manage listings</p>
+      case "airbnb":
+        return (
+          <div>
+            <h2 className="text-2xl font-bold mb-6">Welcome, {firstName}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
+              <Link to="/airbnb">
+                <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
+                  <CardHeader>
+                    <Plane className="w-10 h-10 text-purple-600 mb-2" />
+                    <CardTitle>Airbnb Listings</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription>Manage your short-term rental properties</CardDescription>
+                  </CardContent>
+                </Card>
+              </Link>
+            </div>
+          </div>
+        );
+
+      case "commercial":
+        return (
+          <div>
+            <h2 className="text-2xl font-bold mb-6">Welcome, {firstName}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
+              <Link to="/commercial">
+                <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
+                  <CardHeader>
+                    <Store className="w-10 h-10 text-orange-600 mb-2" />
+                    <CardTitle>Commercial Spaces</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription>Find commercial spaces for your business</CardDescription>
+                  </CardContent>
+                </Card>
+              </Link>
+            </div>
+          </div>
+        );
+
+      default:
+        return (
+          <div>
+            <h2 className="text-2xl font-bold mb-6">Welcome, {firstName}</h2>
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-gray-600">Select an option from the menu to get started.</p>
               </CardContent>
             </Card>
-          </Link>
-        </div>
-      );
+          </div>
+        );
     }
-
-    if (role === 'commercial') {
-      return (
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-slate-800">Commercial Space</h2>
-          <Link to="/commercial">
-            <Card className="cursor-pointer hover:shadow-lg hover:bg-slate-50 transition-all">
-              <CardContent className="p-6">
-                <Building2 className="w-12 h-12 text-orange-600 mb-4" />
-                <h3 className="text-xl font-semibold text-slate-800">Commercial Requests</h3>
-                <p className="text-slate-600 mt-2">Find business spaces</p>
-              </CardContent>
-            </Card>
-          </Link>
-        </div>
-      );
-    }
-
-    return null;
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200">
-        <div className="container-app">
-          <div className="flex items-center justify-between py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900">
-                Welcome, {firstName || 'User'}!
-              </h1>
-              <p className="text-slate-600 mt-1">
-                Role: {getRoleLabel(role)}
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <Link to="/settings">
-                <Button variant="outline" size="sm">
-                  <Settings className="w-4 h-4 mr-2" />
-                  Settings
-                </Button>
-              </Link>
-              <Button
-                onClick={handleLogout}
-                variant="outline"
-                size="sm"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+      <div className="container-app py-8">
+        <div className="flex justify-between items-start mb-8">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
+            <p className="text-gray-600">Welcome back to KejaHub</p>
+          </div>
+          <div className="flex gap-3">
+            <Link to="/settings">
+              <Button variant="outline" size="sm">
+                <Settings className="w-4 h-4 mr-2" />
+                Settings
               </Button>
-            </div>
+            </Link>
+            <Button onClick={handleLogout} variant="destructive" size="sm">
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
           </div>
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="container-app py-8">
         {renderRoleContent()}
       </div>
     </div>
