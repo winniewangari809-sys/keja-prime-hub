@@ -1,27 +1,26 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, EyeOff, Chrome } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import type { AppRole } from "@/hooks/use-auth";
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Eye, EyeOff, Loader, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
-type SignupRole = AppRole;
+type UserRole = 'buyer' | 'tenant' | 'seller' | 'landlord' | 'agent' | 'airbnb' | 'commercial';
 
-export const SignupPage = () => {
+export const SignupPage: React.FC = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState<UserRole>('buyer');
   const [showPassword, setShowPassword] = useState(false);
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState<SignupRole>("buyer");
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
 
   const validateEmail = (value: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -29,48 +28,66 @@ export const SignupPage = () => {
   };
 
   const validatePassword = (value: string) => {
-    return (
-      value.length >= 8 &&
-      /[A-Z]/.test(value) &&
-      /[a-z]/.test(value) &&
-      /[0-9]/.test(value)
-    );
+    const errors: string[] = [];
+    if (value.length < 8) errors.push('At least 8 characters');
+    if (!/[A-Z]/.test(value)) errors.push('One uppercase letter');
+    if (!/[a-z]/.test(value)) errors.push('One lowercase letter');
+    if (!/[0-9]/.test(value)) errors.push('One number');
+    setPasswordErrors(errors);
+    return errors.length === 0;
   };
 
-  const handleValidation = () => {
-    const newErrors: Record<string, string> = {};
+  const handlePasswordChange = (value: string) => {
+    setPassword(value);
+    validatePassword(value);
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/signup`,
+        },
+      });
+
+      if (error) {
+        toast.error(error.message || 'Google sign up failed');
+      }
+    } catch (err) {
+      toast.error('An error occurred during Google sign up');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
     if (!firstName.trim()) {
-      newErrors.firstName = "First name is required";
+      toast.error('First name is required');
+      return;
     }
 
     if (!lastName.trim()) {
-      newErrors.lastName = "Last name is required";
+      toast.error('Last name is required');
+      return;
     }
 
-    if (!email) {
-      newErrors.email = "Email is required";
-    } else if (!validateEmail(email)) {
-      newErrors.email = "Please enter a valid email";
+    if (!email || !validateEmail(email)) {
+      toast.error('Please enter a valid email address');
+      return;
     }
 
-    if (!password) {
-      newErrors.password = "Password is required";
-    } else if (!validatePassword(password)) {
-      newErrors.password = "Password must be at least 8 characters with uppercase, lowercase, and a number";
+    if (!validatePassword(password)) {
+      toast.error('Password does not meet requirements');
+      return;
     }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!handleValidation()) return;
 
     setLoading(true);
     try {
+      // Sign up with auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -83,210 +100,225 @@ export const SignupPage = () => {
       });
 
       if (authError) {
-        toast.error(authError.message || "Failed to create account");
+        toast.error(authError.message || 'Signup failed');
         setLoading(false);
         return;
       }
 
-      if (!authData.user) {
-        toast.error("Failed to create account");
+      if (!authData.user?.id) {
+        toast.error('Failed to create user');
         setLoading(false);
         return;
       }
 
-      const userId = authData.user.id;
-
-      // Insert into profiles
-      const { error: profileError } = await supabase.from("profiles").insert({
-        id: userId,
-        first_name: firstName,
-        full_name: `${firstName} ${lastName}`,
-      });
+      // Insert into profiles table
+      const fullName = `${firstName} ${lastName}`;
+      const { error: profileError } = await supabase.from('profiles').insert([
+        {
+          id: authData.user.id,
+          first_name: firstName,
+          full_name: fullName,
+        },
+      ]);
 
       if (profileError) {
-        toast.error("Failed to create profile");
-        setLoading(false);
-        return;
+        console.error('Profile insert error:', profileError);
+        // Continue even if profile insert fails, can be created later
       }
 
-      // Insert into user_roles
-      const { error: roleError } = await supabase.from("user_roles").insert({
-        user_id: userId,
-        role: role,
-      });
+      // Insert into user_roles table
+      const { error: roleError } = await supabase.from('user_roles').insert([
+        {
+          user_id: authData.user.id,
+          role,
+        },
+      ]);
 
       if (roleError) {
-        toast.error("Failed to assign role");
-        setLoading(false);
-        return;
+        console.error('Role insert error:', roleError);
       }
 
-      toast.success("Account created! Please check your email to verify.");
-      navigate("/login");
+      toast.success('Signup successful! Please check your email to confirm your account.');
+      navigate('/login');
     } catch (err) {
-      toast.error("An unexpected error occurred");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleSignUp = async () => {
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/signup-complete`,
-        },
-      });
-
-      if (error) {
-        toast.error(error.message || "Failed to sign up with Google");
-      }
-    } catch (err) {
-      toast.error("An unexpected error occurred");
+      toast.error('An error occurred during signup');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-2">
-          <CardTitle className="text-2xl text-center">Join KejaHub</CardTitle>
-          <CardDescription className="text-center">Create your account to get started</CardDescription>
-        </CardHeader>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <Card className="border-slate-700 bg-slate-800">
+          <CardHeader className="space-y-2">
+            <CardTitle className="text-2xl text-white">Create Account</CardTitle>
+            <CardDescription>
+              Join KejaHub and find your perfect space
+            </CardDescription>
+          </CardHeader>
 
-        <CardContent className="space-y-6">
-          {/* Google Sign Up */}
-          <Button
-            onClick={handleGoogleSignUp}
-            disabled={loading}
-            variant="outline"
-            className="w-full"
-          >
-            <Chrome className="w-4 h-4 mr-2" />
-            Sign up with Google
-          </Button>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">Or continue with email</span>
-            </div>
-          </div>
-
-          <form onSubmit={handleSignup} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">First Name</Label>
-                <Input
-                  id="firstName"
-                  placeholder="John"
-                  value={firstName}
-                  onChange={(e) => {
-                    setFirstName(e.target.value);
-                    if (errors.firstName) setErrors({ ...errors, firstName: undefined });
-                  }}
-                  className={errors.firstName ? "border-red-500" : ""}
-                />
-                {errors.firstName && <p className="text-xs text-red-500">{errors.firstName}</p>}
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    id="firstName"
+                    type="text"
+                    placeholder="John"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className="border-slate-600 bg-slate-700 text-white placeholder:text-slate-400"
+                    disabled={loading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    type="text"
+                    placeholder="Doe"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    className="border-slate-600 bg-slate-700 text-white placeholder:text-slate-400"
+                    disabled={loading}
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="lastName">Last Name</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
-                  id="lastName"
-                  placeholder="Doe"
-                  value={lastName}
-                  onChange={(e) => {
-                    setLastName(e.target.value);
-                    if (errors.lastName) setErrors({ ...errors, lastName: undefined });
-                  }}
-                  className={errors.lastName ? "border-red-500" : ""}
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="border-slate-600 bg-slate-700 text-white placeholder:text-slate-400"
+                  disabled={loading}
                 />
-                {errors.lastName && <p className="text-xs text-red-500">{errors.lastName}</p>}
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (errors.email) setErrors({ ...errors, email: undefined });
-                }}
-                className={errors.email ? "border-red-500" : ""}
-              />
-              {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Create a strong password"
+                    value={password}
+                    onChange={(e) => handlePasswordChange(e.target.value)}
+                    className="border-slate-600 bg-slate-700 text-white placeholder:text-slate-400 pr-10"
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    if (errors.password) setErrors({ ...errors, password: undefined });
-                  }}
-                  className={errors.password ? "border-red-500 pr-10" : "pr-10"}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                {passwordErrors.length > 0 && (
+                  <div className="bg-red-950 border border-red-700 rounded p-2 space-y-1">
+                    {passwordErrors.map((error, idx) => (
+                      <p key={idx} className="text-xs text-red-200 flex items-center gap-2">
+                        <AlertCircle className="w-3 h-3" />
+                        {error}
+                      </p>
+                    ))}
+                  </div>
+                )}
               </div>
-              {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
-              <p className="text-xs text-gray-500 mt-1">At least 8 characters, with uppercase, lowercase, and a number</p>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="role">I am a</Label>
-              <Select value={role} onValueChange={(value) => setRole(value as SignupRole)}>
-                <SelectTrigger id="role">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="buyer">Home Buyer</SelectItem>
-                  <SelectItem value="tenant">Tenant/Renter</SelectItem>
-                  <SelectItem value="seller">Home Seller</SelectItem>
-                  <SelectItem value="landlord">Landlord</SelectItem>
-                  <SelectItem value="agent">Real Estate Agent</SelectItem>
-                  <SelectItem value="airbnb">Airbnb Host</SelectItem>
-                  <SelectItem value="commercial">Commercial Owner</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="role">I am a</Label>
+                <Select value={role} onValueChange={(value) => setRole(value as UserRole)} disabled={loading}>
+                  <SelectTrigger className="border-slate-600 bg-slate-700 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-700 border-slate-600">
+                    <SelectItem value="buyer">Property Buyer</SelectItem>
+                    <SelectItem value="tenant">Tenant</SelectItem>
+                    <SelectItem value="seller">Property Seller</SelectItem>
+                    <SelectItem value="landlord">Landlord</SelectItem>
+                    <SelectItem value="agent">Real Estate Agent</SelectItem>
+                    <SelectItem value="airbnb">Airbnb Host</SelectItem>
+                    <SelectItem value="commercial">Commercial Space Owner</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
 
-            <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Creating account..." : "Sign Up"}
-            </Button>
+            <CardFooter className="flex flex-col gap-3">
+              <Button
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-700"
+                disabled={loading || passwordErrors.length > 0}
+              >
+                {loading ? (
+                  <>
+                    <Loader className="w-4 h-4 mr-2 animate-spin" />
+                    Creating account...
+                  </>
+                ) : (
+                  'Sign Up'
+                )}
+              </Button>
+
+              <div className="relative my-2">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-600"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-slate-800 text-slate-400">Or sign up with</span>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full border-slate-600 text-white hover:bg-slate-700"
+                onClick={handleGoogleSignIn}
+                disabled={loading}
+              >
+                <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
+                  <path
+                    fill="currentColor"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  />
+                </svg>
+                Google
+              </Button>
+
+              <p className="text-center text-sm text-slate-400">
+                Already have an account?{' '}
+                <Link to="/login" className="text-blue-400 hover:text-blue-300 font-medium">
+                  Login
+                </Link>
+              </p>
+            </CardFooter>
           </form>
-        </CardContent>
-
-        <CardFooter className="flex justify-center">
-          <p className="text-sm text-gray-600">
-            Already have an account?{" "}
-            <Link to="/login" className="text-blue-600 hover:underline font-medium">
-              Sign in
-            </Link>
-          </p>
-        </CardFooter>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 };

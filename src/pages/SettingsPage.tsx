@@ -1,487 +1,635 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
-import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { LogOut } from "lucide-react";
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
+import { Eye, EyeOff, LogOut, Loader, AlertCircle, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { useAuth } from '@/hooks/use-auth';
+import { supabase } from '@/integrations/supabase/client';
 
-export const SettingsPage = () => {
+export const SettingsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, firstName, fullName, signOut } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const { user, loading: authLoading } = useAuth();
 
   // Profile state
-  const [profileFirstName, setProfileFirstName] = useState(firstName || "");
-  const [profileFullName, setProfileFullName] = useState(fullName || "");
-  const [phone, setPhone] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
+  const [firstName, setFirstName] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [profileLoading, setProfileLoading] = useState(false);
 
   // Security state
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
 
-  // Notifications state
-  const [emailNotifications, setEmailNotifications] = useState(() => {
-    return localStorage.getItem("emailNotifications") === "true";
-  });
-  const [pushNotifications, setPushNotifications] = useState(() => {
-    return localStorage.getItem("pushNotifications") === "true";
-  });
+  // Notification state
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [pushNotifications, setPushNotifications] = useState(true);
+  const [marketingEmails, setMarketingEmails] = useState(false);
 
   // Privacy state
-  const [profilePublic, setProfilePublic] = useState(() => {
-    return localStorage.getItem("profilePublic") === "true";
-  });
-  const [showListings, setShowListings] = useState(() => {
-    return localStorage.getItem("showListings") === "true";
-  });
+  const [profilePublic, setProfilePublic] = useState(false);
+  const [shareData, setShareData] = useState(true);
 
-  // Load profile data
+  // Account state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
   useEffect(() => {
-    const loadProfile = async () => {
-      if (!user) return;
+    const fetchUserData = async () => {
+      if (!user) {
+        navigate('/login');
+        return;
+      }
 
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("first_name, full_name, phone, avatar_url")
-        .eq("id", user.id)
-        .maybeSingle();
+      try {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('first_name, full_name, phone, avatar_url')
+          .eq('id', user.id)
+          .single();
 
-      if (data && !error) {
-        setProfileFirstName(data.first_name || "");
-        setProfileFullName(data.full_name || "");
-        setPhone(data.phone || "");
-        setAvatarUrl(data.avatar_url || "");
+        if (profileData) {
+          setFirstName(profileData.first_name || '');
+          setFullName(profileData.full_name || '');
+          setPhone(profileData.phone || '');
+          setAvatarUrl(profileData.avatar_url || '');
+        }
+
+        // Load notification preferences from localStorage
+        const savedNotifications = localStorage.getItem('settings_notifications');
+        if (savedNotifications) {
+          const notifs = JSON.parse(savedNotifications);
+          setEmailNotifications(notifs.email ?? true);
+          setPushNotifications(notifs.push ?? true);
+          setMarketingEmails(notifs.marketing ?? false);
+        }
+
+        // Load privacy preferences from localStorage
+        const savedPrivacy = localStorage.getItem('settings_privacy');
+        if (savedPrivacy) {
+          const privacy = JSON.parse(savedPrivacy);
+          setProfilePublic(privacy.profilePublic ?? false);
+          setShareData(privacy.shareData ?? true);
+        }
+      } catch (err) {
+        console.error('Error fetching user data:', err);
       }
     };
 
-    loadProfile();
-  }, [user]);
+    if (!authLoading) {
+      fetchUserData();
+    }
+  }, [user, authLoading, navigate]);
 
-  const handleLogout = async () => {
-    await signOut();
-    navigate("/");
+  const validatePassword = (value: string) => {
+    const errors: string[] = [];
+    if (value.length < 8) errors.push('At least 8 characters');
+    if (!/[A-Z]/.test(value)) errors.push('One uppercase letter');
+    if (!/[a-z]/.test(value)) errors.push('One lowercase letter');
+    if (!/[0-9]/.test(value)) errors.push('One number');
+    setPasswordErrors(errors);
+    return errors.length === 0;
   };
 
-  // Profile Tab Handlers
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
 
-    setLoading(true);
+    if (!firstName.trim()) {
+      toast.error('First name is required');
+      return;
+    }
+
+    if (!fullName.trim()) {
+      toast.error('Full name is required');
+      return;
+    }
+
+    setProfileLoading(true);
     try {
       const { error } = await supabase
-        .from("profiles")
+        .from('profiles')
         .upsert({
-          id: user.id,
-          first_name: profileFirstName,
-          full_name: profileFullName,
-          phone,
-          avatar_url: avatarUrl,
+          id: user?.id,
+          first_name: firstName,
+          full_name: fullName,
+          phone: phone || null,
+          avatar_url: avatarUrl || null,
         });
 
       if (error) {
-        toast.error(error.message || "Failed to save profile");
+        toast.error('Failed to save profile');
       } else {
-        toast.success("Profile updated successfully!");
+        toast.success('Profile updated successfully');
       }
     } catch (err) {
-      toast.error("An unexpected error occurred");
+      toast.error('An error occurred');
     } finally {
-      setLoading(false);
+      setProfileLoading(false);
     }
   };
 
-  // Security Tab Handlers
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!newPassword) {
-      toast.error("Please enter a new password");
+      toast.error('New password is required');
+      return;
+    }
+
+    if (!validatePassword(newPassword)) {
+      toast.error('Password does not meet requirements');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      toast.error("Passwords do not match");
+      toast.error('Passwords do not match');
       return;
     }
 
-    if (newPassword.length < 8) {
-      toast.error("Password must be at least 8 characters");
-      return;
-    }
-
-    setLoading(true);
+    setPasswordLoading(true);
     try {
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
       });
 
       if (error) {
-        toast.error(error.message || "Failed to change password");
+        toast.error(error.message || 'Failed to change password');
       } else {
-        toast.success("Password changed successfully!");
-        setNewPassword("");
-        setConfirmPassword("");
+        toast.success('Password changed successfully');
+        setNewPassword('');
+        setConfirmPassword('');
       }
     } catch (err) {
-      toast.error("An unexpected error occurred");
+      toast.error('An error occurred');
     } finally {
-      setLoading(false);
+      setPasswordLoading(false);
     }
   };
 
-  // Notification Handlers
-  const handleEmailNotificationsChange = (value: boolean) => {
-    setEmailNotifications(value);
-    localStorage.setItem("emailNotifications", value.toString());
-    toast.success(
-      value ? "Email notifications enabled" : "Email notifications disabled"
-    );
+  const handleNotificationChange = () => {
+    const notifs = {
+      email: emailNotifications,
+      push: pushNotifications,
+      marketing: marketingEmails,
+    };
+    localStorage.setItem('settings_notifications', JSON.stringify(notifs));
   };
 
-  const handlePushNotificationsChange = (value: boolean) => {
-    setPushNotifications(value);
-    localStorage.setItem("pushNotifications", value.toString());
-    toast.success(
-      value ? "Push notifications enabled" : "Push notifications disabled"
-    );
+  const handlePrivacyChange = () => {
+    const privacy = {
+      profilePublic,
+      shareData,
+    };
+    localStorage.setItem('settings_privacy', JSON.stringify(privacy));
   };
 
-  // Privacy Handlers
-  const handleProfilePublicChange = (value: boolean) => {
-    setProfilePublic(value);
-    localStorage.setItem("profilePublic", value.toString());
-    toast.success(
-      value ? "Profile is now public" : "Profile is now private"
-    );
-  };
-
-  const handleShowListingsChange = (value: boolean) => {
-    setShowListings(value);
-    localStorage.setItem("showListings", value.toString());
-    toast.success(
-      value ? "Your listings are now visible" : "Your listings are now hidden"
-    );
-  };
-
-  // Account Handlers
   const handlePauseAccount = async () => {
     if (!user) return;
 
-    setLoading(true);
     try {
       const { error } = await supabase
-        .from("profiles")
+        .from('profiles')
         .update({ paused: true })
-        .eq("id", user.id);
+        .eq('id', user.id);
 
       if (error) {
-        toast.error(error.message || "Failed to pause account");
+        toast.error('Failed to pause account');
       } else {
-        toast.success("Account paused. You can reactivate it anytime.");
-        await signOut();
-        navigate("/");
+        toast.success('Account paused');
       }
     } catch (err) {
-      toast.error("An unexpected error occurred");
-    } finally {
-      setLoading(false);
+      toast.error('An error occurred');
     }
   };
 
   const handleDeleteAccount = async () => {
-    toast.success(
-      "To delete your account, please contact our support team at support@kejahub.com"
-    );
-    await signOut();
-    navigate("/");
+    setDeleteDialogOpen(false);
+    toast.info('Please contact support to delete your account');
+
+    try {
+      await supabase.auth.signOut();
+      navigate('/');
+    } catch (err) {
+      toast.error('An error occurred');
+    }
   };
 
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast.success('Logged out successfully');
+      navigate('/');
+    } catch (err) {
+      toast.error('Failed to logout');
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <Loader className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container-app py-8">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900">Settings</h1>
-            <p className="text-gray-600 mt-2">Manage your account and preferences</p>
-          </div>
-          <Button onClick={handleLogout} variant="destructive">
-            <LogOut className="w-4 h-4 mr-2" />
-            Logout
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      {/* Header */}
+      <header className="border-b border-slate-700 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-40">
+        <div className="container-app h-16 flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-white">Settings</h1>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleLogout}
+            className="text-slate-300 hover:text-white"
+          >
+            <LogOut className="w-5 h-5" />
           </Button>
         </div>
+      </header>
 
-        {/* Settings Tabs */}
-        <div className="max-w-4xl">
-          <Tabs defaultValue="profile" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="profile">Profile</TabsTrigger>
-              <TabsTrigger value="security">Security</TabsTrigger>
-              <TabsTrigger value="notifications">Notifications</TabsTrigger>
-              <TabsTrigger value="privacy">Privacy</TabsTrigger>
-              <TabsTrigger value="account">Account</TabsTrigger>
-            </TabsList>
+      {/* Main Content */}
+      <main className="container-app py-12">
+        <Tabs defaultValue="profile" className="w-full">
+          <TabsList className="bg-slate-800 border-slate-700">
+            <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsTrigger value="security">Security</TabsTrigger>
+            <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            <TabsTrigger value="privacy">Privacy</TabsTrigger>
+            <TabsTrigger value="account">Account</TabsTrigger>
+          </TabsList>
 
-            {/* Profile Tab */}
-            <TabsContent value="profile">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Profile Information</CardTitle>
-                  <CardDescription>Update your personal information</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSaveProfile} className="space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={user?.email || ""}
-                        disabled
-                        className="bg-gray-100"
-                      />
-                      <p className="text-xs text-gray-500">Email cannot be changed</p>
-                    </div>
-
+          {/* Profile Tab */}
+          <TabsContent value="profile" className="mt-6">
+            <Card className="border-slate-700 bg-slate-800">
+              <CardHeader>
+                <CardTitle>Profile Information</CardTitle>
+                <CardDescription>Update your personal details</CardDescription>
+              </CardHeader>
+              <form onSubmit={handleSaveProfile}>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name</Label>
                       <Input
                         id="firstName"
-                        value={profileFirstName}
-                        onChange={(e) => setProfileFirstName(e.target.value)}
-                        placeholder="John"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        className="border-slate-600 bg-slate-700 text-white"
+                        disabled={profileLoading}
                       />
                     </div>
-
                     <div className="space-y-2">
                       <Label htmlFor="fullName">Full Name</Label>
                       <Input
                         id="fullName"
-                        value={profileFullName}
-                        onChange={(e) => setProfileFullName(e.target.value)}
-                        placeholder="John Doe"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="border-slate-600 bg-slate-700 text-white"
+                        disabled={profileLoading}
                       />
                     </div>
+                  </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="+254 712 345 678"
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+254..."
+                      className="border-slate-600 bg-slate-700 text-white"
+                      disabled={profileLoading}
+                    />
+                  </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="avatar">Avatar URL</Label>
-                      <Input
-                        id="avatar"
-                        type="url"
-                        value={avatarUrl}
-                        onChange={(e) => setAvatarUrl(e.target.value)}
-                        placeholder="https://example.com/avatar.jpg"
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="avatar">Avatar URL</Label>
+                    <Input
+                      id="avatar"
+                      type="url"
+                      value={avatarUrl}
+                      onChange={(e) => setAvatarUrl(e.target.value)}
+                      placeholder="https://..."
+                      className="border-slate-600 bg-slate-700 text-white"
+                      disabled={profileLoading}
+                    />
+                  </div>
 
-                    <Button type="submit" disabled={loading}>
-                      {loading ? "Saving..." : "Save Changes"}
-                    </Button>
-                  </form>
+                  <div className="space-y-2">
+                    <Label>Email</Label>
+                    <Input
+                      type="email"
+                      value={user.email || ''}
+                      disabled
+                      className="border-slate-600 bg-slate-700 text-slate-400 cursor-not-allowed"
+                    />
+                    <p className="text-xs text-slate-400">Email cannot be changed</p>
+                  </div>
                 </CardContent>
-              </Card>
-            </TabsContent>
+                <CardFooter>
+                  <Button
+                    type="submit"
+                    className="bg-blue-600 hover:bg-blue-700"
+                    disabled={profileLoading}
+                  >
+                    {profileLoading ? (
+                      <>
+                        <Loader className="w-4 h-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      'Save Changes'
+                    )}
+                  </Button>
+                </CardFooter>
+              </form>
+            </Card>
+          </TabsContent>
 
-            {/* Security Tab */}
-            <TabsContent value="security">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Security</CardTitle>
-                  <CardDescription>Manage your password and security settings</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleChangePassword} className="space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="newPassword">New Password</Label>
+          {/* Security Tab */}
+          <TabsContent value="security" className="mt-6">
+            <Card className="border-slate-700 bg-slate-800">
+              <CardHeader>
+                <CardTitle>Change Password</CardTitle>
+                <CardDescription>Update your password regularly to keep your account secure</CardDescription>
+              </CardHeader>
+              <form onSubmit={handleChangePassword}>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword">New Password</Label>
+                    <div className="relative">
                       <Input
                         id="newPassword"
-                        type="password"
+                        type={showNewPassword ? 'text' : 'password'}
                         value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="••••••••"
+                        onChange={(e) => {
+                          setNewPassword(e.target.value);
+                          validatePassword(e.target.value);
+                        }}
+                        className="border-slate-600 bg-slate-700 text-white pr-10"
+                        disabled={passwordLoading}
                       />
-                      <p className="text-xs text-gray-500">Minimum 8 characters</p>
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                      >
+                        {showNewPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </button>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    {passwordErrors.length > 0 && (
+                      <div className="bg-red-950 border border-red-700 rounded p-2 space-y-1">
+                        {passwordErrors.map((error, idx) => (
+                          <p key={idx} className="text-xs text-red-200 flex items-center gap-2">
+                            <AlertCircle className="w-3 h-3" />
+                            {error}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <div className="relative">
                       <Input
                         id="confirmPassword"
-                        type="password"
+                        type={showConfirmPassword ? 'text' : 'password'}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="••••••••"
+                        className="border-slate-600 bg-slate-700 text-white pr-10"
+                        disabled={passwordLoading}
                       />
-                    </div>
-
-                    <Button type="submit" disabled={loading}>
-                      {loading ? "Updating..." : "Update Password"}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Notifications Tab */}
-            <TabsContent value="notifications">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Notifications</CardTitle>
-                  <CardDescription>Manage how you receive notifications</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Email Notifications</p>
-                      <p className="text-sm text-gray-600">Receive updates via email</p>
-                    </div>
-                    <Switch
-                      checked={emailNotifications}
-                      onCheckedChange={handleEmailNotificationsChange}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Push Notifications</p>
-                      <p className="text-sm text-gray-600">Receive browser notifications</p>
-                    </div>
-                    <Switch
-                      checked={pushNotifications}
-                      onCheckedChange={handlePushNotificationsChange}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Privacy Tab */}
-            <TabsContent value="privacy">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Privacy</CardTitle>
-                  <CardDescription>Control your privacy settings</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Public Profile</p>
-                      <p className="text-sm text-gray-600">Allow others to view your profile</p>
-                    </div>
-                    <Switch
-                      checked={profilePublic}
-                      onCheckedChange={handleProfilePublicChange}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Show Listings</p>
-                      <p className="text-sm text-gray-600">Display your listings publicly</p>
-                    </div>
-                    <Switch
-                      checked={showListings}
-                      onCheckedChange={handleShowListingsChange}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Account Tab */}
-            <TabsContent value="account">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Account Management</CardTitle>
-                  <CardDescription>Manage your account status</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <p className="text-sm text-yellow-800">
-                      Account actions below are not immediately visible but affect your account status.
-                    </p>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <p className="font-medium mb-2">Pause Account</p>
-                      <p className="text-sm text-gray-600 mb-3">
-                        Temporarily deactivate your account. You can reactivate it anytime.
-                      </p>
-                      <Button
-                        variant="outline"
-                        onClick={handlePauseAccount}
-                        disabled={loading}
-                        className="text-gray-600"
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
                       >
-                        Pause Account
-                      </Button>
-                    </div>
-
-                    <div>
-                      <p className="font-medium mb-2">Delete Account</p>
-                      <p className="text-sm text-gray-600 mb-3">
-                        Permanently delete your account. This action cannot be undone.
-                      </p>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" className="text-gray-600">
-                            Delete Account
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Delete Account</DialogTitle>
-                            <DialogDescription>
-                              This action cannot be undone. To proceed with account deletion, please contact our support team.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="py-4">
-                            <p className="text-sm font-medium mb-2">Support Contact:</p>
-                            <p className="text-sm text-gray-600">support@kejahub.com</p>
-                          </div>
-                          <DialogFooter>
-                            <DialogClose asChild>
-                              <Button variant="outline">Cancel</Button>
-                            </DialogClose>
-                            <Button
-                              onClick={handleDeleteAccount}
-                              disabled={loading}
-                              className="text-gray-600"
-                            >
-                              Proceed to Support
-                            </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
+                        {showConfirmPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </button>
                     </div>
                   </div>
                 </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
-      </div>
+                <CardFooter>
+                  <Button
+                    type="submit"
+                    className="bg-blue-600 hover:bg-blue-700"
+                    disabled={passwordLoading || passwordErrors.length > 0}
+                  >
+                    {passwordLoading ? (
+                      <>
+                        <Loader className="w-4 h-4 mr-2 animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      'Update Password'
+                    )}
+                  </Button>
+                </CardFooter>
+              </form>
+            </Card>
+          </TabsContent>
+
+          {/* Notifications Tab */}
+          <TabsContent value="notifications" className="mt-6">
+            <Card className="border-slate-700 bg-slate-800">
+              <CardHeader>
+                <CardTitle>Notification Preferences</CardTitle>
+                <CardDescription>Manage how you receive notifications</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-white">Email Notifications</p>
+                    <p className="text-sm text-slate-400">Receive property updates via email</p>
+                  </div>
+                  <Switch
+                    checked={emailNotifications}
+                    onCheckedChange={(checked) => {
+                      setEmailNotifications(checked);
+                      handleNotificationChange();
+                    }}
+                  />
+                </div>
+
+                <Separator className="bg-slate-700" />
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-white">Push Notifications</p>
+                    <p className="text-sm text-slate-400">Receive instant alerts on your device</p>
+                  </div>
+                  <Switch
+                    checked={pushNotifications}
+                    onCheckedChange={(checked) => {
+                      setPushNotifications(checked);
+                      handleNotificationChange();
+                    }}
+                  />
+                </div>
+
+                <Separator className="bg-slate-700" />
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-white">Marketing Emails</p>
+                    <p className="text-sm text-slate-400">Receive news and special offers</p>
+                  </div>
+                  <Switch
+                    checked={marketingEmails}
+                    onCheckedChange={(checked) => {
+                      setMarketingEmails(checked);
+                      handleNotificationChange();
+                    }}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Privacy Tab */}
+          <TabsContent value="privacy" className="mt-6">
+            <Card className="border-slate-700 bg-slate-800">
+              <CardHeader>
+                <CardTitle>Privacy Settings</CardTitle>
+                <CardDescription>Control how your information is used</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-white">Public Profile</p>
+                    <p className="text-sm text-slate-400">Allow others to view your profile</p>
+                  </div>
+                  <Switch
+                    checked={profilePublic}
+                    onCheckedChange={(checked) => {
+                      setProfilePublic(checked);
+                      handlePrivacyChange();
+                    }}
+                  />
+                </div>
+
+                <Separator className="bg-slate-700" />
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-white">Share Anonymous Data</p>
+                    <p className="text-sm text-slate-400">Help us improve with usage analytics</p>
+                  </div>
+                  <Switch
+                    checked={shareData}
+                    onCheckedChange={(checked) => {
+                      setShareData(checked);
+                      handlePrivacyChange();
+                    }}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Account Tab */}
+          <TabsContent value="account" className="mt-6 space-y-6">
+            <Card className="border-slate-700 bg-slate-800">
+              <CardHeader>
+                <CardTitle>Pause Account</CardTitle>
+                <CardDescription>Temporarily deactivate your account</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-slate-400 mb-4">
+                  Your account and data will remain safe, but you won't be able to login until you reactivate it.
+                </p>
+              </CardContent>
+              <CardFooter>
+                <Button
+                  variant="outline"
+                  className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                  onClick={handlePauseAccount}
+                >
+                  Pause Account
+                </Button>
+              </CardFooter>
+            </Card>
+
+            <Card className="border-red-900/30 bg-red-950/20">
+              <CardHeader>
+                <CardTitle className="text-red-400">Delete Account</CardTitle>
+                <CardDescription>Permanently delete your account and all data</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-slate-400">
+                  This action cannot be undone. Please contact our support team to initiate the deletion process.
+                </p>
+              </CardContent>
+              <CardFooter>
+                <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="border-red-600 text-red-400 hover:bg-red-950/30"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Account
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="border-slate-700 bg-slate-800">
+                    <DialogHeader>
+                      <DialogTitle>Delete Account?</DialogTitle>
+                      <DialogDescription>
+                        This action is permanent. All your data will be deleted.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                      <p className="text-sm text-slate-300">
+                        To delete your account, please contact our support team. This helps us prevent accidental deletions.
+                      </p>
+                    </div>
+                    <DialogFooter className="gap-2">
+                      <DialogClose asChild>
+                        <Button variant="outline" className="border-slate-600">
+                          Cancel
+                        </Button>
+                      </DialogClose>
+                      <Button
+                        className="bg-red-600 hover:bg-red-700"
+                        onClick={handleDeleteAccount}
+                      >
+                        Contact Support
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </main>
     </div>
   );
 };

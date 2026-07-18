@@ -1,199 +1,249 @@
-import { Link, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/hooks/use-auth";
-import { LogOut, Settings, Home, Building2, Warehouse, Briefcase, BarChart3, Shield } from "lucide-react";
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Loader, LogOut, Settings, Home, Building2, Hotel, Store, Shield } from 'lucide-react';
+import { toast } from 'sonner';
+import { useAuth } from '@/hooks/use-auth';
+import { supabase } from '@/integrations/supabase/client';
 
-export const DashboardPage = () => {
+export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, role, firstName, loading, signOut } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [firstName, setFirstName] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!user) {
+        navigate('/login');
+        return;
+      }
+
+      try {
+        // Fetch profile
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('first_name, full_name')
+          .eq('id', user.id)
+          .single();
+
+        if (profileData?.first_name) {
+          setFirstName(profileData.first_name);
+        }
+
+        // Fetch user role
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+
+        if (roleData?.role) {
+          setUserRole(roleData.role);
+        }
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (!authLoading) {
+      fetchUserData();
+    }
+  }, [user, authLoading, navigate]);
 
   const handleLogout = async () => {
-    await signOut();
-    navigate("/");
+    try {
+      await supabase.auth.signOut();
+      toast.success('Logged out successfully');
+      navigate('/');
+    } catch (err) {
+      toast.error('Failed to logout');
+    }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <Loader className="w-8 h-8 animate-spin text-blue-500" />
       </div>
     );
   }
 
   if (!user) {
-    navigate("/login");
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container-app py-8">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      {/* Header */}
+      <header className="border-b border-slate-700 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-40">
+        <div className="container-app h-16 flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900">
-              Welcome, {firstName || user.email}!
-            </h1>
-            <p className="text-gray-600 mt-2">
-              Role: <span className="font-semibold capitalize">{role || "User"}</span>
-            </p>
+            <h1 className="text-2xl font-bold text-white">KejaHub</h1>
           </div>
-          <div className="flex gap-3">
+          <div className="flex items-center gap-3">
             <Link to="/settings">
-              <Button variant="outline" size="icon">
-                <Settings className="w-4 h-4" />
+              <Button variant="ghost" size="icon" className="text-slate-300 hover:text-white">
+                <Settings className="w-5 h-5" />
               </Button>
             </Link>
-            <Button onClick={handleLogout} variant="destructive">
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleLogout}
+              className="text-slate-300 hover:text-white"
+            >
+              <LogOut className="w-5 h-5" />
             </Button>
           </div>
         </div>
+      </header>
 
-        {/* Admin Section */}
-        {(role === "hq" || role === "admin") && (
+      {/* Main Content */}
+      <main className="container-app py-12">
+        {/* Welcome Section */}
+        <div className="mb-12">
+          <h2 className="text-4xl font-bold text-white mb-2">
+            Welcome back, {firstName || 'Guest'}!
+          </h2>
+          <p className="text-slate-400">Manage your properties and bookings</p>
+        </div>
+
+        {/* Admin/HQ Dashboard */}
+        {(userRole === 'hq' || userRole === 'admin') && (
           <div className="mb-8">
             <Link to="/admin">
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <Shield className="w-6 h-6 text-purple-600" />
+              <Card className="border-slate-700 bg-slate-800 hover:border-slate-600 transition-colors cursor-pointer">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-red-500/10 rounded-lg">
+                      <Shield className="w-6 h-6 text-red-500" />
+                    </div>
                     <div>
-                      <CardTitle>HQ Command Center</CardTitle>
-                      <CardDescription>Manage platform, users, and security</CardDescription>
+                      <h3 className="text-lg font-semibold text-white">Admin Dashboard</h3>
+                      <p className="text-sm text-slate-400">HQ Command Center</p>
                     </div>
                   </div>
-                </CardHeader>
+                </CardContent>
               </Card>
             </Link>
           </div>
         )}
 
-        {/* Role-Based Dashboard Cards */}
+        {/* Role-Based Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Buyer/Tenant Options */}
-          {(role === "buyer" || role === "tenant") && (
+          {(userRole === 'buyer' || userRole === 'tenant') && (
             <>
               <Link to="/house-hunting">
-                <Card className="cursor-pointer hover:shadow-lg transition-shadow h-full">
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <Building2 className="w-6 h-6 text-green-600" />
+                <Card className="border-slate-700 bg-slate-800 hover:border-slate-600 transition-colors cursor-pointer h-full">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-blue-500/10 rounded-lg">
+                        <Building2 className="w-6 h-6 text-blue-500" />
+                      </div>
                       <div>
-                        <CardTitle>House Hunting</CardTitle>
-                        <CardDescription>Find your perfect home with our concierge</CardDescription>
+                        <h3 className="text-lg font-semibold text-white">House Hunting</h3>
+                        <p className="text-sm text-slate-400">Find your dream home</p>
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-600">Get personalized assistance from our team to find exactly what you're looking for.</p>
                   </CardContent>
                 </Card>
               </Link>
 
               <Link to="/rentals">
-                <Card className="cursor-pointer hover:shadow-lg transition-shadow h-full">
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <Home className="w-6 h-6 text-blue-600" />
+                <Card className="border-slate-700 bg-slate-800 hover:border-slate-600 transition-colors cursor-pointer h-full">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-green-500/10 rounded-lg">
+                        <Home className="w-6 h-6 text-green-500" />
+                      </div>
                       <div>
-                        <CardTitle>Rentals</CardTitle>
-                        <CardDescription>Browse available rental properties</CardDescription>
+                        <h3 className="text-lg font-semibold text-white">Rentals</h3>
+                        <p className="text-sm text-slate-400">Browse rental properties</p>
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-600">Explore a wide range of rental apartments and houses across Kenya.</p>
                   </CardContent>
                 </Card>
               </Link>
             </>
           )}
 
-          {/* Seller/Landlord Options */}
-          {(role === "seller" || role === "landlord") && (
+          {(userRole === 'seller' || userRole === 'landlord' || userRole === 'agent') && (
             <Link to="/rentals">
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow h-full">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <BarChart3 className="w-6 h-6 text-orange-600" />
+              <Card className="border-slate-700 bg-slate-800 hover:border-slate-600 transition-colors cursor-pointer h-full">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-green-500/10 rounded-lg">
+                      <Home className="w-6 h-6 text-green-500" />
+                    </div>
                     <div>
-                      <CardTitle>My Listings</CardTitle>
-                      <CardDescription>Manage and view your rental properties</CardDescription>
+                      <h3 className="text-lg font-semibold text-white">My Listings</h3>
+                      <p className="text-sm text-slate-400">Manage your rentals</p>
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600">View all your listed properties and manage rental listings.</p>
                 </CardContent>
               </Card>
             </Link>
           )}
 
-          {/* Airbnb Host Options */}
-          {role === "airbnb" && (
+          {userRole === 'airbnb' && (
             <Link to="/airbnb">
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow h-full">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <Warehouse className="w-6 h-6 text-purple-600" />
+              <Card className="border-slate-700 bg-slate-800 hover:border-slate-600 transition-colors cursor-pointer h-full">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-purple-500/10 rounded-lg">
+                      <Hotel className="w-6 h-6 text-purple-500" />
+                    </div>
                     <div>
-                      <CardTitle>Airbnb Listings</CardTitle>
-                      <CardDescription>Manage your vacation property bookings</CardDescription>
+                      <h3 className="text-lg font-semibold text-white">Airbnb</h3>
+                      <p className="text-sm text-slate-400">Manage your listings</p>
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600">View bookings and manage your short-term vacation property.</p>
                 </CardContent>
               </Card>
             </Link>
           )}
 
-          {/* Commercial Owner Options */}
-          {role === "commercial" && (
+          {userRole === 'commercial' && (
             <Link to="/commercial">
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow h-full">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <Briefcase className="w-6 h-6 text-red-600" />
+              <Card className="border-slate-700 bg-slate-800 hover:border-slate-600 transition-colors cursor-pointer h-full">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-orange-500/10 rounded-lg">
+                      <Store className="w-6 h-6 text-orange-500" />
+                    </div>
                     <div>
-                      <CardTitle>Commercial Spaces</CardTitle>
-                      <CardDescription>Manage your business property listings</CardDescription>
+                      <h3 className="text-lg font-semibold text-white">Commercial</h3>
+                      <p className="text-sm text-slate-400">Manage commercial spaces</p>
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600">View and manage commercial space inquiries.</p>
                 </CardContent>
               </Card>
             </Link>
           )}
-
-          {/* Explore Properties - Available for all */}
-          <Link to="/rentals">
-            <Card className="cursor-pointer hover:shadow-lg transition-shadow h-full">
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <Home className="w-6 h-6 text-blue-600" />
-                  <div>
-                    <CardTitle>Browse Properties</CardTitle>
-                    <CardDescription>Explore available rental listings</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600">Discover rental properties across Kenya.</p>
-              </CardContent>
-            </Card>
-          </Link>
         </div>
-      </div>
+
+        {/* Quick Links */}
+        <div className="mt-12 pt-8 border-t border-slate-700">
+          <h3 className="text-xl font-semibold text-white mb-6">Quick Links</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Link to="/rentals">
+              <Button variant="outline" className="w-full justify-start border-slate-600 text-white hover:bg-slate-800">
+                Browse All Rentals
+              </Button>
+            </Link>
+            <Link to="/house-hunting">
+              <Button variant="outline" className="w-full justify-start border-slate-600 text-white hover:bg-slate-800">
+                House Hunting Service
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </main>
     </div>
   );
 };
