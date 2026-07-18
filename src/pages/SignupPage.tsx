@@ -1,94 +1,94 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Eye, EyeOff } from "lucide-react";
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Eye, EyeOff, Loader, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
-const ROLES = [
-  { value: "buyer", label: "Buyer" },
-  { value: "tenant", label: "Tenant" },
-  { value: "seller", label: "Seller" },
-  { value: "landlord", label: "Landlord" },
-  { value: "agent", label: "Agent" },
-  { value: "airbnb", label: "Airbnb Host" },
-  { value: "commercial", label: "Commercial" },
-];
+type UserRole = 'buyer' | 'tenant' | 'seller' | 'landlord' | 'agent' | 'airbnb' | 'commercial';
 
-export default function SignupPage() {
+export const SignupPage: React.FC = () => {
   const navigate = useNavigate();
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState("");
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState<UserRole>('buyer');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{
-    firstName?: string;
-    lastName?: string;
-    email?: string;
-    password?: string;
-    role?: string;
-  }>({});
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  const validatePassword = (pwd: string) => {
-    const hasUppercase = /[A-Z]/.test(pwd);
-    const hasLowercase = /[a-z]/.test(pwd);
-    const hasNumber = /\d/.test(pwd);
-    const isLongEnough = pwd.length >= 8;
-
-    if (!isLongEnough) return "Password must be at least 8 characters";
-    if (!hasUppercase) return "Password must contain an uppercase letter";
-    if (!hasLowercase) return "Password must contain a lowercase letter";
-    if (!hasNumber) return "Password must contain a number";
-    return null;
+  const validateEmail = (value: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(value);
   };
 
-  const validateForm = () => {
-    const newErrors: typeof errors = {};
+  const validatePassword = (value: string) => {
+    const errors: string[] = [];
+    if (value.length < 8) errors.push('At least 8 characters');
+    if (!/[A-Z]/.test(value)) errors.push('One uppercase letter');
+    if (!/[a-z]/.test(value)) errors.push('One lowercase letter');
+    if (!/[0-9]/.test(value)) errors.push('One number');
+    setPasswordErrors(errors);
+    return errors.length === 0;
+  };
 
-    if (!firstName.trim()) {
-      newErrors.firstName = "First name is required";
-    }
-    if (!lastName.trim()) {
-      newErrors.lastName = "Last name is required";
-    }
-    if (!emailRegex.test(email)) {
-      newErrors.email = "Please enter a valid email";
-    }
-    const passwordError = validatePassword(password);
-    if (passwordError) {
-      newErrors.password = passwordError;
-    }
-    if (!role) {
-      newErrors.role = "Please select a role";
-    }
+  const handlePasswordChange = (value: string) => {
+    setPassword(value);
+    validatePassword(value);
+  };
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/signup`,
+        },
+      });
+
+      if (error) {
+        toast.error(error.message || 'Google sign up failed');
+      }
+    } catch (err) {
+      toast.error('An error occurred during Google sign up');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
+
+    if (!firstName.trim()) {
+      toast.error('First name is required');
+      return;
+    }
+
+    if (!lastName.trim()) {
+      toast.error('Last name is required');
+      return;
+    }
+
+    if (!email || !validateEmail(email)) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    if (!validatePassword(password)) {
+      toast.error('Password does not meet requirements');
+      return;
+    }
 
     setLoading(true);
     try {
-      // Step 1: Sign up user
-      const { data, error } = await supabase.auth.signUp({
+      // Sign up with auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -99,200 +99,226 @@ export default function SignupPage() {
         },
       });
 
-      if (error) {
-        toast.error(error.message);
+      if (authError) {
+        toast.error(authError.message || 'Signup failed');
         setLoading(false);
         return;
       }
 
-      if (!data.user) {
-        toast.error("Failed to create user");
+      if (!authData.user?.id) {
+        toast.error('Failed to create user');
         setLoading(false);
         return;
       }
 
-      // Step 2: Insert profile
-      const { error: profileError } = await supabase.from("profiles").insert({
-        id: data.user.id,
-        first_name: firstName,
-        full_name: `${firstName} ${lastName}`,
-      });
+      // Insert into profiles table
+      const fullName = `${firstName} ${lastName}`;
+      const { error: profileError } = await supabase.from('profiles').insert([
+        {
+          id: authData.user.id,
+          first_name: firstName,
+          full_name: fullName,
+        },
+      ]);
 
       if (profileError) {
-        toast.error("Failed to create profile");
-        setLoading(false);
-        return;
+        console.error('Profile insert error:', profileError);
+        // Continue even if profile insert fails, can be created later
       }
 
-      // Step 3: Insert user role
-      const { error: roleError } = await supabase.from("user_roles").insert({
-        user_id: data.user.id,
-        role,
-      });
+      // Insert into user_roles table
+      const { error: roleError } = await supabase.from('user_roles').insert([
+        {
+          user_id: authData.user.id,
+          role,
+        },
+      ]);
 
       if (roleError) {
-        toast.error("Failed to assign role");
-        setLoading(false);
-        return;
+        console.error('Role insert error:', roleError);
       }
 
-      toast.success("Account created successfully. Please check your email to verify.");
-      navigate("/login");
+      toast.success('Signup successful! Please check your email to confirm your account.');
+      navigate('/login');
     } catch (err) {
-      toast.error("An error occurred during signup");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: window.location.origin + "/dashboard",
-        },
-      });
-
-      if (error) {
-        toast.error(error.message);
-      }
-    } catch (err) {
-      toast.error("An error occurred");
+      toast.error('An error occurred during signup');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Create Account</CardTitle>
-          <CardDescription>Join KejaHub and start your real estate journey</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="firstName">First Name</Label>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <Card className="border-slate-700 bg-slate-800">
+          <CardHeader className="space-y-2">
+            <CardTitle className="text-2xl text-white">Create Account</CardTitle>
+            <CardDescription>
+              Join KejaHub and find your perfect space
+            </CardDescription>
+          </CardHeader>
+
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    id="firstName"
+                    type="text"
+                    placeholder="John"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className="border-slate-600 bg-slate-700 text-white placeholder:text-slate-400"
+                    disabled={loading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    type="text"
+                    placeholder="Doe"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    className="border-slate-600 bg-slate-700 text-white placeholder:text-slate-400"
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
                 <Input
-                  id="firstName"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="John"
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="border-slate-600 bg-slate-700 text-white placeholder:text-slate-400"
                   disabled={loading}
-                  className={errors.firstName ? "border-red-500" : ""}
                 />
-                {errors.firstName && (
-                  <p className="text-xs text-red-500 mt-1">{errors.firstName}</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Create a strong password"
+                    value={password}
+                    onChange={(e) => handlePasswordChange(e.target.value)}
+                    className="border-slate-600 bg-slate-700 text-white placeholder:text-slate-400 pr-10"
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+
+                {passwordErrors.length > 0 && (
+                  <div className="bg-red-950 border border-red-700 rounded p-2 space-y-1">
+                    {passwordErrors.map((error, idx) => (
+                      <p key={idx} className="text-xs text-red-200 flex items-center gap-2">
+                        <AlertCircle className="w-3 h-3" />
+                        {error}
+                      </p>
+                    ))}
+                  </div>
                 )}
               </div>
-              <div>
-                <Label htmlFor="lastName">Last Name</Label>
-                <Input
-                  id="lastName"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  placeholder="Doe"
-                  disabled={loading}
-                  className={errors.lastName ? "border-red-500" : ""}
-                />
-                {errors.lastName && <p className="text-xs text-red-500 mt-1">{errors.lastName}</p>}
-              </div>
-            </div>
 
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+              <div className="space-y-2">
+                <Label htmlFor="role">I am a</Label>
+                <Select value={role} onValueChange={(value) => setRole(value as UserRole)} disabled={loading}>
+                  <SelectTrigger className="border-slate-600 bg-slate-700 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-700 border-slate-600">
+                    <SelectItem value="buyer">Property Buyer</SelectItem>
+                    <SelectItem value="tenant">Tenant</SelectItem>
+                    <SelectItem value="seller">Property Seller</SelectItem>
+                    <SelectItem value="landlord">Landlord</SelectItem>
+                    <SelectItem value="agent">Real Estate Agent</SelectItem>
+                    <SelectItem value="airbnb">Airbnb Host</SelectItem>
+                    <SelectItem value="commercial">Commercial Space Owner</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+
+            <CardFooter className="flex flex-col gap-3">
+              <Button
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-700"
+                disabled={loading || passwordErrors.length > 0}
+              >
+                {loading ? (
+                  <>
+                    <Loader className="w-4 h-4 mr-2 animate-spin" />
+                    Creating account...
+                  </>
+                ) : (
+                  'Sign Up'
+                )}
+              </Button>
+
+              <div className="relative my-2">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-600"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-slate-800 text-slate-400">Or sign up with</span>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full border-slate-600 text-white hover:bg-slate-700"
+                onClick={handleGoogleSignIn}
                 disabled={loading}
-                className={errors.email ? "border-red-500" : ""}
-              />
-              {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
-            </div>
+              >
+                <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
+                  <path
+                    fill="currentColor"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  />
+                </svg>
+                Google
+              </Button>
 
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  disabled={loading}
-                  className={errors.password ? "border-red-500 pr-10" : "pr-10"}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  disabled={loading}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
-            </div>
-
-            <div>
-              <Label htmlFor="role">Role</Label>
-              <Select value={role} onValueChange={setRole} disabled={loading}>
-                <SelectTrigger
-                  id="role"
-                  className={errors.role ? "border-red-500" : ""}
-                >
-                  <SelectValue placeholder="Select your role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ROLES.map((r) => (
-                    <SelectItem key={r.value} value={r.value}>
-                      {r.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.role && <p className="text-xs text-red-500 mt-1">{errors.role}</p>}
-            </div>
-
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Creating account..." : "Sign Up"}
-            </Button>
+              <p className="text-center text-sm text-slate-400">
+                Already have an account?{' '}
+                <Link to="/login" className="text-blue-400 hover:text-blue-300 font-medium">
+                  Login
+                </Link>
+              </p>
+            </CardFooter>
           </form>
-
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">Or continue with</span>
-            </div>
-          </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={handleGoogleSignIn}
-            disabled={loading}
-          >
-            Sign up with Google
-          </Button>
-
-          <p className="text-center text-sm text-gray-600 mt-4">
-            Already have an account?{" "}
-            <Link to="/login" className="text-blue-600 hover:text-blue-700 font-medium">
-              Login
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
-}
+};

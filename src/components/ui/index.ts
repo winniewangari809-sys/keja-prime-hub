@@ -1,40 +1,38 @@
-export { Button, buttonVariants } from "./button";
-export type { ButtonProps } from "./button";
+export { Button, buttonVariants } from "./button"
+export type { ButtonProps } from "./button"
 
-export { Input } from "./input";
-export type { InputProps } from "./input";
+export { Input } from "./input"
+export type { InputProps } from "./input"
 
-export { Textarea } from "./textarea";
-export type { TextareaProps } from "./textarea";
+export { Textarea } from "./textarea"
+export type { TextareaProps } from "./textarea"
 
 export {
   Card,
   CardHeader,
+  CardFooter,
   CardTitle,
   CardDescription,
   CardContent,
-  CardFooter,
-} from "./card";
+} from "./card"
 
 export {
   Dialog,
-  DialogPortal,
-  DialogOverlay,
-  DialogClose,
   DialogTrigger,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogFooter,
   DialogTitle,
   DialogDescription,
-} from "./dialog";
+} from "./dialog"
 
-export { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs";
+export { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs"
 
-export { Label } from "./label";
+export { Label } from "./label"
 
-export { Badge, badgeVariants } from "./badge";
-export type { BadgeProps } from "./badge";
+export { Badge, badgeVariants } from "./badge"
+export type { BadgeProps } from "./badge"
 
 export {
   Select,
@@ -42,18 +40,18 @@ export {
   SelectValue,
   SelectTrigger,
   SelectContent,
-  SelectItem,
   SelectLabel,
+  SelectItem,
   SelectSeparator,
   SelectScrollUpButton,
   SelectScrollDownButton,
-} from "./select";
+} from "./select"
 
-export { Checkbox } from "./checkbox";
+export { Checkbox } from "./checkbox"
 
-export { Separator } from "./separator";
+export { Separator } from "./separator"
 
-export { Switch } from "./switch";
+export { Switch } from "./switch"
 
 export {
   DropdownMenu,
@@ -71,4 +69,4 @@ export {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuRadioGroup,
-} from "./dropdown-menu";
+} from "./dropdown-menu"

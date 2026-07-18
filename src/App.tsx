@@ -1,15 +1,15 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
-import HomePage from "@/pages/HomePage";
-import LoginPage from "@/pages/LoginPage";
-import SignupPage from "@/pages/SignupPage";
-import DashboardPage from "@/pages/DashboardPage";
-import SettingsPage from "@/pages/SettingsPage";
-import AdminPage from "@/pages/AdminPage";
-import HouseHuntingPage from "@/pages/HouseHuntingPage";
-import AirbnbPage from "@/pages/AirbnbPage";
-import CommercialPage from "@/pages/CommercialPage";
-import RentalsPage from "@/pages/RentalsPage";
+import { HomePage } from "@/pages/HomePage";
+import { LoginPage } from "@/pages/LoginPage";
+import { SignupPage } from "@/pages/SignupPage";
+import { DashboardPage } from "@/pages/DashboardPage";
+import { SettingsPage } from "@/pages/SettingsPage";
+import { AdminPage } from "@/pages/AdminPage";
+import { HouseHuntingPage } from "@/pages/HouseHuntingPage";
+import { AirbnbPage } from "@/pages/AirbnbPage";
+import { CommercialPage } from "@/pages/CommercialPage";
+import { RentalsPage } from "@/pages/RentalsPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();

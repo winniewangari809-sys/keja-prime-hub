@@ -3,15 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
 
 export type AppRole =
-  | "buyer"
-  | "tenant"
-  | "seller"
-  | "landlord"
-  | "agent"
-  | "airbnb"
-  | "commercial"
-  | "hq"
-  | "admin";
+  | "buyer" | "tenant" | "seller" | "landlord"
+  | "agent" | "airbnb" | "commercial" | "hq" | "admin";
 
 interface AuthContextValue {
   user: User | null;
@@ -23,12 +16,8 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue>({
-  user: null,
-  role: null,
-  firstName: null,
-  fullName: null,
-  loading: true,
-  signOut: async () => {},
+  user: null, role: null, firstName: null, fullName: null,
+  loading: true, signOut: async () => {},
 });
 
 async function loadUserData(user: User) {
@@ -37,17 +26,11 @@ async function loadUserData(user: User) {
   let fullName: string | null = null;
 
   const { data: roleData } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", user.id)
-    .maybeSingle();
+    .from("user_roles").select("role").eq("user_id", user.id).maybeSingle();
   if (roleData) role = roleData.role as AppRole;
 
   const { data: profileData } = await supabase
-    .from("profiles")
-    .select("first_name, full_name")
-    .eq("id", user.id)
-    .maybeSingle();
+    .from("profiles").select("first_name, full_name").eq("id", user.id).maybeSingle();
   if (profileData) {
     firstName = profileData.first_name;
     fullName = profileData.full_name;
@@ -98,10 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setLoading(false);
         })();
       } else {
-        setUser(null);
-        setRole(null);
-        setFirstName(null);
-        setFullName(null);
+        setUser(null); setRole(null); setFirstName(null); setFullName(null);
         setLoading(false);
       }
     });
@@ -114,10 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    setUser(null);
-    setRole(null);
-    setFirstName(null);
-    setFullName(null);
+    setUser(null); setRole(null); setFirstName(null); setFullName(null);
   };
 
   return (
