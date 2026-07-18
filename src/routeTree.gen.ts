@@ -9,123 +9,58 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AboutRouteImport } from './routes/about'
-import { Route as AirbnbsRouteImport } from './routes/airbnbs'
-import { Route as CommercialPropertyRouteImport } from './routes/commercial-property'
-import { Route as CompareRouteImport } from './routes/compare'
-import { Route as ConciergeRouteImport } from './routes/concierge'
-import { Route as ContactRouteImport } from './routes/contact'
-import { Route as HomesForSaleRouteImport } from './routes/homes-for-sale'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as NotificationsRouteImport } from './routes/notifications'
-import { Route as PostListingRouteImport } from './routes/post-listing'
-import { Route as PreviewRouteImport } from './routes/preview'
-import { Route as PropertyRequestsRouteImport } from './routes/property-requests'
-import { Route as RentalsRouteImport } from './routes/rentals'
-import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as RentalsRouteImport } from './routes/rentals'
+import { Route as PropertyRequestsRouteImport } from './routes/property-requests'
+import { Route as PreviewRouteImport } from './routes/preview'
+import { Route as PostListingRouteImport } from './routes/post-listing'
+import { Route as NotificationsRouteImport } from './routes/notifications'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as HomesForSaleRouteImport } from './routes/homes-for-sale'
+import { Route as ContactRouteImport } from './routes/contact'
+import { Route as ConciergeRouteImport } from './routes/concierge'
+import { Route as CompareRouteImport } from './routes/compare'
+import { Route as CommercialPropertyRouteImport } from './routes/commercial-property'
+import { Route as AirbnbsRouteImport } from './routes/airbnbs'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
-import { Route as DashboardAdminRouteImport } from './routes/dashboard.admin'
-import { Route as DashboardAgentRouteImport } from './routes/dashboard.agent'
-import { Route as DashboardAirbnbRouteImport } from './routes/dashboard.airbnb'
-import { Route as DashboardBuyerRouteImport } from './routes/dashboard.buyer'
-import { Route as DashboardCommercialRouteImport } from './routes/dashboard.commercial'
-import { Route as DashboardLandlordRouteImport } from './routes/dashboard.landlord'
-import { Route as DashboardSellerRouteImport } from './routes/dashboard.seller'
-import { Route as DashboardTenantRouteImport } from './routes/dashboard.tenant'
-import { Route as DashboardTestModeRouteImport } from './routes/dashboard.test-mode'
-import { Route as HqAirbnbBookingsRouteImport } from './routes/hq.airbnb-bookings'
-import { Route as HqAnalyticsRouteImport } from './routes/hq.analytics'
-import { Route as HqCalendarRouteImport } from './routes/hq.calendar'
-import { Route as HqCommercialRequestsRouteImport } from './routes/hq.commercial-requests'
-import { Route as HqConciergeRequestsRouteImport } from './routes/hq.concierge-requests'
-import { Route as HqDatabaseRouteImport } from './routes/hq.database'
-import { Route as HqEmergencyRouteImport } from './routes/hq.emergency'
-import { Route as HqFeaturedRouteImport } from './routes/hq.featured'
-import { Route as HqListingHelpRouteImport } from './routes/hq.listing-help'
-import { Route as HqListingsRouteImport } from './routes/hq.listings'
-import { Route as HqMediaRouteImport } from './routes/hq.media'
-import { Route as HqMessagesRouteImport } from './routes/hq.messages'
-import { Route as HqNotificationsRouteImport } from './routes/hq.notifications'
-import { Route as HqPricingRouteImport } from './routes/hq.pricing'
-import { Route as HqReportsRouteImport } from './routes/hq.reports'
-import { Route as HqRevenueRouteImport } from './routes/hq.revenue'
-import { Route as HqSecurityRouteImport } from './routes/hq.security'
-import { Route as HqSupportRouteImport } from './routes/hq.support'
-import { Route as HqUsersRouteImport } from './routes/hq.users'
-import { Route as HqVerificationsRouteImport } from './routes/hq.verifications'
-import { Route as HqViewingsRouteImport } from './routes/hq.viewings'
 import { Route as PropertySlugRouteImport } from './routes/property.$slug'
+import { Route as HqViewingsRouteImport } from './routes/hq.viewings'
+import { Route as HqVerificationsRouteImport } from './routes/hq.verifications'
+import { Route as HqUsersRouteImport } from './routes/hq.users'
+import { Route as HqSupportRouteImport } from './routes/hq.support'
+import { Route as HqSecurityRouteImport } from './routes/hq.security'
+import { Route as HqRevenueRouteImport } from './routes/hq.revenue'
+import { Route as HqReportsRouteImport } from './routes/hq.reports'
+import { Route as HqPricingRouteImport } from './routes/hq.pricing'
+import { Route as HqNotificationsRouteImport } from './routes/hq.notifications'
+import { Route as HqMessagesRouteImport } from './routes/hq.messages'
+import { Route as HqMediaRouteImport } from './routes/hq.media'
+import { Route as HqListingsRouteImport } from './routes/hq.listings'
+import { Route as HqListingHelpRouteImport } from './routes/hq.listing-help'
+import { Route as HqFeaturedRouteImport } from './routes/hq.featured'
+import { Route as HqEmergencyRouteImport } from './routes/hq.emergency'
+import { Route as HqDatabaseRouteImport } from './routes/hq.database'
+import { Route as HqConciergeRequestsRouteImport } from './routes/hq.concierge-requests'
+import { Route as HqCommercialRequestsRouteImport } from './routes/hq.commercial-requests'
+import { Route as HqCalendarRouteImport } from './routes/hq.calendar'
+import { Route as HqAnalyticsRouteImport } from './routes/hq.analytics'
+import { Route as HqAirbnbBookingsRouteImport } from './routes/hq.airbnb-bookings'
+import { Route as DashboardTestModeRouteImport } from './routes/dashboard.test-mode'
+import { Route as DashboardTenantRouteImport } from './routes/dashboard.tenant'
+import { Route as DashboardSellerRouteImport } from './routes/dashboard.seller'
+import { Route as DashboardLandlordRouteImport } from './routes/dashboard.landlord'
+import { Route as DashboardCommercialRouteImport } from './routes/dashboard.commercial'
+import { Route as DashboardBuyerRouteImport } from './routes/dashboard.buyer'
+import { Route as DashboardAirbnbRouteImport } from './routes/dashboard.airbnb'
+import { Route as DashboardAgentRouteImport } from './routes/dashboard.agent'
+import { Route as DashboardAdminRouteImport } from './routes/dashboard.admin'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AboutRoute = AboutRouteImport.update({
-  id: '/about',
-  path: '/about',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AirbnbsRoute = AirbnbsRouteImport.update({
-  id: '/airbnbs',
-  path: '/airbnbs',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CommercialPropertyRoute = CommercialPropertyRouteImport.update({
-  id: '/commercial-property',
-  path: '/commercial-property',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CompareRoute = CompareRouteImport.update({
-  id: '/compare',
-  path: '/compare',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ConciergeRoute = ConciergeRouteImport.update({
-  id: '/concierge',
-  path: '/concierge',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ContactRoute = ContactRouteImport.update({
-  id: '/contact',
-  path: '/contact',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HomesForSaleRoute = HomesForSaleRouteImport.update({
-  id: '/homes-for-sale',
-  path: '/homes-for-sale',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NotificationsRoute = NotificationsRouteImport.update({
-  id: '/notifications',
-  path: '/notifications',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PostListingRoute = PostListingRouteImport.update({
-  id: '/post-listing',
-  path: '/post-listing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PreviewRoute = PreviewRouteImport.update({
-  id: '/preview',
-  path: '/preview',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PropertyRequestsRoute = PropertyRequestsRouteImport.update({
-  id: '/property-requests',
-  path: '/property-requests',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RentalsRoute = RentalsRouteImport.update({
-  id: '/rentals',
-  path: '/rentals',
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignupRoute = SignupRouteImport.update({
@@ -133,9 +68,74 @@ const SignupRoute = SignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
+const RentalsRoute = RentalsRouteImport.update({
+  id: '/rentals',
+  path: '/rentals',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PropertyRequestsRoute = PropertyRequestsRouteImport.update({
+  id: '/property-requests',
+  path: '/property-requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PreviewRoute = PreviewRouteImport.update({
+  id: '/preview',
+  path: '/preview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PostListingRoute = PostListingRouteImport.update({
+  id: '/post-listing',
+  path: '/post-listing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HomesForSaleRoute = HomesForSaleRouteImport.update({
+  id: '/homes-for-sale',
+  path: '/homes-for-sale',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConciergeRoute = ConciergeRouteImport.update({
+  id: '/concierge',
+  path: '/concierge',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareRoute = CompareRouteImport.update({
+  id: '/compare',
+  path: '/compare',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CommercialPropertyRoute = CommercialPropertyRouteImport.update({
+  id: '/commercial-property',
+  path: '/commercial-property',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AirbnbsRoute = AirbnbsRouteImport.update({
+  id: '/airbnbs',
+  path: '/airbnbs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardIndexRoute = DashboardIndexRouteImport.update({
@@ -143,149 +143,9 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
   path: '/dashboard/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DashboardAdminRoute = DashboardAdminRouteImport.update({
-  id: '/dashboard/admin',
-  path: '/dashboard/admin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardAgentRoute = DashboardAgentRouteImport.update({
-  id: '/dashboard/agent',
-  path: '/dashboard/agent',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardAirbnbRoute = DashboardAirbnbRouteImport.update({
-  id: '/dashboard/airbnb',
-  path: '/dashboard/airbnb',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardBuyerRoute = DashboardBuyerRouteImport.update({
-  id: '/dashboard/buyer',
-  path: '/dashboard/buyer',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardCommercialRoute = DashboardCommercialRouteImport.update({
-  id: '/dashboard/commercial',
-  path: '/dashboard/commercial',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardLandlordRoute = DashboardLandlordRouteImport.update({
-  id: '/dashboard/landlord',
-  path: '/dashboard/landlord',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardSellerRoute = DashboardSellerRouteImport.update({
-  id: '/dashboard/seller',
-  path: '/dashboard/seller',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardTenantRoute = DashboardTenantRouteImport.update({
-  id: '/dashboard/tenant',
-  path: '/dashboard/tenant',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardTestModeRoute = DashboardTestModeRouteImport.update({
-  id: '/dashboard/test-mode',
-  path: '/dashboard/test-mode',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HqAirbnbBookingsRoute = HqAirbnbBookingsRouteImport.update({
-  id: '/hq/airbnb-bookings',
-  path: '/hq/airbnb-bookings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HqAnalyticsRoute = HqAnalyticsRouteImport.update({
-  id: '/hq/analytics',
-  path: '/hq/analytics',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HqCalendarRoute = HqCalendarRouteImport.update({
-  id: '/hq/calendar',
-  path: '/hq/calendar',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HqCommercialRequestsRoute = HqCommercialRequestsRouteImport.update({
-  id: '/hq/commercial-requests',
-  path: '/hq/commercial-requests',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HqConciergeRequestsRoute = HqConciergeRequestsRouteImport.update({
-  id: '/hq/concierge-requests',
-  path: '/hq/concierge-requests',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HqDatabaseRoute = HqDatabaseRouteImport.update({
-  id: '/hq/database',
-  path: '/hq/database',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HqEmergencyRoute = HqEmergencyRouteImport.update({
-  id: '/hq/emergency',
-  path: '/hq/emergency',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HqFeaturedRoute = HqFeaturedRouteImport.update({
-  id: '/hq/featured',
-  path: '/hq/featured',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HqListingHelpRoute = HqListingHelpRouteImport.update({
-  id: '/hq/listing-help',
-  path: '/hq/listing-help',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HqListingsRoute = HqListingsRouteImport.update({
-  id: '/hq/listings',
-  path: '/hq/listings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HqMediaRoute = HqMediaRouteImport.update({
-  id: '/hq/media',
-  path: '/hq/media',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HqMessagesRoute = HqMessagesRouteImport.update({
-  id: '/hq/messages',
-  path: '/hq/messages',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HqNotificationsRoute = HqNotificationsRouteImport.update({
-  id: '/hq/notifications',
-  path: '/hq/notifications',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HqPricingRoute = HqPricingRouteImport.update({
-  id: '/hq/pricing',
-  path: '/hq/pricing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HqReportsRoute = HqReportsRouteImport.update({
-  id: '/hq/reports',
-  path: '/hq/reports',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HqRevenueRoute = HqRevenueRouteImport.update({
-  id: '/hq/revenue',
-  path: '/hq/revenue',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HqSecurityRoute = HqSecurityRouteImport.update({
-  id: '/hq/security',
-  path: '/hq/security',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HqSupportRoute = HqSupportRouteImport.update({
-  id: '/hq/support',
-  path: '/hq/support',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HqUsersRoute = HqUsersRouteImport.update({
-  id: '/hq/users',
-  path: '/hq/users',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HqVerificationsRoute = HqVerificationsRouteImport.update({
-  id: '/hq/verifications',
-  path: '/hq/verifications',
+const PropertySlugRoute = PropertySlugRouteImport.update({
+  id: '/property/$slug',
+  path: '/property/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HqViewingsRoute = HqViewingsRouteImport.update({
@@ -293,9 +153,149 @@ const HqViewingsRoute = HqViewingsRouteImport.update({
   path: '/hq/viewings',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PropertySlugRoute = PropertySlugRouteImport.update({
-  id: '/property/$slug',
-  path: '/property/$slug',
+const HqVerificationsRoute = HqVerificationsRouteImport.update({
+  id: '/hq/verifications',
+  path: '/hq/verifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HqUsersRoute = HqUsersRouteImport.update({
+  id: '/hq/users',
+  path: '/hq/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HqSupportRoute = HqSupportRouteImport.update({
+  id: '/hq/support',
+  path: '/hq/support',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HqSecurityRoute = HqSecurityRouteImport.update({
+  id: '/hq/security',
+  path: '/hq/security',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HqRevenueRoute = HqRevenueRouteImport.update({
+  id: '/hq/revenue',
+  path: '/hq/revenue',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HqReportsRoute = HqReportsRouteImport.update({
+  id: '/hq/reports',
+  path: '/hq/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HqPricingRoute = HqPricingRouteImport.update({
+  id: '/hq/pricing',
+  path: '/hq/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HqNotificationsRoute = HqNotificationsRouteImport.update({
+  id: '/hq/notifications',
+  path: '/hq/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HqMessagesRoute = HqMessagesRouteImport.update({
+  id: '/hq/messages',
+  path: '/hq/messages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HqMediaRoute = HqMediaRouteImport.update({
+  id: '/hq/media',
+  path: '/hq/media',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HqListingsRoute = HqListingsRouteImport.update({
+  id: '/hq/listings',
+  path: '/hq/listings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HqListingHelpRoute = HqListingHelpRouteImport.update({
+  id: '/hq/listing-help',
+  path: '/hq/listing-help',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HqFeaturedRoute = HqFeaturedRouteImport.update({
+  id: '/hq/featured',
+  path: '/hq/featured',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HqEmergencyRoute = HqEmergencyRouteImport.update({
+  id: '/hq/emergency',
+  path: '/hq/emergency',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HqDatabaseRoute = HqDatabaseRouteImport.update({
+  id: '/hq/database',
+  path: '/hq/database',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HqConciergeRequestsRoute = HqConciergeRequestsRouteImport.update({
+  id: '/hq/concierge-requests',
+  path: '/hq/concierge-requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HqCommercialRequestsRoute = HqCommercialRequestsRouteImport.update({
+  id: '/hq/commercial-requests',
+  path: '/hq/commercial-requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HqCalendarRoute = HqCalendarRouteImport.update({
+  id: '/hq/calendar',
+  path: '/hq/calendar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HqAnalyticsRoute = HqAnalyticsRouteImport.update({
+  id: '/hq/analytics',
+  path: '/hq/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HqAirbnbBookingsRoute = HqAirbnbBookingsRouteImport.update({
+  id: '/hq/airbnb-bookings',
+  path: '/hq/airbnb-bookings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardTestModeRoute = DashboardTestModeRouteImport.update({
+  id: '/dashboard/test-mode',
+  path: '/dashboard/test-mode',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardTenantRoute = DashboardTenantRouteImport.update({
+  id: '/dashboard/tenant',
+  path: '/dashboard/tenant',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardSellerRoute = DashboardSellerRouteImport.update({
+  id: '/dashboard/seller',
+  path: '/dashboard/seller',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardLandlordRoute = DashboardLandlordRouteImport.update({
+  id: '/dashboard/landlord',
+  path: '/dashboard/landlord',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardCommercialRoute = DashboardCommercialRouteImport.update({
+  id: '/dashboard/commercial',
+  path: '/dashboard/commercial',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardBuyerRoute = DashboardBuyerRouteImport.update({
+  id: '/dashboard/buyer',
+  path: '/dashboard/buyer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardAirbnbRoute = DashboardAirbnbRouteImport.update({
+  id: '/dashboard/airbnb',
+  path: '/dashboard/airbnb',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardAgentRoute = DashboardAgentRouteImport.update({
+  id: '/dashboard/agent',
+  path: '/dashboard/agent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardAdminRoute = DashboardAdminRouteImport.update({
+  id: '/dashboard/admin',
+  path: '/dashboard/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -656,102 +656,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/airbnbs': {
-      id: '/airbnbs'
-      path: '/airbnbs'
-      fullPath: '/airbnbs'
-      preLoaderRoute: typeof AirbnbsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/commercial-property': {
-      id: '/commercial-property'
-      path: '/commercial-property'
-      fullPath: '/commercial-property'
-      preLoaderRoute: typeof CommercialPropertyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/compare': {
-      id: '/compare'
-      path: '/compare'
-      fullPath: '/compare'
-      preLoaderRoute: typeof CompareRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/concierge': {
-      id: '/concierge'
-      path: '/concierge'
-      fullPath: '/concierge'
-      preLoaderRoute: typeof ConciergeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/contact': {
-      id: '/contact'
-      path: '/contact'
-      fullPath: '/contact'
-      preLoaderRoute: typeof ContactRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/homes-for-sale': {
-      id: '/homes-for-sale'
-      path: '/homes-for-sale'
-      fullPath: '/homes-for-sale'
-      preLoaderRoute: typeof HomesForSaleRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/notifications': {
-      id: '/notifications'
-      path: '/notifications'
-      fullPath: '/notifications'
-      preLoaderRoute: typeof NotificationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/post-listing': {
-      id: '/post-listing'
-      path: '/post-listing'
-      fullPath: '/post-listing'
-      preLoaderRoute: typeof PostListingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/preview': {
-      id: '/preview'
-      path: '/preview'
-      fullPath: '/preview'
-      preLoaderRoute: typeof PreviewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/property-requests': {
-      id: '/property-requests'
-      path: '/property-requests'
-      fullPath: '/property-requests'
-      preLoaderRoute: typeof PropertyRequestsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/rentals': {
-      id: '/rentals'
-      path: '/rentals'
-      fullPath: '/rentals'
-      preLoaderRoute: typeof RentalsRouteImport
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/signup': {
@@ -761,11 +670,102 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
+    '/rentals': {
+      id: '/rentals'
+      path: '/rentals'
+      fullPath: '/rentals'
+      preLoaderRoute: typeof RentalsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/property-requests': {
+      id: '/property-requests'
+      path: '/property-requests'
+      fullPath: '/property-requests'
+      preLoaderRoute: typeof PropertyRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/preview': {
+      id: '/preview'
+      path: '/preview'
+      fullPath: '/preview'
+      preLoaderRoute: typeof PreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/post-listing': {
+      id: '/post-listing'
+      path: '/post-listing'
+      fullPath: '/post-listing'
+      preLoaderRoute: typeof PostListingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/homes-for-sale': {
+      id: '/homes-for-sale'
+      path: '/homes-for-sale'
+      fullPath: '/homes-for-sale'
+      preLoaderRoute: typeof HomesForSaleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/concierge': {
+      id: '/concierge'
+      path: '/concierge'
+      fullPath: '/concierge'
+      preLoaderRoute: typeof ConciergeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare': {
+      id: '/compare'
+      path: '/compare'
+      fullPath: '/compare'
+      preLoaderRoute: typeof CompareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/commercial-property': {
+      id: '/commercial-property'
+      path: '/commercial-property'
+      fullPath: '/commercial-property'
+      preLoaderRoute: typeof CommercialPropertyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/airbnbs': {
+      id: '/airbnbs'
+      path: '/airbnbs'
+      fullPath: '/airbnbs'
+      preLoaderRoute: typeof AirbnbsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard/': {
@@ -775,207 +775,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/dashboard/admin': {
-      id: '/dashboard/admin'
-      path: '/dashboard/admin'
-      fullPath: '/dashboard/admin'
-      preLoaderRoute: typeof DashboardAdminRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard/agent': {
-      id: '/dashboard/agent'
-      path: '/dashboard/agent'
-      fullPath: '/dashboard/agent'
-      preLoaderRoute: typeof DashboardAgentRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard/airbnb': {
-      id: '/dashboard/airbnb'
-      path: '/dashboard/airbnb'
-      fullPath: '/dashboard/airbnb'
-      preLoaderRoute: typeof DashboardAirbnbRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard/buyer': {
-      id: '/dashboard/buyer'
-      path: '/dashboard/buyer'
-      fullPath: '/dashboard/buyer'
-      preLoaderRoute: typeof DashboardBuyerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard/commercial': {
-      id: '/dashboard/commercial'
-      path: '/dashboard/commercial'
-      fullPath: '/dashboard/commercial'
-      preLoaderRoute: typeof DashboardCommercialRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard/landlord': {
-      id: '/dashboard/landlord'
-      path: '/dashboard/landlord'
-      fullPath: '/dashboard/landlord'
-      preLoaderRoute: typeof DashboardLandlordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard/seller': {
-      id: '/dashboard/seller'
-      path: '/dashboard/seller'
-      fullPath: '/dashboard/seller'
-      preLoaderRoute: typeof DashboardSellerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard/tenant': {
-      id: '/dashboard/tenant'
-      path: '/dashboard/tenant'
-      fullPath: '/dashboard/tenant'
-      preLoaderRoute: typeof DashboardTenantRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard/test-mode': {
-      id: '/dashboard/test-mode'
-      path: '/dashboard/test-mode'
-      fullPath: '/dashboard/test-mode'
-      preLoaderRoute: typeof DashboardTestModeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hq/airbnb-bookings': {
-      id: '/hq/airbnb-bookings'
-      path: '/hq/airbnb-bookings'
-      fullPath: '/hq/airbnb-bookings'
-      preLoaderRoute: typeof HqAirbnbBookingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hq/analytics': {
-      id: '/hq/analytics'
-      path: '/hq/analytics'
-      fullPath: '/hq/analytics'
-      preLoaderRoute: typeof HqAnalyticsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hq/calendar': {
-      id: '/hq/calendar'
-      path: '/hq/calendar'
-      fullPath: '/hq/calendar'
-      preLoaderRoute: typeof HqCalendarRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hq/commercial-requests': {
-      id: '/hq/commercial-requests'
-      path: '/hq/commercial-requests'
-      fullPath: '/hq/commercial-requests'
-      preLoaderRoute: typeof HqCommercialRequestsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hq/concierge-requests': {
-      id: '/hq/concierge-requests'
-      path: '/hq/concierge-requests'
-      fullPath: '/hq/concierge-requests'
-      preLoaderRoute: typeof HqConciergeRequestsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hq/database': {
-      id: '/hq/database'
-      path: '/hq/database'
-      fullPath: '/hq/database'
-      preLoaderRoute: typeof HqDatabaseRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hq/emergency': {
-      id: '/hq/emergency'
-      path: '/hq/emergency'
-      fullPath: '/hq/emergency'
-      preLoaderRoute: typeof HqEmergencyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hq/featured': {
-      id: '/hq/featured'
-      path: '/hq/featured'
-      fullPath: '/hq/featured'
-      preLoaderRoute: typeof HqFeaturedRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hq/listing-help': {
-      id: '/hq/listing-help'
-      path: '/hq/listing-help'
-      fullPath: '/hq/listing-help'
-      preLoaderRoute: typeof HqListingHelpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hq/listings': {
-      id: '/hq/listings'
-      path: '/hq/listings'
-      fullPath: '/hq/listings'
-      preLoaderRoute: typeof HqListingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hq/media': {
-      id: '/hq/media'
-      path: '/hq/media'
-      fullPath: '/hq/media'
-      preLoaderRoute: typeof HqMediaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hq/messages': {
-      id: '/hq/messages'
-      path: '/hq/messages'
-      fullPath: '/hq/messages'
-      preLoaderRoute: typeof HqMessagesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hq/notifications': {
-      id: '/hq/notifications'
-      path: '/hq/notifications'
-      fullPath: '/hq/notifications'
-      preLoaderRoute: typeof HqNotificationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hq/pricing': {
-      id: '/hq/pricing'
-      path: '/hq/pricing'
-      fullPath: '/hq/pricing'
-      preLoaderRoute: typeof HqPricingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hq/reports': {
-      id: '/hq/reports'
-      path: '/hq/reports'
-      fullPath: '/hq/reports'
-      preLoaderRoute: typeof HqReportsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hq/revenue': {
-      id: '/hq/revenue'
-      path: '/hq/revenue'
-      fullPath: '/hq/revenue'
-      preLoaderRoute: typeof HqRevenueRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hq/security': {
-      id: '/hq/security'
-      path: '/hq/security'
-      fullPath: '/hq/security'
-      preLoaderRoute: typeof HqSecurityRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hq/support': {
-      id: '/hq/support'
-      path: '/hq/support'
-      fullPath: '/hq/support'
-      preLoaderRoute: typeof HqSupportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hq/users': {
-      id: '/hq/users'
-      path: '/hq/users'
-      fullPath: '/hq/users'
-      preLoaderRoute: typeof HqUsersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hq/verifications': {
-      id: '/hq/verifications'
-      path: '/hq/verifications'
-      fullPath: '/hq/verifications'
-      preLoaderRoute: typeof HqVerificationsRouteImport
+    '/property/$slug': {
+      id: '/property/$slug'
+      path: '/property/$slug'
+      fullPath: '/property/$slug'
+      preLoaderRoute: typeof PropertySlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/hq/viewings': {
@@ -985,11 +789,207 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HqViewingsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/property/$slug': {
-      id: '/property/$slug'
-      path: '/property/$slug'
-      fullPath: '/property/$slug'
-      preLoaderRoute: typeof PropertySlugRouteImport
+    '/hq/verifications': {
+      id: '/hq/verifications'
+      path: '/hq/verifications'
+      fullPath: '/hq/verifications'
+      preLoaderRoute: typeof HqVerificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hq/users': {
+      id: '/hq/users'
+      path: '/hq/users'
+      fullPath: '/hq/users'
+      preLoaderRoute: typeof HqUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hq/support': {
+      id: '/hq/support'
+      path: '/hq/support'
+      fullPath: '/hq/support'
+      preLoaderRoute: typeof HqSupportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hq/security': {
+      id: '/hq/security'
+      path: '/hq/security'
+      fullPath: '/hq/security'
+      preLoaderRoute: typeof HqSecurityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hq/revenue': {
+      id: '/hq/revenue'
+      path: '/hq/revenue'
+      fullPath: '/hq/revenue'
+      preLoaderRoute: typeof HqRevenueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hq/reports': {
+      id: '/hq/reports'
+      path: '/hq/reports'
+      fullPath: '/hq/reports'
+      preLoaderRoute: typeof HqReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hq/pricing': {
+      id: '/hq/pricing'
+      path: '/hq/pricing'
+      fullPath: '/hq/pricing'
+      preLoaderRoute: typeof HqPricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hq/notifications': {
+      id: '/hq/notifications'
+      path: '/hq/notifications'
+      fullPath: '/hq/notifications'
+      preLoaderRoute: typeof HqNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hq/messages': {
+      id: '/hq/messages'
+      path: '/hq/messages'
+      fullPath: '/hq/messages'
+      preLoaderRoute: typeof HqMessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hq/media': {
+      id: '/hq/media'
+      path: '/hq/media'
+      fullPath: '/hq/media'
+      preLoaderRoute: typeof HqMediaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hq/listings': {
+      id: '/hq/listings'
+      path: '/hq/listings'
+      fullPath: '/hq/listings'
+      preLoaderRoute: typeof HqListingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hq/listing-help': {
+      id: '/hq/listing-help'
+      path: '/hq/listing-help'
+      fullPath: '/hq/listing-help'
+      preLoaderRoute: typeof HqListingHelpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hq/featured': {
+      id: '/hq/featured'
+      path: '/hq/featured'
+      fullPath: '/hq/featured'
+      preLoaderRoute: typeof HqFeaturedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hq/emergency': {
+      id: '/hq/emergency'
+      path: '/hq/emergency'
+      fullPath: '/hq/emergency'
+      preLoaderRoute: typeof HqEmergencyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hq/database': {
+      id: '/hq/database'
+      path: '/hq/database'
+      fullPath: '/hq/database'
+      preLoaderRoute: typeof HqDatabaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hq/concierge-requests': {
+      id: '/hq/concierge-requests'
+      path: '/hq/concierge-requests'
+      fullPath: '/hq/concierge-requests'
+      preLoaderRoute: typeof HqConciergeRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hq/commercial-requests': {
+      id: '/hq/commercial-requests'
+      path: '/hq/commercial-requests'
+      fullPath: '/hq/commercial-requests'
+      preLoaderRoute: typeof HqCommercialRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hq/calendar': {
+      id: '/hq/calendar'
+      path: '/hq/calendar'
+      fullPath: '/hq/calendar'
+      preLoaderRoute: typeof HqCalendarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hq/analytics': {
+      id: '/hq/analytics'
+      path: '/hq/analytics'
+      fullPath: '/hq/analytics'
+      preLoaderRoute: typeof HqAnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hq/airbnb-bookings': {
+      id: '/hq/airbnb-bookings'
+      path: '/hq/airbnb-bookings'
+      fullPath: '/hq/airbnb-bookings'
+      preLoaderRoute: typeof HqAirbnbBookingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/test-mode': {
+      id: '/dashboard/test-mode'
+      path: '/dashboard/test-mode'
+      fullPath: '/dashboard/test-mode'
+      preLoaderRoute: typeof DashboardTestModeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/tenant': {
+      id: '/dashboard/tenant'
+      path: '/dashboard/tenant'
+      fullPath: '/dashboard/tenant'
+      preLoaderRoute: typeof DashboardTenantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/seller': {
+      id: '/dashboard/seller'
+      path: '/dashboard/seller'
+      fullPath: '/dashboard/seller'
+      preLoaderRoute: typeof DashboardSellerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/landlord': {
+      id: '/dashboard/landlord'
+      path: '/dashboard/landlord'
+      fullPath: '/dashboard/landlord'
+      preLoaderRoute: typeof DashboardLandlordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/commercial': {
+      id: '/dashboard/commercial'
+      path: '/dashboard/commercial'
+      fullPath: '/dashboard/commercial'
+      preLoaderRoute: typeof DashboardCommercialRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/buyer': {
+      id: '/dashboard/buyer'
+      path: '/dashboard/buyer'
+      fullPath: '/dashboard/buyer'
+      preLoaderRoute: typeof DashboardBuyerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/airbnb': {
+      id: '/dashboard/airbnb'
+      path: '/dashboard/airbnb'
+      fullPath: '/dashboard/airbnb'
+      preLoaderRoute: typeof DashboardAirbnbRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/agent': {
+      id: '/dashboard/agent'
+      path: '/dashboard/agent'
+      fullPath: '/dashboard/agent'
+      preLoaderRoute: typeof DashboardAgentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/admin': {
+      id: '/dashboard/admin'
+      path: '/dashboard/admin'
+      fullPath: '/dashboard/admin'
+      preLoaderRoute: typeof DashboardAdminRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
