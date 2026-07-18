@@ -47,8 +47,6 @@ export {
   SelectItem,
   SelectLabel,
   SelectSeparator,
-  SelectScrollUpButton,
-  SelectScrollDownButton,
 } from "./select"
 
 export { Checkbox } from "./checkbox"
@@ -81,6 +79,6 @@ export {
 
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "./tooltip"
 
-export { Popover, PopoverTrigger, PopoverContent, PopoverAnchor } from "./popover"
+export { Popover, PopoverTrigger, PopoverContent } from "./popover"
 
 export { toast, Toaster } from "./sonner"
