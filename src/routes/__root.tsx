@@ -9,15 +9,10 @@ export const Route = createFileRoute("__root")({
 
 function RootComponent() {
   const { theme } = useTheme();
-
   useEffect(() => {
-    if (theme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    if (theme === "dark") document.documentElement.classList.add("dark");
+    else document.documentElement.classList.remove("dark");
   }, [theme]);
-
   return (
     <>
       <Outlet />

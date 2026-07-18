@@ -80,7 +80,7 @@ export function useAuth() {
       }
     })();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!isMounted) return;
       const currentUser = session?.user || null;
 

@@ -23,10 +23,5 @@ export function useRequireRole(roles: AppRole[]): RequireRoleResult {
     }
   }, [loading, user, role, roles, navigate]);
 
-  return {
-    loading,
-    user,
-    role,
-    firstName,
-  };
+  return { loading, user, role, firstName };
 }
