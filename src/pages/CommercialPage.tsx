@@ -2,65 +2,79 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/hooks/use-auth";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { School, Hospital, DollarSign, Train } from "lucide-react";
-
-const BUSINESS_TYPES = [
-  "Shop",
-  "Office",
-  "Warehouse",
-  "Salon Space",
-  "Restaurant Space",
-];
-
-const NEARBY_AMENITIES = [
-  { icon: School, name: "Schools", description: "Quality education institutions" },
-  { icon: Hospital, name: "Hospitals", description: "Healthcare facilities" },
-  { icon: DollarSign, name: "Banks", description: "Financial services" },
-  { icon: Train, name: "Transport", description: "Easy accessibility" },
-];
+import { Building, MapPin, TrendingUp } from "lucide-react";
 
 export const CommercialPage = () => {
   const navigate = useNavigate();
-  const { user, firstName } = useAuth();
-  const [loading, setLoading] = useState(false);
-
-  // Form state
-  const [name, setName] = useState(firstName || "");
+  const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState(user?.email || "");
+  const [email, setEmail] = useState("");
   const [businessType, setBusinessType] = useState("");
   const [area, setArea] = useState("");
   const [budget, setBudget] = useState("");
   const [parkingNeeded, setParkingNeeded] = useState(false);
   const [groundFloor, setGroundFloor] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const businessTypeOptions = [
+    "Shop",
+    "Office",
+    "Warehouse",
+    "Salon Space",
+    "Restaurant Space",
+  ];
+
+  const amenities = [
+    { icon: MapPin, label: "Schools", count: "12" },
+    { icon: Building, label: "Hospitals", count: "8" },
+    { icon: Building, label: "Banks", count: "15" },
+    { icon: Building, label: "Supermarkets", count: "10" },
+    { icon: Building, label: "Transport", count: "5" },
+  ];
 
   const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!name.trim()) newErrors.name = "Business name is required";
-    if (!phone.trim()) newErrors.phone = "Phone is required";
-    if (!email.trim()) newErrors.email = "Email is required";
-    if (!businessType) newErrors.businessType = "Business type is required";
-    if (!area.trim()) newErrors.area = "Area is required";
-    if (!budget) newErrors.budget = "Budget is required";
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    if (!name.trim()) {
+      toast.error("Name is required");
+      return false;
+    }
+    if (!phone.trim()) {
+      toast.error("Phone is required");
+      return false;
+    }
+    if (!email.trim()) {
+      toast.error("Email is required");
+      return false;
+    }
+    if (!businessType) {
+      toast.error("Business type is required");
+      return false;
+    }
+    if (!area.trim()) {
+      toast.error("Area is required");
+      return false;
+    }
+    if (!budget || parseInt(budget) <= 0) {
+      toast.error("Budget must be greater than 0");
+      return false;
+    }
+    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!validateForm()) return;
 
     setLoading(true);
@@ -74,286 +88,267 @@ export const CommercialPage = () => {
         budget: parseInt(budget),
         parking_needed: parkingNeeded,
         ground_floor: groundFloor,
-        user_id: user?.id || null,
       });
 
       if (error) {
-        toast.error(error.message || "Failed to submit request");
-      } else {
-        toast.success("Request submitted! We'll connect you with available spaces.");
-        navigate("/dashboard");
+        toast.error("Failed to submit request");
+        return;
       }
+
+      toast.success("Commercial space request submitted successfully!");
+      navigate("/dashboard");
     } catch (err) {
-      toast.error("An unexpected error occurred");
+      toast.error("An error occurred");
     } finally {
       setLoading(false);
     }
   };
 
-  // Calculate business potential score
   const calculateScore = (): number => {
     let score = 50; // Base score
-    if (parkingNeeded) score += 15;
-    if (groundFloor) score += 25;
-    if (budget && parseInt(budget) > 100000) score += 10;
+    if (groundFloor) score += 15;
+    if (parkingNeeded) score += 10;
+    if (area.length > 5) score += 10;
+    if (parseInt(budget) > 100000) score += 15;
     return Math.min(score, 100);
   };
 
   const businessPotentialScore = calculateScore();
 
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("en-KE", {
+      style: "currency",
+      currency: "KES",
+    }).format(price);
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-100 py-8">
-      <div className="container-app">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="mb-8 text-center">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Commercial Spaces</h1>
-            <p className="text-gray-600">Find the perfect space for your business</p>
-          </div>
+    <div className="min-h-screen bg-gray-50 py-12 px-4">
+      <div className="container-app mx-auto max-w-4xl">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900">Commercial Spaces</h1>
+          <p className="text-gray-600 mt-2">Find the perfect space for your business</p>
+        </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Form */}
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader className="bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-t-lg">
-                  <CardTitle>Find Your Business Space</CardTitle>
-                  <CardDescription className="text-orange-100">
-                    Tell us about your business needs and we'll match you with the perfect space
-                  </CardDescription>
-                </CardHeader>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Form */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Business Space Inquiry</CardTitle>
+                <CardDescription>
+                  Tell us about your business needs
+                </CardDescription>
+              </CardHeader>
+              <form onSubmit={handleSubmit}>
+                <CardContent className="space-y-6">
+                  {/* Contact Information */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-gray-900">Contact Information</h3>
 
-                <CardContent className="pt-8">
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Business Name */}
                     <div className="space-y-2">
-                      <Label htmlFor="name">Business Name *</Label>
+                      <Label htmlFor="name">Full Name</Label>
                       <Input
                         id="name"
-                        placeholder="Your Business Name"
                         value={name}
-                        onChange={(e) => {
-                          setName(e.target.value);
-                          if (errors.name) setErrors({ ...errors, name: undefined });
-                        }}
-                        className={errors.name ? "border-red-500" : ""}
+                        onChange={(e) => setName(e.target.value)}
+                        disabled={loading}
                       />
-                      {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
                     </div>
 
-                    {/* Contact Info Row */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="phone">Phone *</Label>
+                        <Label htmlFor="phone">Phone Number</Label>
                         <Input
                           id="phone"
                           type="tel"
-                          placeholder="+254 712 345 678"
                           value={phone}
-                          onChange={(e) => {
-                            setPhone(e.target.value);
-                            if (errors.phone) setErrors({ ...errors, phone: undefined });
-                          }}
-                          className={errors.phone ? "border-red-500" : ""}
+                          onChange={(e) => setPhone(e.target.value)}
+                          disabled={loading}
                         />
-                        {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
                       </div>
-
                       <div className="space-y-2">
-                        <Label htmlFor="email">Email *</Label>
+                        <Label htmlFor="email">Email</Label>
                         <Input
                           id="email"
                           type="email"
-                          placeholder="you@business.com"
                           value={email}
-                          onChange={(e) => {
-                            setEmail(e.target.value);
-                            if (errors.email) setErrors({ ...errors, email: undefined });
-                          }}
-                          className={errors.email ? "border-red-500" : ""}
+                          onChange={(e) => setEmail(e.target.value)}
+                          disabled={loading}
                         />
-                        {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
                       </div>
                     </div>
+                  </div>
 
-                    {/* Business Type */}
+                  {/* Business Details */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-gray-900">Business Details</h3>
+
                     <div className="space-y-2">
-                      <Label htmlFor="businessType">Business Type *</Label>
-                      <Select value={businessType} onValueChange={(value) => {
-                        setBusinessType(value);
-                        if (errors.businessType) setErrors({ ...errors, businessType: undefined });
-                      }}>
-                        <SelectTrigger id="businessType" className={errors.businessType ? "border-red-500" : ""}>
+                      <Label htmlFor="businessType">Type of Business Space</Label>
+                      <Select value={businessType} onValueChange={setBusinessType} disabled={loading}>
+                        <SelectTrigger id="businessType">
                           <SelectValue placeholder="Select business type" />
                         </SelectTrigger>
                         <SelectContent>
-                          {BUSINESS_TYPES.map((type) => (
+                          {businessTypeOptions.map((type) => (
                             <SelectItem key={type} value={type}>
                               {type}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                      {errors.businessType && <p className="text-sm text-red-500">{errors.businessType}</p>}
                     </div>
 
-                    {/* Area */}
                     <div className="space-y-2">
-                      <Label htmlFor="area">Preferred Area *</Label>
+                      <Label htmlFor="area">Preferred Area(s)</Label>
                       <Input
                         id="area"
                         placeholder="e.g., CBD, Westlands, Industrial Area"
                         value={area}
-                        onChange={(e) => {
-                          setArea(e.target.value);
-                          if (errors.area) setErrors({ ...errors, area: undefined });
-                        }}
-                        className={errors.area ? "border-red-500" : ""}
+                        onChange={(e) => setArea(e.target.value)}
+                        disabled={loading}
                       />
-                      {errors.area && <p className="text-sm text-red-500">{errors.area}</p>}
                     </div>
 
-                    {/* Budget */}
                     <div className="space-y-2">
-                      <Label htmlFor="budget">Monthly Budget (KES) *</Label>
+                      <Label htmlFor="budget">Monthly Budget (KES)</Label>
                       <Input
                         id="budget"
                         type="number"
-                        placeholder="100000"
+                        placeholder="0"
                         value={budget}
-                        onChange={(e) => {
-                          setBudget(e.target.value);
-                          if (errors.budget) setErrors({ ...errors, budget: undefined });
-                        }}
-                        className={errors.budget ? "border-red-500" : ""}
+                        onChange={(e) => setBudget(e.target.value)}
+                        disabled={loading}
                       />
-                      {errors.budget && <p className="text-sm text-red-500">{errors.budget}</p>}
                     </div>
+                  </div>
 
-                    {/* Preferences */}
+                  {/* Preferences */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-gray-900">Preferences</h3>
+
                     <div className="space-y-3">
-                      <Label>Space Preferences</Label>
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="parking"
-                            checked={parkingNeeded}
-                            onCheckedChange={(checked) => setParkingNeeded(checked as boolean)}
-                          />
-                          <label
-                            htmlFor="parking"
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                          >
-                            Parking Required
-                          </label>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="groundFloor"
-                            checked={groundFloor}
-                            onCheckedChange={(checked) => setGroundFloor(checked as boolean)}
-                          />
-                          <label
-                            htmlFor="groundFloor"
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                          >
-                            Ground Floor Preferred
-                          </label>
-                        </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="parking"
+                          checked={parkingNeeded}
+                          onCheckedChange={(checked) => setParkingNeeded(checked as boolean)}
+                          disabled={loading}
+                        />
+                        <Label
+                          htmlFor="parking"
+                          className="text-sm font-normal cursor-pointer"
+                        >
+                          Parking is essential
+                        </Label>
                       </div>
-                    </div>
 
-                    {/* Submit Button */}
-                    <Button type="submit" disabled={loading} className="w-full bg-orange-600 hover:bg-orange-700 text-white">
-                      {loading ? "Submitting..." : "Submit Request"}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Sidebar Info */}
-            <div className="lg:col-span-1 space-y-6">
-              {/* Business Potential Score */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Business Potential Score</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-center">
-                    <div className="relative w-24 h-24">
-                      <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="45"
-                          stroke="#e5e7eb"
-                          strokeWidth="8"
-                          fill="none"
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="groundFloor"
+                          checked={groundFloor}
+                          onCheckedChange={(checked) => setGroundFloor(checked as boolean)}
+                          disabled={loading}
                         />
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="45"
-                          stroke="#f97316"
-                          strokeWidth="8"
-                          fill="none"
-                          strokeDasharray={`${(businessPotentialScore / 100) * 283} 283`}
-                          className="transition-all"
-                        />
-                      </svg>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-2xl font-bold text-orange-600">{businessPotentialScore}</span>
+                        <Label
+                          htmlFor="groundFloor"
+                          className="text-sm font-normal cursor-pointer"
+                        >
+                          Ground floor preferred
+                        </Label>
                       </div>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-600 text-center">
-                    Score based on your requirements and preferences
+                </CardContent>
+                <CardFooter>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? "Submitting..." : "Submit Inquiry"}
+                  </Button>
+                </CardFooter>
+              </form>
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Business Potential Score */}
+            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-green-600" />
+                  Business Potential
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="text-center">
+                  <div className="text-4xl font-bold text-green-600">
+                    {businessPotentialScore}%
+                  </div>
+                  <p className="text-sm text-gray-600 mt-2">
+                    Based on your preferences
                   </p>
-                </CardContent>
-              </Card>
+                </div>
 
-              {/* Nearby Amenities */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Nearby Amenities</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {NEARBY_AMENITIES.map(({ icon: Icon, name, description }) => (
-                    <div key={name} className="flex gap-3">
-                      <div className="flex-shrink-0">
-                        <Icon className="w-5 h-5 text-orange-600 mt-0.5" />
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-green-600 h-2 rounded-full transition-all"
+                    style={{ width: `${businessPotentialScore}%` }}
+                  />
+                </div>
+
+                <div className="text-xs text-gray-600 space-y-1">
+                  <p>• Ground floor location: +15%</p>
+                  <p>• Parking availability: +10%</p>
+                  <p>• Higher budget: +15%</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Nearby Amenities */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Nearby Amenities</CardTitle>
+                <CardDescription>In the {area || "selected"} area</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {amenities.map((amenity) => {
+                  const IconComponent = amenity.icon;
+                  return (
+                    <div key={amenity.label} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50">
+                      <div className="flex items-center gap-3">
+                        <IconComponent className="w-5 h-5 text-blue-600" />
+                        <span className="text-sm font-medium text-gray-900">
+                          {amenity.label}
+                        </span>
                       </div>
-                      <div>
-                        <p className="font-medium text-sm">{name}</p>
-                        <p className="text-xs text-gray-600">{description}</p>
-                      </div>
+                      <Badge variant="outline">{amenity.count}</Badge>
                     </div>
-                  ))}
-                </CardContent>
-              </Card>
+                  );
+                })}
+              </CardContent>
+            </Card>
 
-              {/* Quick Stats */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Available Spaces</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">In Nairobi</p>
-                    <Badge>145+</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">Budget Range</p>
-                    <Badge variant="outline">50K-500K</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">Average Lead Time</p>
-                    <Badge variant="outline">24hrs</Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            {/* Key Features */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Why Commercial Spaces?</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <div className="flex gap-3">
+                  <div className="w-2 h-2 rounded-full bg-blue-600 mt-1 flex-shrink-0" />
+                  <p className="text-gray-700">Verified business locations</p>
+                </div>
+                <div className="flex gap-3">
+                  <div className="w-2 h-2 rounded-full bg-blue-600 mt-1 flex-shrink-0" />
+                  <p className="text-gray-700">Competitive pricing</p>
+                </div>
+                <div className="flex gap-3">
+                  <div className="w-2 h-2 rounded-full bg-blue-600 mt-1 flex-shrink-0" />
+                  <p className="text-gray-700">Expert consultation</p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>

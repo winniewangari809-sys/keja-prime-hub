@@ -4,44 +4,39 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, Chrome } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export const LoginPage = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
-  const validateEmail = (value: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(value);
-  };
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  const handleValidation = () => {
-    const newErrors: { email?: string; password?: string } = {};
-
-    if (!email) {
-      newErrors.email = "Email is required";
-    } else if (!validateEmail(email)) {
-      newErrors.email = "Please enter a valid email";
+  const validateForm = () => {
+    if (!email.trim()) {
+      toast.error("Email is required");
+      return false;
     }
-
+    if (!emailRegex.test(email)) {
+      toast.error("Please enter a valid email address");
+      return false;
+    }
     if (!password) {
-      newErrors.password = "Password is required";
+      toast.error("Password is required");
+      return false;
     }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return true;
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!handleValidation()) return;
+    if (!validateForm()) return;
 
     setLoading(true);
     try {
@@ -51,13 +46,14 @@ export const LoginPage = () => {
       });
 
       if (error) {
-        toast.error(error.message || "Failed to login");
-      } else {
-        toast.success("Login successful!");
-        navigate("/dashboard");
+        toast.error(error.message || "Failed to sign in");
+        return;
       }
+
+      toast.success("Signed in successfully!");
+      navigate("/dashboard");
     } catch (err) {
-      toast.error("An unexpected error occurred");
+      toast.error("An error occurred during login");
     } finally {
       setLoading(false);
     }
@@ -69,7 +65,7 @@ export const LoginPage = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: `${window.location.origin}/auth-callback`,
         },
       });
 
@@ -77,24 +73,24 @@ export const LoginPage = () => {
         toast.error(error.message || "Failed to sign in with Google");
       }
     } catch (err) {
-      toast.error("An unexpected error occurred");
+      toast.error("An error occurred during Google sign in");
     } finally {
       setLoading(false);
     }
   };
 
   const handleForgotPassword = async () => {
-    if (!email) {
-      setErrors({ email: "Enter your email to reset password" });
+    if (!email.trim()) {
+      toast.error("Please enter your email address");
       return;
     }
 
-    if (!validateEmail(email)) {
-      setErrors({ email: "Please enter a valid email" });
+    if (!emailRegex.test(email)) {
+      toast.error("Please enter a valid email address");
       return;
     }
 
-    setLoading(true);
+    setResetLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
@@ -102,60 +98,36 @@ export const LoginPage = () => {
 
       if (error) {
         toast.error(error.message || "Failed to send reset email");
-      } else {
-        toast.success("Password reset email sent! Check your inbox.");
+        return;
       }
+
+      toast.success("Password reset email sent! Check your inbox.");
     } catch (err) {
-      toast.error("An unexpected error occurred");
+      toast.error("An error occurred");
     } finally {
-      setLoading(false);
+      setResetLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="space-y-2">
-          <CardTitle className="text-2xl text-center">Welcome to KejaHub</CardTitle>
-          <CardDescription className="text-center">Sign in to your account</CardDescription>
+        <CardHeader>
+          <CardTitle className="text-2xl">Welcome Back</CardTitle>
+          <CardDescription>Sign in to your KejaHub account</CardDescription>
         </CardHeader>
-
-        <CardContent className="space-y-6">
-          {/* Google Sign In */}
-          <Button
-            onClick={handleGoogleSignIn}
-            disabled={loading}
-            variant="outline"
-            className="w-full"
-          >
-            <Chrome className="w-4 h-4 mr-2" />
-            Sign in with Google
-          </Button>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">Or continue with email</span>
-            </div>
-          </div>
-
+        <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder="your@email.com"
                 value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (errors.email) setErrors({ ...errors, email: undefined });
-                }}
-                className={errors.email ? "border-red-500" : ""}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
               />
-              {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
             </div>
 
             <div className="space-y-2">
@@ -166,43 +138,59 @@ export const LoginPage = () => {
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    if (errors.password) setErrors({ ...errors, password: undefined });
-                  }}
-                  className={errors.password ? "border-red-500 pr-10" : "pr-10"}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  disabled={loading}
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
-              {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
             </div>
 
             <div className="flex justify-end">
               <button
                 type="button"
                 onClick={handleForgotPassword}
-                className="text-sm text-blue-600 hover:underline"
+                disabled={resetLoading || loading}
+                className="text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50"
               >
                 Forgot password?
               </button>
             </div>
 
-            <Button type="submit" disabled={loading} className="w-full">
+            <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Signing in..." : "Sign In"}
+            </Button>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">Or continue with</span>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+            >
+              Google Sign In
             </Button>
           </form>
         </CardContent>
-
-        <CardFooter className="flex justify-center">
-          <p className="text-sm text-gray-600">
+        <CardFooter className="flex flex-col gap-2 border-t pt-4">
+          <p className="text-sm text-gray-600 text-center">
             Don't have an account?{" "}
-            <Link to="/signup" className="text-blue-600 hover:underline font-medium">
+            <Link to="/signup" className="text-blue-600 hover:text-blue-700 font-semibold">
               Sign up
             </Link>
           </p>

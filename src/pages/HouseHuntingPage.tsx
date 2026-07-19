@@ -2,91 +2,115 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-const PROPERTY_TYPES = [
-  "Single Room",
-  "Bedsitter",
-  "Studio",
-  "1 Bedroom",
-  "2 Bedroom",
-  "3 Bedroom",
-  "4 Bedroom",
-  "Maisonette",
-  "Penthouse",
-];
-
-const AMENITIES = [
-  "Parking",
-  "Security",
-  "Water",
-  "WiFi",
-  "Furnished",
-  "Balcony",
-  "Gym",
-  "Swimming Pool",
-  "Pets Allowed",
-];
-
 export const HouseHuntingPage = () => {
   const navigate = useNavigate();
-  const { user, firstName } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const { user, profile } = useAuth();
 
-  // Form state
-  const [name, setName] = useState(firstName || "");
-  const [phone, setPhone] = useState("");
+  const [name, setName] = useState(profile?.full_name || "");
+  const [phone, setPhone] = useState(profile?.phone || "");
   const [email, setEmail] = useState(user?.email || "");
   const [area, setArea] = useState("");
   const [budgetMin, setBudgetMin] = useState("");
   const [budgetMax, setBudgetMax] = useState("");
   const [propertyType, setPropertyType] = useState("");
   const [moveInDate, setMoveInDate] = useState("");
-  const [amenities, setAmenities] = useState<string[]>([]);
+  const [amenities, setAmenities] = useState({
+    parking: false,
+    security: false,
+    water: false,
+    wifi: false,
+    furnished: false,
+    balcony: false,
+    gym: false,
+    swimming_pool: false,
+    pets_allowed: false,
+  });
+  const [loading, setLoading] = useState(false);
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const propertyTypeOptions = [
+    "Single Room",
+    "Bedsitter",
+    "Studio",
+    "1 Bedroom",
+    "2 Bedroom",
+    "3 Bedroom",
+    "4 Bedroom",
+    "Maisonette",
+    "Penthouse",
+  ];
 
-  const handleAmenityToggle = (amenity: string) => {
-    setAmenities((prev) =>
-      prev.includes(amenity) ? prev.filter((a) => a !== amenity) : [...prev, amenity]
-    );
-  };
+  const amenityOptions = [
+    { key: "parking", label: "Parking" },
+    { key: "security", label: "Security" },
+    { key: "water", label: "Water" },
+    { key: "wifi", label: "WiFi" },
+    { key: "furnished", label: "Furnished" },
+    { key: "balcony", label: "Balcony" },
+    { key: "gym", label: "Gym" },
+    { key: "swimming_pool", label: "Swimming Pool" },
+    { key: "pets_allowed", label: "Pets Allowed" },
+  ];
 
   const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!name.trim()) newErrors.name = "Name is required";
-    if (!phone.trim()) newErrors.phone = "Phone is required";
-    if (!email.trim()) newErrors.email = "Email is required";
-    if (!area.trim()) newErrors.area = "Area is required";
-    if (!budgetMin) newErrors.budgetMin = "Minimum budget is required";
-    if (!budgetMax) newErrors.budgetMax = "Maximum budget is required";
-    if (!propertyType) newErrors.propertyType = "Property type is required";
-    if (!moveInDate) newErrors.moveInDate = "Move-in date is required";
-
-    const minBudget = parseInt(budgetMin);
-    const maxBudget = parseInt(budgetMax);
-    if (minBudget > maxBudget) {
-      newErrors.budgetMin = "Minimum budget must be less than maximum budget";
+    if (!name.trim()) {
+      toast.error("Name is required");
+      return false;
     }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    if (!phone.trim()) {
+      toast.error("Phone is required");
+      return false;
+    }
+    if (!email.trim()) {
+      toast.error("Email is required");
+      return false;
+    }
+    if (!area.trim()) {
+      toast.error("Area is required");
+      return false;
+    }
+    if (!budgetMin || !budgetMax) {
+      toast.error("Budget range is required");
+      return false;
+    }
+    if (parseInt(budgetMin) > parseInt(budgetMax)) {
+      toast.error("Minimum budget cannot exceed maximum budget");
+      return false;
+    }
+    if (!propertyType) {
+      toast.error("Property type is required");
+      return false;
+    }
+    if (!moveInDate) {
+      toast.error("Move-in date is required");
+      return false;
+    }
+    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!validateForm()) return;
 
     setLoading(true);
     try {
+      const amenitiesList = amenityOptions
+        .filter((opt) => amenities[opt.key as keyof typeof amenities])
+        .map((opt) => opt.label);
+
       const { error } = await supabase.from("house_hunting_requests").insert({
         name,
         phone,
@@ -96,207 +120,181 @@ export const HouseHuntingPage = () => {
         budget_max: parseInt(budgetMax),
         property_type: propertyType,
         move_in_date: moveInDate,
-        amenities: amenities,
-        user_id: user?.id || null,
+        amenities: amenitiesList.length > 0 ? amenitiesList : null,
       });
 
       if (error) {
-        toast.error(error.message || "Failed to submit request");
-      } else {
-        toast.success("Request submitted! Our team will contact you soon.");
-        navigate("/dashboard");
+        toast.error("Failed to submit request");
+        return;
       }
+
+      toast.success("House hunting request submitted successfully!");
+      navigate("/dashboard");
     } catch (err) {
-      toast.error("An unexpected error occurred");
+      toast.error("An error occurred");
     } finally {
       setLoading(false);
     }
   };
 
+  const toggleAmenity = (key: keyof typeof amenities) => {
+    setAmenities((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 py-8">
-      <div className="container-app max-w-2xl">
+    <div className="min-h-screen bg-gray-50 py-12 px-4">
+      <div className="container-app mx-auto max-w-2xl">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900">House Hunting</h1>
+          <p className="text-gray-600 mt-2">
+            Let our concierge team find your perfect home
+          </p>
+        </div>
+
         <Card>
-          <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-t-lg">
-            <CardTitle>House Hunting Concierge Service</CardTitle>
-            <CardDescription className="text-green-100">
-              Tell us what you're looking for, and our team will help you find the perfect home
+          <CardHeader>
+            <CardTitle>Your House Hunting Request</CardTitle>
+            <CardDescription>
+              Tell us what you're looking for and we'll help you find it
             </CardDescription>
           </CardHeader>
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-6">
+              {/* Contact Information */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-gray-900">Contact Information</h3>
 
-          <CardContent className="pt-8">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Name */}
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name *</Label>
-                <Input
-                  id="name"
-                  placeholder="John Doe"
-                  value={name}
-                  onChange={(e) => {
-                    setName(e.target.value);
-                    if (errors.name) setErrors({ ...errors, name: undefined });
-                  }}
-                  className={errors.name ? "border-red-500" : ""}
-                />
-                {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
-              </div>
-
-              {/* Contact Info Row */}
-              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone *</Label>
+                  <Label htmlFor="name">Full Name</Label>
                   <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="+254 712 345 678"
-                    value={phone}
-                    onChange={(e) => {
-                      setPhone(e.target.value);
-                      if (errors.phone) setErrors({ ...errors, phone: undefined });
-                    }}
-                    className={errors.phone ? "border-red-500" : ""}
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    disabled={loading}
                   />
-                  {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      if (errors.email) setErrors({ ...errors, email: undefined });
-                    }}
-                    className={errors.email ? "border-red-500" : ""}
-                  />
-                  {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* Area */}
-              <div className="space-y-2">
-                <Label htmlFor="area">Preferred Area/Location *</Label>
-                <Input
-                  id="area"
-                  placeholder="e.g., Westlands, Kilimani, Upper Hill"
-                  value={area}
-                  onChange={(e) => {
-                    setArea(e.target.value);
-                    if (errors.area) setErrors({ ...errors, area: undefined });
-                  }}
-                  className={errors.area ? "border-red-500" : ""}
-                />
-                {errors.area && <p className="text-sm text-red-500">{errors.area}</p>}
-              </div>
+              {/* Property Requirements */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-gray-900">What are you looking for?</h3>
 
-              {/* Budget Row */}
-              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="budgetMin">Budget Min (KES) *</Label>
+                  <Label htmlFor="area">Preferred Area(s)</Label>
                   <Input
-                    id="budgetMin"
-                    type="number"
-                    placeholder="50000"
-                    value={budgetMin}
-                    onChange={(e) => {
-                      setBudgetMin(e.target.value);
-                      if (errors.budgetMin) setErrors({ ...errors, budgetMin: undefined });
-                    }}
-                    className={errors.budgetMin ? "border-red-500" : ""}
+                    id="area"
+                    placeholder="e.g., Westlands, Karen, Makati"
+                    value={area}
+                    onChange={(e) => setArea(e.target.value)}
+                    disabled={loading}
                   />
-                  {errors.budgetMin && <p className="text-sm text-red-500">{errors.budgetMin}</p>}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="budgetMax">Budget Max (KES) *</Label>
-                  <Input
-                    id="budgetMax"
-                    type="number"
-                    placeholder="150000"
-                    value={budgetMax}
-                    onChange={(e) => {
-                      setBudgetMax(e.target.value);
-                      if (errors.budgetMax) setErrors({ ...errors, budgetMax: undefined });
-                    }}
-                    className={errors.budgetMax ? "border-red-500" : ""}
-                  />
-                  {errors.budgetMax && <p className="text-sm text-red-500">{errors.budgetMax}</p>}
+                  <Label htmlFor="propertyType">Property Type</Label>
+                  <Select value={propertyType} onValueChange={setPropertyType} disabled={loading}>
+                    <SelectTrigger id="propertyType">
+                      <SelectValue placeholder="Select property type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {propertyTypeOptions.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
 
-              {/* Property Type */}
-              <div className="space-y-2">
-                <Label htmlFor="propertyType">Property Type *</Label>
-                <Select value={propertyType} onValueChange={(value) => {
-                  setPropertyType(value);
-                  if (errors.propertyType) setErrors({ ...errors, propertyType: undefined });
-                }}>
-                  <SelectTrigger id="propertyType" className={errors.propertyType ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Select property type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PROPERTY_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.propertyType && <p className="text-sm text-red-500">{errors.propertyType}</p>}
-              </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="budgetMin">Minimum Budget (KES)</Label>
+                    <Input
+                      id="budgetMin"
+                      type="number"
+                      placeholder="0"
+                      value={budgetMin}
+                      onChange={(e) => setBudgetMin(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="budgetMax">Maximum Budget (KES)</Label>
+                    <Input
+                      id="budgetMax"
+                      type="number"
+                      placeholder="0"
+                      value={budgetMax}
+                      onChange={(e) => setBudgetMax(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
 
-              {/* Move-in Date */}
-              <div className="space-y-2">
-                <Label htmlFor="moveInDate">Move-in Date *</Label>
-                <Input
-                  id="moveInDate"
-                  type="date"
-                  value={moveInDate}
-                  onChange={(e) => {
-                    setMoveInDate(e.target.value);
-                    if (errors.moveInDate) setErrors({ ...errors, moveInDate: undefined });
-                  }}
-                  className={errors.moveInDate ? "border-red-500" : ""}
-                />
-                {errors.moveInDate && <p className="text-sm text-red-500">{errors.moveInDate}</p>}
+                <div className="space-y-2">
+                  <Label htmlFor="moveInDate">Desired Move-in Date</Label>
+                  <Input
+                    id="moveInDate"
+                    type="date"
+                    value={moveInDate}
+                    onChange={(e) => setMoveInDate(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
               </div>
 
               {/* Amenities */}
               <div className="space-y-4">
-                <Label>Preferred Amenities</Label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {AMENITIES.map((amenity) => (
-                    <div key={amenity} className="flex items-center space-x-2">
+                <h3 className="font-semibold text-gray-900">Desired Amenities</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {amenityOptions.map((option) => (
+                    <div key={option.key} className="flex items-center space-x-2">
                       <Checkbox
-                        id={amenity}
-                        checked={amenities.includes(amenity)}
-                        onCheckedChange={() => handleAmenityToggle(amenity)}
+                        id={option.key}
+                        checked={amenities[option.key as keyof typeof amenities]}
+                        onCheckedChange={() => toggleAmenity(option.key as keyof typeof amenities)}
+                        disabled={loading}
                       />
-                      <label
-                        htmlFor={amenity}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      <Label
+                        htmlFor={option.key}
+                        className="text-sm font-normal cursor-pointer"
                       >
-                        {amenity}
-                      </label>
+                        {option.label}
+                      </Label>
                     </div>
                   ))}
                 </div>
               </div>
-
-              {/* Submit Button */}
-              <Button type="submit" disabled={loading} className="w-full bg-green-600 hover:bg-green-700 text-white">
+            </CardContent>
+            <CardFooter>
+              <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Submitting..." : "Submit Request"}
               </Button>
-
-              <p className="text-sm text-gray-600 text-center">
-                Our concierge team will review your request and contact you within 24 hours.
-              </p>
-            </form>
-          </CardContent>
+            </CardFooter>
+          </form>
         </Card>
       </div>
     </div>

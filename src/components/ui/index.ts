@@ -1,12 +1,16 @@
+// Button
 export { Button, buttonVariants } from "./button"
 export type { ButtonProps } from "./button"
 
+// Input
 export { Input } from "./input"
 export type { InputProps } from "./input"
 
+// Textarea
 export { Textarea } from "./textarea"
 export type { TextareaProps } from "./textarea"
 
+// Card
 export {
   Card,
   CardHeader,
@@ -16,12 +20,11 @@ export {
   CardFooter,
 } from "./card"
 
+// Dialog
 export {
   Dialog,
-  DialogPortal,
-  DialogOverlay,
-  DialogClose,
   DialogTrigger,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogFooter,
@@ -29,18 +32,17 @@ export {
   DialogDescription,
 } from "./dialog"
 
-export {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "./tabs"
+// Tabs
+export { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs"
 
+// Label
 export { Label } from "./label"
 
+// Badge
 export { Badge, badgeVariants } from "./badge"
 export type { BadgeProps } from "./badge"
 
+// Select
 export {
   Select,
   SelectGroup,
@@ -54,12 +56,16 @@ export {
   SelectScrollDownButton,
 } from "./select"
 
+// Checkbox
 export { Checkbox } from "./checkbox"
 
+// Separator
 export { Separator } from "./separator"
 
+// Switch
 export { Switch } from "./switch"
 
+// Dropdown Menu
 export {
   DropdownMenu,
   DropdownMenuTrigger,

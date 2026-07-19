@@ -1,121 +1,132 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Home, Building2, Warehouse, Briefcase } from "lucide-react";
+import { Home, Building2, Building, ShoppingCart } from "lucide-react";
 
 export const HomePage = () => {
-  return (
-    <div className="w-full">
-      {/* Hero Section */}
-      <section className="relative min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-400 flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 left-20 w-72 h-72 bg-white rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
-          <div className="absolute top-40 right-20 w-72 h-72 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000"></div>
-          <div className="absolute -bottom-8 left-1/2 w-72 h-72 bg-cyan-300 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000"></div>
-        </div>
+  const propertyTypes = [
+    {
+      title: "Rentals",
+      description: "Find your perfect rental home",
+      icon: Home,
+      link: "/rentals",
+      color: "bg-blue-50",
+      borderColor: "border-blue-200",
+    },
+    {
+      title: "House Hunting",
+      description: "Get personalized concierge service",
+      icon: Building2,
+      link: "/house-hunting",
+      color: "bg-green-50",
+      borderColor: "border-green-200",
+    },
+    {
+      title: "Airbnb",
+      description: "Book short-term stays",
+      icon: Home,
+      link: "/airbnb",
+      color: "bg-orange-50",
+      borderColor: "border-orange-200",
+    },
+    {
+      title: "Commercial",
+      description: "Explore business spaces",
+      icon: Building,
+      link: "/commercial",
+      color: "bg-purple-50",
+      borderColor: "border-purple-200",
+    },
+  ];
 
-        <div className="relative z-10 container-app text-center text-white">
-          <h1 className="text-6xl md:text-7xl font-bold mb-6 drop-shadow-lg">KejaHub</h1>
-          <p className="text-xl md:text-2xl font-light mb-12 drop-shadow-md">Find your perfect home across Kenya</p>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-purple-600">
+      {/* Hero Section */}
+      <div className="relative pt-20 pb-32 px-4 sm:px-6 lg:px-8">
+        <div className="container-app mx-auto text-center">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
+            KejaHub
+          </h1>
+          <p className="text-xl sm:text-2xl text-blue-100 mb-12 max-w-2xl mx-auto">
+            Find your perfect home across Kenya
+          </p>
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
             <Link to="/signup">
-              <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100 font-semibold">
+              <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50 font-semibold">
                 Get Started
               </Button>
             </Link>
             <Link to="/login">
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/20 font-semibold">
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-white text-white hover:bg-white/10 font-semibold"
+              >
                 Sign In
               </Button>
             </Link>
           </div>
         </div>
-      </section>
+      </div>
 
       {/* Property Types Section */}
-      <section className="py-16 md:py-24 bg-white">
-        <div className="container-app">
-          <h2 className="text-4xl font-bold text-center mb-12">Explore Properties</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Rentals */}
-            <Link to="/rentals">
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow h-full">
-                <CardHeader>
-                  <div className="flex items-center gap-3 mb-2">
-                    <Home className="w-8 h-8 text-blue-600" />
-                    <CardTitle>Rentals</CardTitle>
-                  </div>
-                  <CardDescription>Find apartments and houses to rent</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600">Browse available rental properties across Kenya</p>
-                </CardContent>
-              </Card>
-            </Link>
+      <div className="container-app mx-auto px-4 py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {propertyTypes.map((type) => {
+            const IconComponent = type.icon;
+            return (
+              <Link key={type.link} to={type.link}>
+                <Card
+                  className={`h-full ${type.color} ${type.borderColor} border-2 cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-2`}
+                >
+                  <CardHeader>
+                    <div className="flex items-center gap-3 mb-2">
+                      <IconComponent className="w-8 h-8 text-blue-600" />
+                      <CardTitle className="text-lg">{type.title}</CardTitle>
+                    </div>
+                    <CardDescription className="text-sm">
+                      {type.description}
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
 
-            {/* House Hunting */}
-            <Link to="/house-hunting">
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow h-full">
-                <CardHeader>
-                  <div className="flex items-center gap-3 mb-2">
-                    <Building2 className="w-8 h-8 text-green-600" />
-                    <CardTitle>House Hunting</CardTitle>
-                  </div>
-                  <CardDescription>Looking for your dream home?</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600">Get personalized assistance from our concierge team</p>
-                </CardContent>
-              </Card>
-            </Link>
-
-            {/* Airbnb */}
-            <Link to="/airbnb">
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow h-full">
-                <CardHeader>
-                  <div className="flex items-center gap-3 mb-2">
-                    <Warehouse className="w-8 h-8 text-purple-600" />
-                    <CardTitle>Airbnb</CardTitle>
-                  </div>
-                  <CardDescription>Short-term vacation stays</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600">Book unique properties for your travels</p>
-                </CardContent>
-              </Card>
-            </Link>
-
-            {/* Commercial */}
-            <Link to="/commercial">
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow h-full">
-                <CardHeader>
-                  <div className="flex items-center gap-3 mb-2">
-                    <Briefcase className="w-8 h-8 text-orange-600" />
-                    <CardTitle>Commercial</CardTitle>
-                  </div>
-                  <CardDescription>Business spaces available</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600">Find the perfect space for your business</p>
-                </CardContent>
-              </Card>
-            </Link>
+      {/* Features Section */}
+      <div className="bg-white py-16 px-4 sm:px-6 lg:px-8">
+        <div className="container-app mx-auto">
+          <h2 className="text-3xl font-bold text-center mb-12 text-gray-900">
+            Why Choose KejaHub?
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                <Home className="w-8 h-8 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-gray-900">Wide Selection</h3>
+              <p className="text-gray-600">Access thousands of properties across Kenya</p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-4">
+                <Building2 className="w-8 h-8 text-green-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-gray-900">Expert Support</h3>
+              <p className="text-gray-600">Get personalized help from our concierge team</p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto bg-purple-100 rounded-full flex items-center justify-center mb-4">
+                <Building className="w-8 h-8 text-purple-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-gray-900">Verified Listings</h3>
+              <p className="text-gray-600">All properties are verified and legitimate</p>
+            </div>
           </div>
         </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-16 md:py-24 bg-blue-50">
-        <div className="container-app text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to find your perfect space?</h2>
-          <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">Join thousands of Kenyans who've found their ideal homes and business spaces through KejaHub</p>
-          <Link to="/signup">
-            <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
-              Create Your Account Today
-            </Button>
-          </Link>
-        </div>
-      </section>
+      </div>
     </div>
   );
 };
