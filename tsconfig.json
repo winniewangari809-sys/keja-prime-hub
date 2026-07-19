@@ -13,9 +13,7 @@
     "allowSyntheticDefaultImports": true,
     "isolatedModules": true,
     "noEmit": true,
-    "types": ["vite/client", "node"],
-    "baseUrl": ".",
-    "paths": { "@/*": ["./src/*"] }
+    "types": ["vite/client"]
   },
   "include": ["src/**/*"]
 }
