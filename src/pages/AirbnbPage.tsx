@@ -1,43 +1,40 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Sofa, Calendar, Users, MapPin, DollarSign } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Calendar, MapPin, Users } from "lucide-react";
+
+interface AirbnbListing {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  location: string;
+  bedrooms: number;
+  bathrooms: number;
+  image_url?: string;
+}
 
 export const AirbnbPage = () => {
-  const { user } = useAuth();
-  const [listings, setListings] = useState<any[]>([]);
+  const navigate = useNavigate();
+  const [listings, setListings] = useState<AirbnbListing[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedListing, setSelectedListing] = useState<any>(null);
-  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
-
-  const [bookingData, setBookingData] = useState({
-    check_in: "",
-    check_out: "",
-    guests: "1",
-  });
+  const [selectedProperty, setSelectedProperty] = useState<string>("");
+  const [checkIn, setCheckIn] = useState("");
+  const [checkOut, setCheckOut] = useState("");
+  const [guests, setGuests] = useState("1");
+  const [showBookingForm, setShowBookingForm] = useState(false);
 
   useEffect(() => {
-    loadListings();
+    fetchListings();
   }, []);
 
-  const loadListings = async () => {
+  const fetchListings = async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -45,268 +42,247 @@ export const AirbnbPage = () => {
         .select("*")
         .ilike("property_type", "%airbnb%");
 
-      if (error) throw error;
-      setListings(data || []);
+      if (error) {
+        toast.error("Failed to fetch listings");
+        setLoading(false);
+        return;
+      }
+
+      setListings((data as AirbnbListing[]) || []);
     } catch (err) {
-      toast.error("Failed to load Airbnb listings");
+      toast.error("An error occurred");
     } finally {
       setLoading(false);
     }
   };
 
-  const calculateNights = (checkIn: string, checkOut: string) => {
+  const calculateNights = (): number => {
     if (!checkIn || !checkOut) return 0;
-    const check_in_date = new Date(checkIn);
-    const check_out_date = new Date(checkOut);
-    const diffTime = Math.abs(check_out_date.getTime() - check_in_date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    const start = new Date(checkIn);
+    const end = new Date(checkOut);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  const calculateTotal = () => {
-    if (!selectedListing || !bookingData.check_in || !bookingData.check_out) {
-      return 0;
+  const calculateTotal = (): number => {
+    if (!selectedProperty) return 0;
+    const property = listings.find((p) => p.id === selectedProperty);
+    if (!property) return 0;
+    return property.price * calculateNights();
+  };
+
+  const validateForm = () => {
+    if (!selectedProperty) {
+      toast.error("Please select a property");
+      return false;
     }
-    const nights = calculateNights(bookingData.check_in, bookingData.check_out);
-    return (selectedListing.price || 0) * nights;
+    if (!checkIn) {
+      toast.error("Check-in date is required");
+      return false;
+    }
+    if (!checkOut) {
+      toast.error("Check-out date is required");
+      return false;
+    }
+    if (new Date(checkIn) >= new Date(checkOut)) {
+      toast.error("Check-out date must be after check-in date");
+      return false;
+    }
+    if (!guests || parseInt(guests) < 1) {
+      toast.error("Number of guests must be at least 1");
+      return false;
+    }
+    return true;
   };
 
   const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!bookingData.check_in || !bookingData.check_out || !bookingData.guests) {
-      toast.error("Please fill in all booking details");
-      return;
-    }
-
-    if (new Date(bookingData.check_in) >= new Date(bookingData.check_out)) {
-      toast.error("Check-out date must be after check-in date");
-      return;
-    }
+    if (!validateForm()) return;
 
     setBookingLoading(true);
     try {
       const { error } = await supabase.from("airbnb_bookings").insert({
-        property_id: selectedListing.id,
-        user_id: user?.id || null,
-        check_in: bookingData.check_in,
-        check_out: bookingData.check_out,
-        guests: parseInt(bookingData.guests),
+        property_id: selectedProperty,
+        check_in: checkIn,
+        check_out: checkOut,
+        guests: parseInt(guests),
         total_price: calculateTotal(),
       });
 
-      if (error) throw error;
-      toast.success("Booking submitted successfully!");
-      setBookingDialogOpen(false);
-      setBookingData({ check_in: "", check_out: "", guests: "1" });
+      if (error) {
+        toast.error("Failed to create booking");
+        setBookingLoading(false);
+        return;
+      }
+
+      toast.success("Booking created successfully!");
+      navigate("/dashboard");
     } catch (err) {
-      toast.error("Failed to submit booking");
+      toast.error("An error occurred");
     } finally {
       setBookingLoading(false);
     }
   };
 
   const formatPrice = (price: number) => {
-    return `KES ${price.toLocaleString()}`;
+    return new Intl.NumberFormat("en-KE", {
+      style: "currency",
+      currency: "KES",
+    }).format(price);
   };
 
+  const nights = calculateNights();
+  const total = calculateTotal();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-gray-600">Loading Airbnb listings...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-slate-50 py-12">
-      <div className="container-app">
-        <div className="mb-12">
-          <h1 className="mb-2 text-4xl font-bold text-slate-900">Airbnb Stays</h1>
-          <p className="text-lg text-slate-600">
-            Book short-term accommodations across Kenya
-          </p>
+    <div className="min-h-screen bg-gray-50 py-12 px-4">
+      <div className="container-app mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900">Airbnb Listings</h1>
+          <p className="text-gray-600 mt-2">Book short-term stays across Kenya</p>
         </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <p className="text-slate-600">Loading listings...</p>
-          </div>
-        ) : listings.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Sofa className="mb-4 h-12 w-12 text-slate-400" />
-              <p className="text-center text-slate-600">No Airbnb listings available</p>
+        {listings.length === 0 ? (
+          <Card className="text-center py-12">
+            <CardContent>
+              <p className="text-gray-600">No Airbnb listings available at the moment</p>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {listings.map((listing) => (
-              <Card key={listing.id} className="overflow-hidden transition-all hover:shadow-lg">
-                {/* Listing Image */}
-                <div className="relative h-48 bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center">
-                  <Sofa className="h-16 w-16 text-slate-400" />
-                </div>
-
-                <CardHeader>
-                  <CardTitle className="text-lg">{listing.title}</CardTitle>
-                  <CardDescription className="flex items-center gap-1">
-                    <MapPin className="h-4 w-4" />
-                    {listing.location}
-                  </CardDescription>
-                </CardHeader>
-
-                <CardContent className="space-y-4">
-                  {/* Price */}
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-slate-900">
-                      {formatPrice(listing.price || 0)}
-                    </span>
-                    <span className="text-sm text-slate-600">per night</span>
-                  </div>
-
-                  <Separator />
-
-                  {/* Property Details */}
-                  <div className="grid grid-cols-3 gap-4">
-                    {listing.bedrooms && (
-                      <div className="text-center">
-                        <p className="text-sm font-semibold text-slate-900">
-                          {listing.bedrooms}
-                        </p>
-                        <p className="text-xs text-slate-600">Bedrooms</p>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Listings */}
+            <div className="lg:col-span-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {listings.map((listing) => (
+                  <Card
+                    key={listing.id}
+                    className={`cursor-pointer transition-all hover:shadow-lg ${
+                      selectedProperty === listing.id ? "ring-2 ring-blue-500" : ""
+                    }`}
+                    onClick={() => {
+                      setSelectedProperty(listing.id);
+                      setShowBookingForm(true);
+                    }}
+                  >
+                    {listing.image_url && (
+                      <div className="w-full h-48 bg-gray-200 overflow-hidden rounded-t-lg">
+                        <img
+                          src={listing.image_url}
+                          alt={listing.title}
+                          className="w-full h-full object-cover"
+                        />
                       </div>
                     )}
-                    {listing.bathrooms && (
-                      <div className="text-center">
-                        <p className="text-sm font-semibold text-slate-900">
-                          {listing.bathrooms}
-                        </p>
-                        <p className="text-xs text-slate-600">Bathrooms</p>
-                      </div>
-                    )}
-                    {listing.square_feet && (
-                      <div className="text-center">
-                        <p className="text-sm font-semibold text-slate-900">
-                          {listing.square_feet}
-                        </p>
-                        <p className="text-xs text-slate-600">sqft</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Description */}
-                  {listing.description && (
-                    <>
-                      <Separator />
-                      <p className="line-clamp-2 text-sm text-slate-600">
+                    <CardHeader>
+                      <CardTitle className="text-lg">{listing.title}</CardTitle>
+                      <CardDescription className="line-clamp-2">
                         {listing.description}
-                      </p>
-                    </>
-                  )}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <MapPin size={16} />
+                        {listing.location}
+                      </div>
+                      <div className="flex gap-4 text-sm text-gray-600">
+                        <span>{listing.bedrooms} Bedrooms</span>
+                        <span>{listing.bathrooms} Bathrooms</span>
+                      </div>
+                      <div className="text-lg font-bold text-blue-600">
+                        {formatPrice(listing.price)}
+                        <span className="text-sm text-gray-600"> / night</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
 
-                  {/* Booking Dialog */}
-                  <Dialog open={bookingDialogOpen && selectedListing?.id === listing.id} onOpenChange={(open) => {
-                    setBookingDialogOpen(open);
-                    if (open) setSelectedListing(listing);
-                  }}>
-                    <DialogTrigger asChild>
-                      <Button
-                        className="w-full"
-                        onClick={() => {
-                          setSelectedListing(listing);
-                          setBookingDialogOpen(true);
-                        }}
-                      >
-                        Book Now
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Book {listing.title}</DialogTitle>
-                        <DialogDescription>
-                          Complete your booking for this Airbnb
-                        </DialogDescription>
-                      </DialogHeader>
+            {/* Booking Form */}
+            {showBookingForm && selectedProperty && (
+              <div className="lg:col-span-1">
+                <Card className="sticky top-4">
+                  <CardHeader>
+                    <CardTitle>Book Now</CardTitle>
+                    <CardDescription>
+                      {listings.find((p) => p.id === selectedProperty)?.title}
+                    </CardDescription>
+                  </CardHeader>
+                  <form onSubmit={handleBooking}>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="checkIn">Check-in Date</Label>
+                        <Input
+                          id="checkIn"
+                          type="date"
+                          value={checkIn}
+                          onChange={(e) => setCheckIn(e.target.value)}
+                          disabled={bookingLoading}
+                        />
+                      </div>
 
-                      <form onSubmit={handleBooking} className="space-y-6">
-                        <div className="space-y-2">
-                          <Label htmlFor="check_in">Check-In Date</Label>
-                          <Input
-                            id="check_in"
-                            type="date"
-                            value={bookingData.check_in}
-                            onChange={(e) =>
-                              setBookingData((prev) => ({
-                                ...prev,
-                                check_in: e.target.value,
-                              }))
-                            }
-                            disabled={bookingLoading}
-                          />
-                        </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="checkOut">Check-out Date</Label>
+                        <Input
+                          id="checkOut"
+                          type="date"
+                          value={checkOut}
+                          onChange={(e) => setCheckOut(e.target.value)}
+                          disabled={bookingLoading}
+                        />
+                      </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="check_out">Check-Out Date</Label>
-                          <Input
-                            id="check_out"
-                            type="date"
-                            value={bookingData.check_out}
-                            onChange={(e) =>
-                              setBookingData((prev) => ({
-                                ...prev,
-                                check_out: e.target.value,
-                              }))
-                            }
-                            disabled={bookingLoading}
-                          />
-                        </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="guests">Number of Guests</Label>
+                        <Input
+                          id="guests"
+                          type="number"
+                          min="1"
+                          value={guests}
+                          onChange={(e) => setGuests(e.target.value)}
+                          disabled={bookingLoading}
+                        />
+                      </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="guests">Number of Guests</Label>
-                          <Input
-                            id="guests"
-                            type="number"
-                            min="1"
-                            value={bookingData.guests}
-                            onChange={(e) =>
-                              setBookingData((prev) => ({
-                                ...prev,
-                                guests: e.target.value,
-                              }))
-                            }
-                            disabled={bookingLoading}
-                          />
-                        </div>
-
-                        {bookingData.check_in && bookingData.check_out && (
-                          <div className="rounded-lg bg-slate-50 p-4">
-                            <div className="flex justify-between">
-                              <span className="text-slate-600">
-                                {calculateNights(bookingData.check_in, bookingData.check_out)} nights
-                              </span>
-                              <span className="text-slate-600">
-                                {formatPrice((listing.price || 0) * calculateNights(bookingData.check_in, bookingData.check_out))}
-                              </span>
-                            </div>
-                            <Separator className="my-2" />
-                            <div className="flex justify-between font-semibold">
-                              <span>Total</span>
-                              <span>{formatPrice(calculateTotal())}</span>
-                            </div>
+                      {/* Price Breakdown */}
+                      {nights > 0 && (
+                        <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">
+                              {formatPrice(
+                                listings.find((p) => p.id === selectedProperty)?.price || 0
+                              )}{" "}
+                              × {nights} nights
+                            </span>
+                            <span className="font-semibold">
+                              {formatPrice(total)}
+                            </span>
                           </div>
-                        )}
-
-                        <DialogFooter>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setBookingDialogOpen(false)}
-                          >
-                            Cancel
-                          </Button>
-                          <Button type="submit" disabled={bookingLoading}>
-                            {bookingLoading ? "Booking..." : "Confirm Booking"}
-                          </Button>
-                        </DialogFooter>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
-                </CardContent>
-              </Card>
-            ))}
+                          <div className="border-t pt-2 flex justify-between font-bold">
+                            <span>Total</span>
+                            <span className="text-blue-600">{formatPrice(total)}</span>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                    <CardFooter>
+                      <Button type="submit" className="w-full" disabled={bookingLoading}>
+                        {bookingLoading ? "Booking..." : "Complete Booking"}
+                      </Button>
+                    </CardFooter>
+                  </form>
+                </Card>
+              </div>
+            )}
           </div>
         )}
       </div>

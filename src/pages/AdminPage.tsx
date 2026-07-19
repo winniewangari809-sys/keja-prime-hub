@@ -1,39 +1,72 @@
 import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { useRequireRole } from "@/hooks/use-require-role";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  BarChart3,
-  Users,
-  Home,
-  Building2,
-  Sofa,
-  Store,
-  AlertTriangle,
-  MoreVertical,
-  Check,
-  X,
-} from "lucide-react";
 import { toast } from "sonner";
+import { Check, X, AlertTriangle } from "lucide-react";
+
+interface Property {
+  id: string;
+  title: string;
+  price: number;
+  location: string;
+  admin_status: string;
+}
+
+interface Profile {
+  id: string;
+  first_name: string;
+  full_name: string;
+  email?: string;
+}
+
+interface HouseHuntingRequest {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  area: string;
+  budget_min: number;
+  budget_max: number;
+  property_type: string;
+  created_at: string;
+}
+
+interface AirbnbBooking {
+  id: string;
+  property_id: string;
+  check_in: string;
+  check_out: string;
+  guests: number;
+  total_price: number;
+  created_at: string;
+}
+
+interface CommercialRequest {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  business_type: string;
+  area: string;
+  budget: number;
+  created_at: string;
+}
+
+interface SecurityAlert {
+  id: string;
+  alert_type: string;
+  description: string;
+  severity: string;
+  created_at: string;
+}
 
 export const AdminPage = () => {
-  const { loading: authLoading } = useRequireRole(["hq", "admin"]);
-  const [activeTab, setActiveTab] = useState("overview");
-  const [loading, setLoading] = useState(false);
+  const { loading: roleLoading } = useRequireRole(["hq", "admin"]);
 
-  // Stats
   const [stats, setStats] = useState({
     properties: 0,
     users: 0,
@@ -43,65 +76,86 @@ export const AdminPage = () => {
     securityAlerts: 0,
   });
 
-  // Data
-  const [properties, setProperties] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
-  const [houseHuntingRequests, setHouseHuntingRequests] = useState<any[]>([]);
-  const [airbnbBookings, setAirbnbBookings] = useState<any[]>([]);
-  const [commercialRequests, setCommercialRequests] = useState<any[]>([]);
-  const [securityAlerts, setSecurityAlerts] = useState<any[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [houseHuntingRequests, setHouseHuntingRequests] = useState<HouseHuntingRequest[]>([]);
+  const [airbnbBookings, setAirbnbBookings] = useState<AirbnbBooking[]>([]);
+  const [commercialRequests, setCommercialRequests] = useState<CommercialRequest[]>([]);
+  const [securityAlerts, setSecurityAlerts] = useState<SecurityAlert[]>([]);
+
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!authLoading) {
-      loadData();
-    }
-  }, [authLoading]);
+    fetchAllData();
+  }, []);
 
-  const loadData = async () => {
+  const fetchAllData = async () => {
     setLoading(true);
     try {
-      // Load stats
-      const propertiesCount = await supabase.from("properties").select("id", { count: "exact" });
-      const usersCount = await supabase.from("profiles").select("id", { count: "exact" });
-      const houseHuntingCount = await supabase
+      // Fetch properties
+      const { data: propertiesData, count: propertiesCount } = await supabase
+        .from("properties")
+        .select("*", { count: "exact" });
+
+      if (propertiesData) {
+        setProperties(propertiesData as Property[]);
+      }
+
+      // Fetch profiles
+      const { data: profilesData, count: profilesCount } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact" });
+
+      if (profilesData) {
+        setProfiles(profilesData as Profile[]);
+      }
+
+      // Fetch house hunting requests
+      const { data: houseHuntingData, count: houseHuntingCount } = await supabase
         .from("house_hunting_requests")
-        .select("id", { count: "exact" });
-      const airbnbCount = await supabase.from("airbnb_bookings").select("id", { count: "exact" });
-      const commercialCount = await supabase
+        .select("*", { count: "exact" });
+
+      if (houseHuntingData) {
+        setHouseHuntingRequests(houseHuntingData as HouseHuntingRequest[]);
+      }
+
+      // Fetch airbnb bookings
+      const { data: airbnbData, count: airbnbCount } = await supabase
+        .from("airbnb_bookings")
+        .select("*", { count: "exact" });
+
+      if (airbnbData) {
+        setAirbnbBookings(airbnbData as AirbnbBooking[]);
+      }
+
+      // Fetch commercial requests
+      const { data: commercialData, count: commercialCount } = await supabase
         .from("commercial_requests")
-        .select("id", { count: "exact" });
-      const alertsCount = await supabase.from("security_alerts").select("id", { count: "exact" });
+        .select("*", { count: "exact" });
+
+      if (commercialData) {
+        setCommercialRequests(commercialData as CommercialRequest[]);
+      }
+
+      // Fetch security alerts
+      const { data: securityData, count: securityCount } = await supabase
+        .from("security_alerts")
+        .select("*", { count: "exact" });
+
+      if (securityData) {
+        setSecurityAlerts(securityData as SecurityAlert[]);
+      }
 
       setStats({
-        properties: propertiesCount.count || 0,
-        users: usersCount.count || 0,
-        houseHuntingRequests: houseHuntingCount.count || 0,
-        airbnbBookings: airbnbCount.count || 0,
-        commercialRequests: commercialCount.count || 0,
-        securityAlerts: alertsCount.count || 0,
+        properties: propertiesCount || 0,
+        users: profilesCount || 0,
+        houseHuntingRequests: houseHuntingCount || 0,
+        airbnbBookings: airbnbCount || 0,
+        commercialRequests: commercialCount || 0,
+        securityAlerts: securityCount || 0,
       });
-
-      // Load detailed data
-      const [propData, userData, hhData, abData, commData, alertData] = await Promise.all([
-        supabase.from("properties").select("*").limit(100),
-        supabase
-          .from("profiles")
-          .select("id, first_name, full_name, email:auth.users(email)")
-          .limit(100),
-        supabase.from("house_hunting_requests").select("*").limit(100),
-        supabase.from("airbnb_bookings").select("*").limit(100),
-        supabase.from("commercial_requests").select("*").limit(100),
-        supabase.from("security_alerts").select("*").limit(100),
-      ]);
-
-      setProperties(propData.data || []);
-      setUsers(userData.data || []);
-      setHouseHuntingRequests(hhData.data || []);
-      setAirbnbBookings(abData.data || []);
-      setCommercialRequests(commData.data || []);
-      setSecurityAlerts(alertData.data || []);
     } catch (err) {
-      toast.error("Failed to load admin data");
+      toast.error("Failed to fetch admin data");
     } finally {
       setLoading(false);
     }
@@ -113,11 +167,16 @@ export const AdminPage = () => {
         .from("properties")
         .update({ admin_status: "approved" })
         .eq("id", id);
-      if (error) throw error;
+
+      if (error) {
+        toast.error("Failed to approve property");
+        return;
+      }
+
       toast.success("Property approved");
-      loadData();
+      fetchAllData();
     } catch (err) {
-      toast.error("Failed to approve property");
+      toast.error("An error occurred");
     }
   };
 
@@ -127,37 +186,47 @@ export const AdminPage = () => {
         .from("properties")
         .update({ admin_status: "rejected" })
         .eq("id", id);
-      if (error) throw error;
+
+      if (error) {
+        toast.error("Failed to reject property");
+        return;
+      }
+
       toast.success("Property rejected");
-      loadData();
+      fetchAllData();
     } catch (err) {
-      toast.error("Failed to reject property");
+      toast.error("An error occurred");
     }
   };
 
-  if (authLoading) {
+  if (roleLoading || loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <p className="text-slate-600">Loading...</p>
-        </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-gray-600">Loading admin dashboard...</p>
       </div>
     );
   }
 
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("en-KE", {
+      style: "currency",
+      currency: "KES",
+    }).format(price);
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="border-b border-slate-200 bg-white">
-        <div className="container-app py-6">
-          <h1 className="text-3xl font-bold text-slate-900">HQ Command Center</h1>
-          <p className="mt-1 text-slate-600">Manage the KejaHub platform</p>
+      <div className="bg-white border-b border-gray-200">
+        <div className="container-app mx-auto px-4 py-6">
+          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="text-gray-600 mt-1">HQ Command Center</p>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="container-app py-12">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      {/* Content */}
+      <div className="container-app mx-auto px-4 py-8">
+        <Tabs defaultValue="overview" className="w-full">
           <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="properties">Properties</TabsTrigger>
@@ -168,131 +237,135 @@ export const AdminPage = () => {
             <TabsTrigger value="security">Security</TabsTrigger>
           </TabsList>
 
-          {/* Overview */}
-          <TabsContent value="overview">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Home className="h-5 w-5" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-gray-600">
                     Properties
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold">{stats.properties}</p>
+                  <div className="text-2xl font-bold">{stats.properties}</div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-gray-600">
                     Users
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold">{stats.users}</p>
+                  <div className="text-2xl font-bold">{stats.users}</div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Building2 className="h-5 w-5" />
-                    House Hunting Requests
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-gray-600">
+                    House Hunting
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold">{stats.houseHuntingRequests}</p>
+                  <div className="text-2xl font-bold">{stats.houseHuntingRequests}</div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Sofa className="h-5 w-5" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-gray-600">
                     Airbnb Bookings
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold">{stats.airbnbBookings}</p>
+                  <div className="text-2xl font-bold">{stats.airbnbBookings}</div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Store className="h-5 w-5" />
-                    Commercial Requests
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-gray-600">
+                    Commercial
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold">{stats.commercialRequests}</p>
+                  <div className="text-2xl font-bold">{stats.commercialRequests}</div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <AlertTriangle className="h-5 w-5" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-gray-600">
                     Security Alerts
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold">{stats.securityAlerts}</p>
+                  <div className="text-2xl font-bold text-red-600">
+                    {stats.securityAlerts}
+                  </div>
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
 
-          {/* Properties */}
-          <TabsContent value="properties">
+          {/* Properties Tab */}
+          <TabsContent value="properties" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Properties</CardTitle>
-                <CardDescription>Manage all properties on the platform</CardDescription>
+                <CardTitle>All Properties</CardTitle>
+                <CardDescription>Review and approve listings</CardDescription>
               </CardHeader>
               <CardContent>
-                {loading ? (
-                  <p className="text-slate-600">Loading...</p>
-                ) : properties.length === 0 ? (
-                  <p className="text-slate-600">No properties found</p>
+                {properties.length === 0 ? (
+                  <p className="text-gray-600 text-center py-8">No properties found</p>
                 ) : (
                   <div className="space-y-4">
                     {properties.map((property) => (
                       <div
                         key={property.id}
-                        className="flex items-center justify-between rounded-lg border border-slate-200 p-4"
+                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
                       >
-                        <div>
-                          <p className="font-semibold text-slate-900">{property.title}</p>
-                          <p className="text-sm text-slate-600">{property.location}</p>
-                          <Badge className="mt-2">{property.admin_status || "pending"}</Badge>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900">{property.title}</h3>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {property.location} • {formatPrice(property.price)}
+                          </p>
+                          <div className="mt-2">
+                            <Badge
+                              variant={
+                                property.admin_status === "approved"
+                                  ? "default"
+                                  : property.admin_status === "rejected"
+                                  ? "destructive"
+                                  : "outline"
+                              }
+                            >
+                              {property.admin_status || "pending"}
+                            </Badge>
+                          </div>
                         </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
+                        {property.admin_status !== "approved" && (
+                          <div className="flex gap-2 ml-4">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-green-600 border-green-200"
                               onClick={() => handleApproveProperty(property.id)}
                             >
-                              <Check className="mr-2 h-4 w-4" />
-                              Approve
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
+                              <Check size={16} />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 border-red-200"
                               onClick={() => handleRejectProperty(property.id)}
-                              className="text-red-600"
                             >
-                              <X className="mr-2 h-4 w-4" />
-                              Reject
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              <X size={16} />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -301,28 +374,28 @@ export const AdminPage = () => {
             </Card>
           </TabsContent>
 
-          {/* Users */}
-          <TabsContent value="users">
+          {/* Users Tab */}
+          <TabsContent value="users" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Users</CardTitle>
-                <CardDescription>View all registered users</CardDescription>
+                <CardTitle>All Users</CardTitle>
+                <CardDescription>User profiles and roles</CardDescription>
               </CardHeader>
               <CardContent>
-                {loading ? (
-                  <p className="text-slate-600">Loading...</p>
-                ) : users.length === 0 ? (
-                  <p className="text-slate-600">No users found</p>
+                {profiles.length === 0 ? (
+                  <p className="text-gray-600 text-center py-8">No users found</p>
                 ) : (
-                  <div className="space-y-2">
-                    {users.map((user) => (
+                  <div className="space-y-4">
+                    {profiles.map((profile) => (
                       <div
-                        key={user.id}
-                        className="flex items-center justify-between rounded-lg border border-slate-200 p-4"
+                        key={profile.id}
+                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
                       >
-                        <div>
-                          <p className="font-semibold text-slate-900">{user.full_name}</p>
-                          <p className="text-sm text-slate-600">{user.first_name}</p>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900">
+                            {profile.full_name || profile.first_name || "No name"}
+                          </h3>
+                          <p className="text-sm text-gray-600 mt-1">{profile.id}</p>
                         </div>
                       </div>
                     ))}
@@ -332,29 +405,34 @@ export const AdminPage = () => {
             </Card>
           </TabsContent>
 
-          {/* House Hunting */}
-          <TabsContent value="house-hunting">
+          {/* House Hunting Tab */}
+          <TabsContent value="house-hunting" className="mt-6">
             <Card>
               <CardHeader>
                 <CardTitle>House Hunting Requests</CardTitle>
-                <CardDescription>View all house hunting concierge requests</CardDescription>
+                <CardDescription>Concierge service requests</CardDescription>
               </CardHeader>
               <CardContent>
-                {loading ? (
-                  <p className="text-slate-600">Loading...</p>
-                ) : houseHuntingRequests.length === 0 ? (
-                  <p className="text-slate-600">No requests found</p>
+                {houseHuntingRequests.length === 0 ? (
+                  <p className="text-gray-600 text-center py-8">No requests found</p>
                 ) : (
-                  <div className="space-y-2">
-                    {houseHuntingRequests.map((req) => (
+                  <div className="space-y-4">
+                    {houseHuntingRequests.map((request) => (
                       <div
-                        key={req.id}
-                        className="rounded-lg border border-slate-200 p-4"
+                        key={request.id}
+                        className="p-4 border rounded-lg hover:bg-gray-50"
                       >
-                        <p className="font-semibold text-slate-900">{req.name}</p>
-                        <p className="text-sm text-slate-600">{req.email}</p>
-                        <p className="text-sm text-slate-600">{req.area}</p>
-                        <Badge className="mt-2">{req.property_type}</Badge>
+                        <h3 className="font-semibold text-gray-900">{request.name}</h3>
+                        <div className="grid grid-cols-2 gap-4 mt-2 text-sm text-gray-600">
+                          <p>Phone: {request.phone}</p>
+                          <p>Email: {request.email}</p>
+                          <p>Area: {request.area}</p>
+                          <p>Property Type: {request.property_type}</p>
+                          <p>Budget: KES {request.budget_min} - {request.budget_max}</p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(request.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -363,32 +441,39 @@ export const AdminPage = () => {
             </Card>
           </TabsContent>
 
-          {/* Airbnb */}
-          <TabsContent value="airbnb">
+          {/* Airbnb Tab */}
+          <TabsContent value="airbnb" className="mt-6">
             <Card>
               <CardHeader>
                 <CardTitle>Airbnb Bookings</CardTitle>
-                <CardDescription>View all Airbnb bookings</CardDescription>
+                <CardDescription>Short-term booking activity</CardDescription>
               </CardHeader>
               <CardContent>
-                {loading ? (
-                  <p className="text-slate-600">Loading...</p>
-                ) : airbnbBookings.length === 0 ? (
-                  <p className="text-slate-600">No bookings found</p>
+                {airbnbBookings.length === 0 ? (
+                  <p className="text-gray-600 text-center py-8">No bookings found</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     {airbnbBookings.map((booking) => (
                       <div
                         key={booking.id}
-                        className="rounded-lg border border-slate-200 p-4"
+                        className="p-4 border rounded-lg hover:bg-gray-50"
                       >
-                        <p className="font-semibold text-slate-900">
-                          Booking #{booking.id.slice(0, 8)}
-                        </p>
-                        <p className="text-sm text-slate-600">
-                          {booking.check_in} to {booking.check_out}
-                        </p>
-                        <p className="text-sm text-slate-600">Guests: {booking.guests}</p>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-semibold text-gray-900">
+                              Property ID: {booking.property_id}
+                            </h3>
+                            <div className="grid grid-cols-2 gap-4 mt-2 text-sm text-gray-600">
+                              <p>Check-in: {new Date(booking.check_in).toLocaleDateString()}</p>
+                              <p>Check-out: {new Date(booking.check_out).toLocaleDateString()}</p>
+                              <p>Guests: {booking.guests}</p>
+                              <p>Total: {formatPrice(booking.total_price)}</p>
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-500">
+                            {new Date(booking.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -397,29 +482,34 @@ export const AdminPage = () => {
             </Card>
           </TabsContent>
 
-          {/* Commercial */}
-          <TabsContent value="commercial">
+          {/* Commercial Tab */}
+          <TabsContent value="commercial" className="mt-6">
             <Card>
               <CardHeader>
                 <CardTitle>Commercial Requests</CardTitle>
-                <CardDescription>View all commercial space requests</CardDescription>
+                <CardDescription>Business space inquiries</CardDescription>
               </CardHeader>
               <CardContent>
-                {loading ? (
-                  <p className="text-slate-600">Loading...</p>
-                ) : commercialRequests.length === 0 ? (
-                  <p className="text-slate-600">No requests found</p>
+                {commercialRequests.length === 0 ? (
+                  <p className="text-gray-600 text-center py-8">No requests found</p>
                 ) : (
-                  <div className="space-y-2">
-                    {commercialRequests.map((req) => (
+                  <div className="space-y-4">
+                    {commercialRequests.map((request) => (
                       <div
-                        key={req.id}
-                        className="rounded-lg border border-slate-200 p-4"
+                        key={request.id}
+                        className="p-4 border rounded-lg hover:bg-gray-50"
                       >
-                        <p className="font-semibold text-slate-900">{req.name}</p>
-                        <p className="text-sm text-slate-600">{req.email}</p>
-                        <p className="text-sm text-slate-600">{req.business_type}</p>
-                        <Badge className="mt-2">{req.area}</Badge>
+                        <h3 className="font-semibold text-gray-900">{request.name}</h3>
+                        <div className="grid grid-cols-2 gap-4 mt-2 text-sm text-gray-600">
+                          <p>Phone: {request.phone}</p>
+                          <p>Email: {request.email}</p>
+                          <p>Business Type: {request.business_type}</p>
+                          <p>Area: {request.area}</p>
+                          <p>Budget: {formatPrice(request.budget)}</p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(request.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -428,27 +518,38 @@ export const AdminPage = () => {
             </Card>
           </TabsContent>
 
-          {/* Security */}
-          <TabsContent value="security">
+          {/* Security Tab */}
+          <TabsContent value="security" className="mt-6">
             <Card>
               <CardHeader>
                 <CardTitle>Security Alerts</CardTitle>
-                <CardDescription>View all security alerts</CardDescription>
+                <CardDescription>Platform security events</CardDescription>
               </CardHeader>
               <CardContent>
-                {loading ? (
-                  <p className="text-slate-600">Loading...</p>
-                ) : securityAlerts.length === 0 ? (
-                  <p className="text-slate-600">No alerts found</p>
+                {securityAlerts.length === 0 ? (
+                  <p className="text-gray-600 text-center py-8">No alerts found</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     {securityAlerts.map((alert) => (
                       <div
                         key={alert.id}
-                        className="rounded-lg border border-red-200 bg-red-50 p-4"
+                        className={`p-4 border rounded-lg flex items-start gap-4 ${
+                          alert.severity === "high" ? "bg-red-50 border-red-200" : ""
+                        }`}
                       >
-                        <p className="font-semibold text-red-900">{alert.alert_type}</p>
-                        <p className="text-sm text-red-700">{alert.description}</p>
+                        {alert.severity === "high" && <AlertTriangle className="text-red-600 mt-1" />}
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900">{alert.alert_type}</h3>
+                          <p className="text-sm text-gray-600 mt-1">{alert.description}</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Badge variant={alert.severity === "high" ? "destructive" : "outline"}>
+                              {alert.severity}
+                            </Badge>
+                            <p className="text-xs text-gray-500">
+                              {new Date(alert.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>

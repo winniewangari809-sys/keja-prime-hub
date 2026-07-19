@@ -1,26 +1,18 @@
 import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import {
-  Home,
-  Building2,
-  Sofa,
-  Store,
-  Settings,
-  LogOut,
-  LayoutDashboard,
-} from "lucide-react";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Home, Building2, Building, LogOut, LayoutDashboard, Zap } from "lucide-react";
 
 export const DashboardPage = () => {
-  const { user, role, firstName, signOut } = useAuth();
   const navigate = useNavigate();
+  const { user, profile, role, loading } = useAuth();
 
   const handleLogout = async () => {
     try {
-      await signOut();
+      await supabase.auth.signOut();
       toast.success("Logged out successfully");
       navigate("/");
     } catch (err) {
@@ -28,107 +20,88 @@ export const DashboardPage = () => {
     }
   };
 
-  if (!user) {
+  if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <p className="mb-4 text-slate-600">Please log in to view your dashboard</p>
-          <Link to="/login">
-            <Button>Go to Login</Button>
-          </Link>
-        </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-gray-600">Loading...</p>
       </div>
     );
   }
 
+  if (!user) {
+    navigate("/login");
+    return null;
+  }
+
+  const firstName = profile?.first_name || user.email?.split("@")[0] || "User";
+
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="border-b border-slate-200 bg-white">
-        <div className="container-app flex items-center justify-between py-6">
+      <div className="bg-white border-b border-gray-200">
+        <div className="container-app mx-auto px-4 py-6 flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">
-              Welcome, {firstName || "User"}
-            </h1>
-            <p className="mt-1 text-slate-600">
-              Role: <span className="font-semibold capitalize">{role}</span>
-            </p>
+            <h1 className="text-3xl font-bold text-gray-900">Welcome, {firstName}!</h1>
+            <p className="text-gray-600 mt-1">Role: {role || "User"}</p>
           </div>
-          <div className="flex gap-4">
-            <Link to="/settings">
-              <Button variant="outline">
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
-              </Button>
-            </Link>
-            <Button variant="destructive" onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Logout
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleLogout}
+            className="gap-2"
+          >
+            <LogOut size={16} />
+            Logout
+          </Button>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="container-app py-12">
-        {/* Admin/HQ Link */}
+      <div className="container-app mx-auto px-4 py-12">
+        {/* Admin Link */}
         {(role === "hq" || role === "admin") && (
           <div className="mb-8">
             <Link to="/admin">
-              <Card className="cursor-pointer transition-all hover:shadow-lg">
-                <CardContent className="flex items-center justify-between pt-6">
-                  <div className="flex items-center gap-4">
-                    <LayoutDashboard className="h-8 w-8 text-slate-700" />
-                    <div>
-                      <h3 className="font-semibold text-slate-900">Admin Panel</h3>
-                      <p className="text-sm text-slate-600">HQ Command Center</p>
-                    </div>
+              <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 hover:shadow-md transition-shadow cursor-pointer">
+                <CardContent className="pt-6 flex items-center gap-4">
+                  <LayoutDashboard className="w-8 h-8 text-blue-600" />
+                  <div>
+                    <h3 className="font-semibold text-blue-900">Admin Dashboard</h3>
+                    <p className="text-sm text-blue-700">Manage properties, users, and platform</p>
                   </div>
-                  <Button variant="outline">Open</Button>
+                  <Zap className="w-5 h-5 text-blue-600 ml-auto" />
                 </CardContent>
               </Card>
             </Link>
           </div>
         )}
 
-        <Separator className="my-8" />
-
-        {/* Role-Based Content */}
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* Main Dashboard Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Buyer/Tenant Section */}
           {(role === "buyer" || role === "tenant") && (
             <>
               <Link to="/house-hunting">
-                <Card className="h-full cursor-pointer transition-all hover:shadow-lg">
+                <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Home className="h-5 w-5" />
-                      House Hunting
-                    </CardTitle>
-                    <CardDescription>Find your perfect home</CardDescription>
+                    <div className="flex items-center gap-3 mb-2">
+                      <Building2 className="w-6 h-6 text-green-600" />
+                      <CardTitle>House Hunting</CardTitle>
+                    </div>
+                    <CardDescription>Get personalized concierge service</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <Button variant="outline" className="w-full">
-                      Browse Properties
-                    </Button>
-                  </CardContent>
                 </Card>
               </Link>
 
               <Link to="/rentals">
-                <Card className="h-full cursor-pointer transition-all hover:shadow-lg">
+                <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Building2 className="h-5 w-5" />
-                      Rentals
-                    </CardTitle>
-                    <CardDescription>Explore rental properties</CardDescription>
+                    <div className="flex items-center gap-3 mb-2">
+                      <Home className="w-6 h-6 text-blue-600" />
+                      <CardTitle>Rentals</CardTitle>
+                    </div>
+                    <CardDescription>Browse available rental properties</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <Button variant="outline" className="w-full">
-                      View Rentals
-                    </Button>
-                  </CardContent>
                 </Card>
               </Link>
             </>
@@ -136,42 +109,30 @@ export const DashboardPage = () => {
 
           {/* Seller/Landlord Section */}
           {(role === "seller" || role === "landlord") && (
-            <>
-              <Link to="/rentals">
-                <Card className="h-full cursor-pointer transition-all hover:shadow-lg">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Building2 className="h-5 w-5" />
-                      My Listings
-                    </CardTitle>
-                    <CardDescription>Manage your rental properties</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button variant="outline" className="w-full">
-                      View Listings
-                    </Button>
-                  </CardContent>
-                </Card>
-              </Link>
-            </>
+            <Link to="/rentals">
+              <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
+                <CardHeader>
+                  <div className="flex items-center gap-3 mb-2">
+                    <Home className="w-6 h-6 text-blue-600" />
+                    <CardTitle>My Listings</CardTitle>
+                  </div>
+                  <CardDescription>Manage your rental properties</CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
           )}
 
           {/* Airbnb Host Section */}
           {role === "airbnb" && (
             <Link to="/airbnb">
-              <Card className="h-full cursor-pointer transition-all hover:shadow-lg">
+              <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Sofa className="h-5 w-5" />
-                    Airbnb Listings
-                  </CardTitle>
+                  <div className="flex items-center gap-3 mb-2">
+                    <Home className="w-6 h-6 text-orange-600" />
+                    <CardTitle>Airbnb Listings</CardTitle>
+                  </div>
                   <CardDescription>Manage your Airbnb properties</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <Button variant="outline" className="w-full">
-                    View Listings
-                  </Button>
-                </CardContent>
               </Card>
             </Link>
           )}
@@ -179,81 +140,91 @@ export const DashboardPage = () => {
           {/* Commercial Section */}
           {role === "commercial" && (
             <Link to="/commercial">
-              <Card className="h-full cursor-pointer transition-all hover:shadow-lg">
+              <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Store className="h-5 w-5" />
-                    Commercial Spaces
-                  </CardTitle>
+                  <div className="flex items-center gap-3 mb-2">
+                    <Building className="w-6 h-6 text-purple-600" />
+                    <CardTitle>Commercial Spaces</CardTitle>
+                  </div>
                   <CardDescription>Find business spaces</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <Button variant="outline" className="w-full">
-                    Explore
-                  </Button>
-                </CardContent>
               </Card>
             </Link>
           )}
 
-          {/* Rentals Section */}
-          {role === "buyer" && (
-            <Link to="/rentals">
-              <Card className="h-full cursor-pointer transition-all hover:shadow-lg">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Building2 className="h-5 w-5" />
-                    Rentals
-                  </CardTitle>
-                  <CardDescription>Explore rental properties</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button variant="outline" className="w-full">
-                    View Rentals
-                  </Button>
-                </CardContent>
-              </Card>
-            </Link>
-          )}
+          {/* Settings Card */}
+          <Link to="/settings">
+            <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
+              <CardHeader>
+                <div className="flex items-center gap-3 mb-2">
+                  <Zap className="w-6 h-6 text-gray-600" />
+                  <CardTitle>Settings</CardTitle>
+                </div>
+                <CardDescription>Manage your account preferences</CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
         </div>
 
-        {/* Quick Links Section */}
-        <div className="mt-12">
-          <h2 className="mb-6 text-2xl font-bold text-slate-900">Explore More</h2>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-            <Link to="/rentals">
-              <Card className="cursor-pointer transition-all hover:shadow-lg">
-                <CardContent className="pt-6 text-center">
-                  <Building2 className="mx-auto mb-2 h-8 w-8 text-blue-600" />
-                  <p className="font-semibold">Rentals</p>
-                </CardContent>
-              </Card>
-            </Link>
-            <Link to="/house-hunting">
-              <Card className="cursor-pointer transition-all hover:shadow-lg">
-                <CardContent className="pt-6 text-center">
-                  <Home className="mx-auto mb-2 h-8 w-8 text-green-600" />
-                  <p className="font-semibold">House Hunting</p>
-                </CardContent>
-              </Card>
-            </Link>
-            <Link to="/airbnb">
-              <Card className="cursor-pointer transition-all hover:shadow-lg">
-                <CardContent className="pt-6 text-center">
-                  <Sofa className="mx-auto mb-2 h-8 w-8 text-pink-600" />
-                  <p className="font-semibold">Airbnb</p>
-                </CardContent>
-              </Card>
-            </Link>
-            <Link to="/commercial">
-              <Card className="cursor-pointer transition-all hover:shadow-lg">
-                <CardContent className="pt-6 text-center">
-                  <Store className="mx-auto mb-2 h-8 w-8 text-orange-600" />
-                  <p className="font-semibold">Commercial</p>
-                </CardContent>
-              </Card>
-            </Link>
-          </div>
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Account Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm text-gray-600 space-y-2">
+                <p>
+                  <strong>Email:</strong> {user.email}
+                </p>
+                <p>
+                  <strong>Role:</strong> {role || "Not assigned"}
+                </p>
+                <p>
+                  <strong>Status:</strong>{" "}
+                  <span className="text-green-600 font-semibold">Active</span>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Profile Info</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm text-gray-600 space-y-2">
+                <p>
+                  <strong>Name:</strong> {profile?.full_name || "Not set"}
+                </p>
+                <p>
+                  <strong>Phone:</strong> {profile?.phone || "Not provided"}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Quick Links</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Link to="/settings" className="text-blue-600 hover:text-blue-700 text-sm block">
+                  Edit Profile
+                </Link>
+                <Link to="/settings" className="text-blue-600 hover:text-blue-700 text-sm block">
+                  Change Password
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="text-red-600 hover:text-red-700 text-sm block"
+                >
+                  Sign Out
+                </button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
