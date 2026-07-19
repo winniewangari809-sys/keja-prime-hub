@@ -1,130 +1,121 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Home, Building2, Building, ShoppingCart } from "lucide-react";
+import { Home, Building2, Sofa, Store } from "lucide-react";
 
 export const HomePage = () => {
   const propertyTypes = [
     {
-      title: "Rentals",
-      description: "Find your perfect rental home",
       icon: Home,
-      link: "/rentals",
-      color: "bg-blue-50",
-      borderColor: "border-blue-200",
-    },
-    {
       title: "House Hunting",
-      description: "Get personalized concierge service",
-      icon: Building2,
+      description: "Find your dream home with our concierge service",
       link: "/house-hunting",
-      color: "bg-green-50",
-      borderColor: "border-green-200",
+      color: "text-blue-600",
     },
     {
+      icon: Building2,
+      title: "Rentals",
+      description: "Explore rental properties across Kenya",
+      link: "/rentals",
+      color: "text-green-600",
+    },
+    {
+      icon: Sofa,
       title: "Airbnb",
-      description: "Book short-term stays",
-      icon: Home,
+      description: "Book short-term accommodations",
       link: "/airbnb",
-      color: "bg-orange-50",
-      borderColor: "border-orange-200",
+      color: "text-pink-600",
     },
     {
+      icon: Store,
       title: "Commercial",
-      description: "Explore business spaces",
-      icon: Building,
+      description: "Find commercial spaces for your business",
       link: "/commercial",
-      color: "bg-purple-50",
-      borderColor: "border-purple-200",
+      color: "text-orange-600",
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-purple-600">
+    <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <div className="relative pt-20 pb-32 px-4 sm:px-6 lg:px-8">
-        <div className="container-app mx-auto text-center">
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
-            KejaHub
-          </h1>
-          <p className="text-xl sm:text-2xl text-blue-100 mb-12 max-w-2xl mx-auto">
-            Find your perfect home across Kenya
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-            <Link to="/signup">
-              <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50 font-semibold">
-                Get Started
-              </Button>
-            </Link>
-            <Link to="/login">
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white text-white hover:bg-white/10 font-semibold"
-              >
-                Sign In
-              </Button>
-            </Link>
+      <div className="relative w-full overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-32">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[length:40px_40px]" />
+        </div>
+        <div className="container-app relative">
+          <div className="text-center">
+            <h1 className="mb-4 text-5xl font-bold text-white md:text-6xl">
+              KejaHub
+            </h1>
+            <p className="mb-8 text-xl text-slate-300 md:text-2xl">
+              Find your perfect home across Kenya
+            </p>
+            <div className="flex flex-col justify-center gap-4 sm:flex-row">
+              <Link to="/signup">
+                <Button size="lg" className="w-full sm:w-auto">
+                  Get Started
+                </Button>
+              </Link>
+              <Link to="/login">
+                <Button size="lg" variant="outline" className="w-full border-white text-white hover:bg-white hover:text-slate-900 sm:w-auto">
+                  Sign In
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Property Types Section */}
-      <div className="container-app mx-auto px-4 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {propertyTypes.map((type) => {
-            const IconComponent = type.icon;
-            return (
-              <Link key={type.link} to={type.link}>
-                <Card
-                  className={`h-full ${type.color} ${type.borderColor} border-2 cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-2`}
-                >
-                  <CardHeader>
-                    <div className="flex items-center gap-3 mb-2">
-                      <IconComponent className="w-8 h-8 text-blue-600" />
-                      <CardTitle className="text-lg">{type.title}</CardTitle>
-                    </div>
-                    <CardDescription className="text-sm">
-                      {type.description}
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
-              </Link>
-            );
-          })}
+      <div className="bg-slate-50 py-24">
+        <div className="container-app">
+          <div className="mb-16 text-center">
+            <h2 className="mb-4 text-4xl font-bold text-slate-900">
+              Explore Properties
+            </h2>
+            <p className="text-lg text-slate-600">
+              Choose what works best for you
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+            {propertyTypes.map((type) => {
+              const IconComponent = type.icon;
+              return (
+                <Link key={type.link} to={type.link}>
+                  <Card className="h-full cursor-pointer transition-all hover:shadow-lg hover:scale-105">
+                    <CardHeader>
+                      <IconComponent className={`mb-2 h-8 w-8 ${type.color}`} />
+                      <CardTitle>{type.title}</CardTitle>
+                      <CardDescription>{type.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Button variant="outline" className="w-full">
+                        Browse
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {/* Features Section */}
-      <div className="bg-white py-16 px-4 sm:px-6 lg:px-8">
-        <div className="container-app mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12 text-gray-900">
-            Why Choose KejaHub?
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                <Home className="w-8 h-8 text-blue-600" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2 text-gray-900">Wide Selection</h3>
-              <p className="text-gray-600">Access thousands of properties across Kenya</p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-4">
-                <Building2 className="w-8 h-8 text-green-600" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2 text-gray-900">Expert Support</h3>
-              <p className="text-gray-600">Get personalized help from our concierge team</p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto bg-purple-100 rounded-full flex items-center justify-center mb-4">
-                <Building className="w-8 h-8 text-purple-600" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2 text-gray-900">Verified Listings</h3>
-              <p className="text-gray-600">All properties are verified and legitimate</p>
-            </div>
-          </div>
+      {/* Footer CTA */}
+      <div className="bg-white py-16">
+        <div className="container-app text-center">
+          <h3 className="mb-4 text-2xl font-bold text-slate-900">
+            Ready to find your perfect property?
+          </h3>
+          <p className="mb-8 text-slate-600">
+            Join thousands of Kenyans using KejaHub to find their ideal homes
+          </p>
+          <Link to="/signup">
+            <Button size="lg">
+              Create Account
+            </Button>
+          </Link>
         </div>
       </div>
     </div>

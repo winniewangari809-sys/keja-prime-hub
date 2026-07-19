@@ -1,35 +1,41 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
-  SelectTrigger,
-  SelectValue,
   SelectContent,
   SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Store, School, Hospital, Landmark, Utensils, Bus } from "lucide-react";
 import { toast } from "sonner";
-import { Building, MapPin, TrendingUp } from "lucide-react";
 
 export const CommercialPage = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [businessType, setBusinessType] = useState("");
-  const [area, setArea] = useState("");
-  const [budget, setBudget] = useState("");
-  const [parkingNeeded, setParkingNeeded] = useState(false);
-  const [groundFloor, setGroundFloor] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const businessTypeOptions = [
+  const [formData, setFormData] = useState({
+    name: "",
+    phone: "",
+    email: user?.email || "",
+    business_type: "",
+    area: "",
+    budget: "",
+    parking_needed: false,
+    ground_floor: false,
+  });
+
+  const businessTypes = [
     "Shop",
     "Office",
     "Warehouse",
@@ -37,161 +43,153 @@ export const CommercialPage = () => {
     "Restaurant Space",
   ];
 
-  const amenities = [
-    { icon: MapPin, label: "Schools", count: "12" },
-    { icon: Building, label: "Hospitals", count: "8" },
-    { icon: Building, label: "Banks", count: "15" },
-    { icon: Building, label: "Supermarkets", count: "10" },
-    { icon: Building, label: "Transport", count: "5" },
+  const nearbyAmenities = [
+    { icon: School, label: "Schools", color: "text-blue-600" },
+    { icon: Hospital, label: "Hospitals", color: "text-red-600" },
+    { icon: Landmark, label: "Banks", color: "text-slate-600" },
+    { icon: Utensils, label: "Supermarkets", color: "text-green-600" },
+    { icon: Bus, label: "Transport", color: "text-orange-600" },
   ];
 
-  const validateForm = () => {
-    if (!name.trim()) {
-      toast.error("Name is required");
-      return false;
-    }
-    if (!phone.trim()) {
-      toast.error("Phone is required");
-      return false;
-    }
-    if (!email.trim()) {
-      toast.error("Email is required");
-      return false;
-    }
-    if (!businessType) {
-      toast.error("Business type is required");
-      return false;
-    }
-    if (!area.trim()) {
-      toast.error("Area is required");
-      return false;
-    }
-    if (!budget || parseInt(budget) <= 0) {
-      toast.error("Budget must be greater than 0");
-      return false;
-    }
-    return true;
+  const handleFormChange = (field: string, value: string | boolean) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const calculateBusinessScore = () => {
+    let score = 0;
+    if (formData.parking_needed) score += 10;
+    if (formData.ground_floor) score += 15;
+    if (formData.area) score += 20;
+    if (formData.budget) score += 20;
+    if (formData.business_type) score += 20;
+    if (formData.email) score += 15;
+    return Math.min(100, score);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
+
+    if (
+      !formData.name ||
+      !formData.phone ||
+      !formData.email ||
+      !formData.business_type ||
+      !formData.area ||
+      !formData.budget
+    ) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
 
     setLoading(true);
     try {
       const { error } = await supabase.from("commercial_requests").insert({
-        name,
-        phone,
-        email,
-        business_type: businessType,
-        area,
-        budget: parseInt(budget),
-        parking_needed: parkingNeeded,
-        ground_floor: groundFloor,
+        name: formData.name,
+        phone: formData.phone,
+        email: formData.email,
+        business_type: formData.business_type,
+        area: formData.area,
+        budget: parseInt(formData.budget),
+        parking_needed: formData.parking_needed,
+        ground_floor: formData.ground_floor,
+        user_id: user?.id || null,
       });
 
-      if (error) {
-        toast.error("Failed to submit request");
-        return;
-      }
-
-      toast.success("Commercial space request submitted successfully!");
+      if (error) throw error;
+      toast.success("Commercial request submitted successfully!");
       navigate("/dashboard");
     } catch (err) {
-      toast.error("An error occurred");
+      toast.error("Failed to submit commercial request");
     } finally {
       setLoading(false);
     }
   };
 
-  const calculateScore = (): number => {
-    let score = 50; // Base score
-    if (groundFloor) score += 15;
-    if (parkingNeeded) score += 10;
-    if (area.length > 5) score += 10;
-    if (parseInt(budget) > 100000) score += 15;
-    return Math.min(score, 100);
-  };
-
-  const businessPotentialScore = calculateScore();
-
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-KE", {
-      style: "currency",
-      currency: "KES",
-    }).format(price);
+    return `KES ${price.toLocaleString()}`;
   };
+
+  const businessScore = calculateBusinessScore();
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
-      <div className="container-app mx-auto max-w-4xl">
+    <div className="min-h-screen bg-slate-50 py-12">
+      <div className="container-app">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900">Commercial Spaces</h1>
-          <p className="text-gray-600 mt-2">Find the perfect space for your business</p>
+          <h1 className="text-4xl font-bold text-slate-900">Commercial Spaces</h1>
+          <p className="mt-2 text-lg text-slate-600">
+            Find the perfect space for your business
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Form */}
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
-                <CardTitle>Business Space Inquiry</CardTitle>
+                <CardTitle>Commercial Space Inquiry</CardTitle>
                 <CardDescription>
                   Tell us about your business needs
                 </CardDescription>
               </CardHeader>
-              <form onSubmit={handleSubmit}>
-                <CardContent className="space-y-6">
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-6">
                   {/* Contact Information */}
                   <div className="space-y-4">
-                    <h3 className="font-semibold text-gray-900">Contact Information</h3>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Full Name</Label>
-                      <Input
-                        id="name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        disabled={loading}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
+                    <h3 className="font-semibold text-slate-900">Contact Information</h3>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <div className="space-y-2">
-                        <Label htmlFor="phone">Phone Number</Label>
+                        <Label htmlFor="name">Business Owner Name *</Label>
+                        <Input
+                          id="name"
+                          placeholder="Jane Smith"
+                          value={formData.name}
+                          onChange={(e) => handleFormChange("name", e.target.value)}
+                          disabled={loading}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone Number *</Label>
                         <Input
                           id="phone"
-                          type="tel"
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
+                          placeholder="+254712345678"
+                          value={formData.phone}
+                          onChange={(e) => handleFormChange("phone", e.target.value)}
                           disabled={loading}
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          disabled={loading}
-                        />
-                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="your@email.com"
+                        value={formData.email}
+                        onChange={(e) => handleFormChange("email", e.target.value)}
+                        disabled={loading}
+                      />
                     </div>
                   </div>
 
                   {/* Business Details */}
                   <div className="space-y-4">
-                    <h3 className="font-semibold text-gray-900">Business Details</h3>
-
+                    <h3 className="font-semibold text-slate-900">Business Requirements</h3>
                     <div className="space-y-2">
-                      <Label htmlFor="businessType">Type of Business Space</Label>
-                      <Select value={businessType} onValueChange={setBusinessType} disabled={loading}>
-                        <SelectTrigger id="businessType">
+                      <Label htmlFor="business_type">Business Type *</Label>
+                      <Select
+                        value={formData.business_type}
+                        onValueChange={(value) =>
+                          handleFormChange("business_type", value)
+                        }
+                        disabled={loading}
+                      >
+                        <SelectTrigger id="business_type">
                           <SelectValue placeholder="Select business type" />
                         </SelectTrigger>
                         <SelectContent>
-                          {businessTypeOptions.map((type) => (
+                          {businessTypes.map((type) => (
                             <SelectItem key={type} value={type}>
                               {type}
                             </SelectItem>
@@ -201,106 +199,110 @@ export const CommercialPage = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="area">Preferred Area(s)</Label>
+                      <Label htmlFor="area">Preferred Area *</Label>
                       <Input
                         id="area"
-                        placeholder="e.g., CBD, Westlands, Industrial Area"
-                        value={area}
-                        onChange={(e) => setArea(e.target.value)}
+                        placeholder="e.g., Westlands, Nairobi CBD, Parklands"
+                        value={formData.area}
+                        onChange={(e) => handleFormChange("area", e.target.value)}
                         disabled={loading}
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="budget">Monthly Budget (KES)</Label>
+                      <Label htmlFor="budget">Budget (KES) *</Label>
                       <Input
                         id="budget"
                         type="number"
-                        placeholder="0"
-                        value={budget}
-                        onChange={(e) => setBudget(e.target.value)}
+                        placeholder="100000"
+                        value={formData.budget}
+                        onChange={(e) => handleFormChange("budget", e.target.value)}
                         disabled={loading}
                       />
                     </div>
                   </div>
 
-                  {/* Preferences */}
+                  {/* Special Requirements */}
                   <div className="space-y-4">
-                    <h3 className="font-semibold text-gray-900">Preferences</h3>
-
+                    <h3 className="font-semibold text-slate-900">Special Requirements</h3>
                     <div className="space-y-3">
                       <div className="flex items-center space-x-2">
                         <Checkbox
-                          id="parking"
-                          checked={parkingNeeded}
-                          onCheckedChange={(checked) => setParkingNeeded(checked as boolean)}
+                          id="parking_needed"
+                          checked={formData.parking_needed}
+                          onCheckedChange={(checked) =>
+                            handleFormChange("parking_needed", checked)
+                          }
                           disabled={loading}
                         />
-                        <Label
-                          htmlFor="parking"
-                          className="text-sm font-normal cursor-pointer"
-                        >
-                          Parking is essential
+                        <Label htmlFor="parking_needed" className="cursor-pointer">
+                          Parking Required
                         </Label>
                       </div>
-
                       <div className="flex items-center space-x-2">
                         <Checkbox
-                          id="groundFloor"
-                          checked={groundFloor}
-                          onCheckedChange={(checked) => setGroundFloor(checked as boolean)}
+                          id="ground_floor"
+                          checked={formData.ground_floor}
+                          onCheckedChange={(checked) =>
+                            handleFormChange("ground_floor", checked)
+                          }
                           disabled={loading}
                         />
-                        <Label
-                          htmlFor="groundFloor"
-                          className="text-sm font-normal cursor-pointer"
-                        >
-                          Ground floor preferred
+                        <Label htmlFor="ground_floor" className="cursor-pointer">
+                          Ground Floor Only
                         </Label>
                       </div>
                     </div>
                   </div>
-                </CardContent>
-                <CardFooter>
+
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? "Submitting..." : "Submit Inquiry"}
                   </Button>
-                </CardFooter>
-              </form>
+                </form>
+              </CardContent>
             </Card>
           </div>
 
-          {/* Sidebar */}
+          {/* Info Sidebar */}
           <div className="space-y-6">
             {/* Business Potential Score */}
-            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+            <Card>
               <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-green-600" />
-                  Business Potential
-                </CardTitle>
+                <CardTitle className="text-lg">Business Potential Score</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-center">
-                  <div className="text-4xl font-bold text-green-600">
-                    {businessPotentialScore}%
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-sm font-semibold text-slate-900">Score</span>
+                      <Badge
+                        variant={
+                          businessScore >= 80
+                            ? "default"
+                            : businessScore >= 60
+                              ? "secondary"
+                              : "outline"
+                        }
+                      >
+                        {businessScore}%
+                      </Badge>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                      <div
+                        className={`h-full transition-all ${
+                          businessScore >= 80
+                            ? "bg-green-600"
+                            : businessScore >= 60
+                              ? "bg-yellow-600"
+                              : "bg-red-600"
+                        }`}
+                        style={{ width: `${businessScore}%` }}
+                      />
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-600 mt-2">
-                    Based on your preferences
+                  <p className="text-xs text-slate-600">
+                    Complete more fields to improve your score and get better matches
                   </p>
-                </div>
-
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-green-600 h-2 rounded-full transition-all"
-                    style={{ width: `${businessPotentialScore}%` }}
-                  />
-                </div>
-
-                <div className="text-xs text-gray-600 space-y-1">
-                  <p>• Ground floor location: +15%</p>
-                  <p>• Parking availability: +10%</p>
-                  <p>• Higher budget: +15%</p>
                 </div>
               </CardContent>
             </Card>
@@ -309,43 +311,38 @@ export const CommercialPage = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Nearby Amenities</CardTitle>
-                <CardDescription>In the {area || "selected"} area</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {amenities.map((amenity) => {
-                  const IconComponent = amenity.icon;
-                  return (
-                    <div key={amenity.label} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50">
-                      <div className="flex items-center gap-3">
-                        <IconComponent className="w-5 h-5 text-blue-600" />
-                        <span className="text-sm font-medium text-gray-900">
-                          {amenity.label}
-                        </span>
+              <CardContent>
+                <div className="space-y-3">
+                  {nearbyAmenities.map((amenity) => {
+                    const IconComponent = amenity.icon;
+                    return (
+                      <div key={amenity.label} className="flex items-center gap-3">
+                        <IconComponent className={`h-5 w-5 ${amenity.color}`} />
+                        <span className="text-sm text-slate-700">{amenity.label}</span>
                       </div>
-                      <Badge variant="outline">{amenity.count}</Badge>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </CardContent>
             </Card>
 
-            {/* Key Features */}
+            {/* Featured Spaces */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Why Commercial Spaces?</CardTitle>
+                <CardTitle className="text-lg">Popular Business Types</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="flex gap-3">
-                  <div className="w-2 h-2 rounded-full bg-blue-600 mt-1 flex-shrink-0" />
-                  <p className="text-gray-700">Verified business locations</p>
-                </div>
-                <div className="flex gap-3">
-                  <div className="w-2 h-2 rounded-full bg-blue-600 mt-1 flex-shrink-0" />
-                  <p className="text-gray-700">Competitive pricing</p>
-                </div>
-                <div className="flex gap-3">
-                  <div className="w-2 h-2 rounded-full bg-blue-600 mt-1 flex-shrink-0" />
-                  <p className="text-gray-700">Expert consultation</p>
+              <CardContent>
+                <div className="space-y-2">
+                  {businessTypes.map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => handleFormChange("business_type", type)}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-50"
+                    >
+                      {type}
+                    </button>
+                  ))}
                 </div>
               </CardContent>
             </Card>

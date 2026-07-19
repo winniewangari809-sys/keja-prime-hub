@@ -1,19 +1,19 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
   Select,
-  SelectTrigger,
-  SelectValue,
   SelectContent,
   SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Github } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 export const SignupPage = () => {
   const navigate = useNavigate();
@@ -21,52 +21,52 @@ export const SignupPage = () => {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("buyer");
+  const [role, setRole] = useState<string>("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
 
-  const validateForm = () => {
-    if (!firstName.trim()) {
-      toast.error("First name is required");
-      return false;
-    }
-    if (!lastName.trim()) {
-      toast.error("Last name is required");
-      return false;
-    }
-    if (!email.trim()) {
-      toast.error("Email is required");
-      return false;
-    }
-    if (!emailRegex.test(email)) {
-      toast.error("Please enter a valid email address");
-      return false;
-    }
-    if (!password) {
-      toast.error("Password is required");
-      return false;
-    }
-    if (!passwordRegex.test(password)) {
-      toast.error("Password must be at least 8 characters with uppercase, lowercase, and a number");
-      return false;
-    }
-    if (!role) {
-      toast.error("Please select a role");
-      return false;
-    }
-    return true;
+  const validatePassword = (pwd: string) => {
+    const errors = [];
+    if (pwd.length < 8) errors.push("At least 8 characters");
+    if (!/[A-Z]/.test(pwd)) errors.push("One uppercase letter");
+    if (!/[a-z]/.test(pwd)) errors.push("One lowercase letter");
+    if (!/\d/.test(pwd)) errors.push("One number");
+    return errors;
+  };
+
+  const handlePasswordChange = (pwd: string) => {
+    setPassword(pwd);
+    setPasswordErrors(validatePassword(pwd));
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
+
+    if (!firstName || !lastName || !email || !password || !role) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    if (passwordErrors.length > 0) {
+      toast.error("Password does not meet requirements");
+      return;
+    }
 
     setLoading(true);
     try {
-      const { data: authData, error: signupError } = await supabase.auth.signUp({
+      // Sign up user
+      const { data, error: signupError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -78,22 +78,20 @@ export const SignupPage = () => {
       });
 
       if (signupError) {
-        toast.error(signupError.message || "Failed to sign up");
+        toast.error(signupError.message);
         setLoading(false);
         return;
       }
 
-      if (!authData.user) {
-        toast.error("Failed to create user account");
+      if (!data.user) {
+        toast.error("Signup failed. Please try again.");
         setLoading(false);
         return;
       }
-
-      const userId = authData.user.id;
 
       // Insert profile
       const { error: profileError } = await supabase.from("profiles").insert({
-        id: userId,
+        id: data.user.id,
         first_name: firstName,
         full_name: `${firstName} ${lastName}`,
       });
@@ -106,7 +104,7 @@ export const SignupPage = () => {
 
       // Insert user role
       const { error: roleError } = await supabase.from("user_roles").insert({
-        user_id: userId,
+        user_id: data.user.id,
         role: role,
       });
 
@@ -116,7 +114,7 @@ export const SignupPage = () => {
         return;
       }
 
-      toast.success("Account created successfully! Please check your email to verify.");
+      toast.success("Account created successfully! Please log in.");
       navigate("/login");
     } catch (err) {
       toast.error("An error occurred during signup");
@@ -131,117 +129,127 @@ export const SignupPage = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth-callback`,
+          redirectTo: `${window.location.origin}/dashboard`,
         },
       });
 
       if (error) {
-        toast.error(error.message || "Failed to sign up with Google");
+        toast.error(error.message);
       }
     } catch (err) {
-      toast.error("An error occurred during Google sign up");
+      toast.error("Google sign-up failed");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4 py-8">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl">Create Account</CardTitle>
-          <CardDescription>Join KejaHub today</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSignup} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12">
+      <div className="w-full max-w-md">
+        <Card>
+          <CardHeader className="text-center">
+            <CardTitle className="text-3xl">Create Account</CardTitle>
+            <CardDescription>Join KejaHub and start your property journey</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <form onSubmit={handleSignup} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    id="firstName"
+                    placeholder="John"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    placeholder="Doe"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <Label htmlFor="firstName">First Name</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
-                  id="firstName"
-                  placeholder="John"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
+                  id="email"
+                  type="email"
+                  placeholder="your@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   disabled={loading}
                 />
               </div>
+
               <div className="space-y-2">
-                <Label htmlFor="lastName">Last Name</Label>
-                <Input
-                  id="lastName"
-                  placeholder="Doe"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  disabled={loading}
-                />
+                <Label htmlFor="role">I am a...</Label>
+                <Select value={role} onValueChange={setRole} disabled={loading}>
+                  <SelectTrigger id="role">
+                    <SelectValue placeholder="Select your role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="buyer">Home Buyer</SelectItem>
+                    <SelectItem value="tenant">Tenant</SelectItem>
+                    <SelectItem value="seller">Property Seller</SelectItem>
+                    <SelectItem value="landlord">Landlord</SelectItem>
+                    <SelectItem value="agent">Real Estate Agent</SelectItem>
+                    <SelectItem value="airbnb">Airbnb Host</SelectItem>
+                    <SelectItem value="commercial">Commercial User</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="your@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                  disabled={loading}
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => handlePasswordChange(e.target.value)}
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                {passwordErrors.length > 0 && (
+                  <div className="mt-2 space-y-1 text-xs text-red-600">
+                    <p>Password must have:</p>
+                    {passwordErrors.map((err) => (
+                      <p key={err}>• {err}</p>
+                    ))}
+                  </div>
+                )}
               </div>
-              <p className="text-xs text-gray-500">
-                Min 8 chars, uppercase, lowercase, and number
-              </p>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="role">I am a...</Label>
-              <Select value={role} onValueChange={setRole} disabled={loading}>
-                <SelectTrigger id="role">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="buyer">Buyer</SelectItem>
-                  <SelectItem value="tenant">Tenant</SelectItem>
-                  <SelectItem value="seller">Seller</SelectItem>
-                  <SelectItem value="landlord">Landlord</SelectItem>
-                  <SelectItem value="agent">Agent</SelectItem>
-                  <SelectItem value="airbnb">Airbnb Host</SelectItem>
-                  <SelectItem value="commercial">Commercial</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Creating account..." : "Sign Up"}
-            </Button>
+              <Button type="submit" className="w-full" disabled={loading || passwordErrors.length > 0}>
+                {loading ? "Creating account..." : "Create Account"}
+              </Button>
+            </form>
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200"></div>
+                <div className="w-full border-t border-slate-200" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                <span className="bg-white px-2 text-slate-500">Or sign up with</span>
               </div>
             </div>
 
@@ -252,19 +260,19 @@ export const SignupPage = () => {
               onClick={handleGoogleSignIn}
               disabled={loading}
             >
-              Google Sign Up
+              <Github className="mr-2 h-4 w-4" />
+              Google
             </Button>
-          </form>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-2 border-t pt-4">
-          <p className="text-sm text-gray-600 text-center">
-            Already have an account?{" "}
-            <Link to="/login" className="text-blue-600 hover:text-blue-700 font-semibold">
-              Sign in
-            </Link>
-          </p>
-        </CardFooter>
-      </Card>
+
+            <div className="text-center text-sm text-slate-600">
+              Already have an account?{" "}
+              <Link to="/login" className="font-semibold text-blue-600 hover:text-blue-700">
+                Sign in
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

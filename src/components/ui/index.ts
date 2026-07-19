@@ -1,48 +1,31 @@
-// Button
+// Barrel file exporting all UI components
+
 export { Button, buttonVariants } from "./button"
-export type { ButtonProps } from "./button"
-
-// Input
 export { Input } from "./input"
-export type { InputProps } from "./input"
-
-// Textarea
 export { Textarea } from "./textarea"
-export type { TextareaProps } from "./textarea"
-
-// Card
 export {
   Card,
   CardHeader,
+  CardFooter,
   CardTitle,
   CardDescription,
   CardContent,
-  CardFooter,
 } from "./card"
-
-// Dialog
 export {
   Dialog,
-  DialogTrigger,
+  DialogPortal,
+  DialogOverlay,
   DialogClose,
+  DialogTrigger,
   DialogContent,
   DialogHeader,
   DialogFooter,
   DialogTitle,
   DialogDescription,
 } from "./dialog"
-
-// Tabs
 export { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs"
-
-// Label
 export { Label } from "./label"
-
-// Badge
 export { Badge, badgeVariants } from "./badge"
-export type { BadgeProps } from "./badge"
-
-// Select
 export {
   Select,
   SelectGroup,
@@ -55,17 +38,9 @@ export {
   SelectScrollUpButton,
   SelectScrollDownButton,
 } from "./select"
-
-// Checkbox
 export { Checkbox } from "./checkbox"
-
-// Separator
 export { Separator } from "./separator"
-
-// Switch
 export { Switch } from "./switch"
-
-// Dropdown Menu
 export {
   DropdownMenu,
   DropdownMenuTrigger,

@@ -1,71 +1,89 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { LogOut, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import { Eye, EyeOff, LogOut } from "lucide-react";
 
 export const SettingsPage = () => {
+  const { user, firstName, signOut } = useAuth();
   const navigate = useNavigate();
-  const { user, profile, loading: authLoading } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("profile");
 
-  const [firstName, setFirstName] = useState("");
-  const [fullName, setFullName] = useState("");
+  // Profile state
+  const [profileFirstName, setProfileFirstName] = useState("");
+  const [profileFullName, setProfileFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
-  const [profileLoading, setProfileLoading] = useState(false);
 
-  const [currentPassword, setCurrentPassword] = useState("");
+  // Security state
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [passwordLoading, setPasswordLoading] = useState(false);
 
-  const [notifications, setNotifications] = useState({
-    email: localStorage.getItem("notify_email") !== "false",
-    sms: localStorage.getItem("notify_sms") !== "false",
-    push: localStorage.getItem("notify_push") !== "false",
-  });
+  // Notifications & Privacy state
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [smsNotifications, setSmsNotifications] = useState(false);
+  const [profilePublic, setProfilePublic] = useState(true);
+  const [dataCollection, setDataCollection] = useState(true);
 
-  const [privacy, setPrivacy] = useState({
-    profilePublic: localStorage.getItem("profile_public") !== "false",
-    showEmail: localStorage.getItem("show_email") === "true",
-    allowMessages: localStorage.getItem("allow_messages") !== "false",
-  });
+  // Account state
+  const [pauseDialogOpen, setPauseDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
-    if (profile) {
-      setFirstName(profile.first_name || "");
-      setFullName(profile.full_name || "");
-      setPhone(profile.phone || "");
-      setAvatarUrl(profile.avatar_url || "");
+    if (user) {
+      loadProfileData();
+      loadSettings();
     }
-  }, [profile]);
+  }, [user]);
 
-  const handleLogout = async () => {
+  const loadProfileData = async () => {
+    if (!user) return;
     try {
-      await supabase.auth.signOut();
-      toast.success("Logged out successfully");
-      navigate("/");
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("first_name, full_name, phone, avatar_url")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (data) {
+        setProfileFirstName(data.first_name || "");
+        setProfileFullName(data.full_name || "");
+        setPhone(data.phone || "");
+        setAvatarUrl(data.avatar_url || "");
+      }
     } catch (err) {
-      toast.error("Failed to logout");
+      console.error("Error loading profile:", err);
+    }
+  };
+
+  const loadSettings = () => {
+    try {
+      setEmailNotifications(localStorage.getItem("email_notifications") !== "false");
+      setSmsNotifications(localStorage.getItem("sms_notifications") === "true");
+      setProfilePublic(localStorage.getItem("profile_public") !== "false");
+      setDataCollection(localStorage.getItem("data_collection") !== "false");
+    } catch (err) {
+      console.error("Error loading settings:", err);
     }
   };
 
@@ -73,26 +91,25 @@ export const SettingsPage = () => {
     e.preventDefault();
     if (!user) return;
 
-    setProfileLoading(true);
+    setLoading(true);
     try {
-      const { error } = await supabase.from("profiles").upsert({
-        id: user.id,
-        first_name: firstName,
-        full_name: fullName,
-        phone: phone,
-        avatar_url: avatarUrl,
-      });
+      const { error } = await supabase
+        .from("profiles")
+        .upsert({
+          id: user.id,
+          first_name: profileFirstName,
+          full_name: profileFullName,
+          phone,
+          avatar_url: avatarUrl,
+        })
+        .eq("id", user.id);
 
-      if (error) {
-        toast.error("Failed to update profile");
-        return;
-      }
-
+      if (error) throw error;
       toast.success("Profile updated successfully");
     } catch (err) {
-      toast.error("An error occurred");
+      toast.error("Failed to update profile");
     } finally {
-      setProfileLoading(false);
+      setLoading(false);
     }
   };
 
@@ -100,7 +117,7 @@ export const SettingsPage = () => {
     e.preventDefault();
 
     if (!newPassword || !confirmPassword) {
-      toast.error("Please fill in all password fields");
+      toast.error("Please fill in both password fields");
       return;
     }
 
@@ -114,115 +131,107 @@ export const SettingsPage = () => {
       return;
     }
 
-    setPasswordLoading(true);
+    setLoading(true);
     try {
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
       });
 
-      if (error) {
-        toast.error(error.message || "Failed to change password");
-        return;
-      }
-
-      toast.success("Password changed successfully");
-      setCurrentPassword("");
+      if (error) throw error;
+      toast.success("Password updated successfully");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
-      toast.error("An error occurred");
+      toast.error("Failed to update password");
     } finally {
-      setPasswordLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleNotificationToggle = (key: keyof typeof notifications) => {
-    const newValue = !notifications[key];
-    setNotifications((prev) => ({ ...prev, [key]: newValue }));
-    localStorage.setItem(
-      `notify_${key}`,
-      newValue ? "true" : "false"
-    );
-    toast.success("Notification settings updated");
+  const handleSaveNotifications = () => {
+    localStorage.setItem("email_notifications", emailNotifications.toString());
+    localStorage.setItem("sms_notifications", smsNotifications.toString());
+    toast.success("Notification preferences saved");
   };
 
-  const handlePrivacyToggle = (key: keyof typeof privacy) => {
-    const newValue = !privacy[key];
-    setPrivacy((prev) => ({ ...prev, [key]: newValue }));
-    const storageKey =
-      key === "profilePublic"
-        ? "profile_public"
-        : key === "showEmail"
-        ? "show_email"
-        : "allow_messages";
-    localStorage.setItem(storageKey, newValue ? "true" : "false");
-    toast.success("Privacy settings updated");
+  const handleSavePrivacy = () => {
+    localStorage.setItem("profile_public", profilePublic.toString());
+    localStorage.setItem("data_collection", dataCollection.toString());
+    toast.success("Privacy settings saved");
   };
 
   const handlePauseAccount = async () => {
     if (!user) return;
-
+    setLoading(true);
     try {
       const { error } = await supabase
         .from("profiles")
         .update({ paused: true })
         .eq("id", user.id);
 
-      if (error) {
-        toast.error("Failed to pause account");
-        return;
-      }
-
+      if (error) throw error;
       toast.success("Account paused successfully");
+      setPauseDialogOpen(false);
+      await signOut();
+      navigate("/");
     } catch (err) {
-      toast.error("An error occurred");
+      toast.error("Failed to pause account");
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleDeleteAccount = async () => {
     try {
-      await supabase.auth.signOut();
-      toast.success("Account deletion initiated. Please contact support.");
+      await signOut();
+      toast.success("Please contact support to delete your account");
       navigate("/");
+      setDeleteDialogOpen(false);
     } catch (err) {
-      toast.error("An error occurred");
+      toast.error("Failed to logout");
     }
   };
 
-  if (authLoading) {
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast.success("Logged out successfully");
+      navigate("/");
+    } catch (err) {
+      toast.error("Failed to logout");
+    }
+  };
+
+  if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-600">Loading...</p>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <p className="mb-4 text-slate-600">Please log in to access settings</p>
+          <Button onClick={() => navigate("/login")}>Go to Login</Button>
+        </div>
       </div>
     );
   }
 
-  if (!user) {
-    navigate("/login");
-    return null;
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="container-app mx-auto px-4 py-6 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleLogout}
-            className="gap-2"
-          >
-            <LogOut size={16} />
+      <div className="border-b border-slate-200 bg-white">
+        <div className="container-app flex items-center justify-between py-6">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">Settings</h1>
+            <p className="mt-1 text-slate-600">{user.email}</p>
+          </div>
+          <Button variant="destructive" onClick={handleLogout}>
+            <LogOut className="mr-2 h-4 w-4" />
             Logout
           </Button>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="container-app mx-auto px-4 py-8 max-w-2xl">
-        <Tabs defaultValue="profile" className="w-full">
+      {/* Settings Tabs */}
+      <div className="container-app py-12">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
@@ -232,42 +241,43 @@ export const SettingsPage = () => {
           </TabsList>
 
           {/* Profile Tab */}
-          <TabsContent value="profile" className="mt-6">
+          <TabsContent value="profile">
             <Card>
               <CardHeader>
-                <CardTitle>Profile Information</CardTitle>
-                <CardDescription>Update your personal details</CardDescription>
+                <CardTitle>Profile Settings</CardTitle>
+                <CardDescription>Update your profile information</CardDescription>
               </CardHeader>
-              <form onSubmit={handleSaveProfile}>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input
-                      id="firstName"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      disabled={profileLoading}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="fullName">Full Name</Label>
-                    <Input
-                      id="fullName"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      disabled={profileLoading}
-                    />
+              <CardContent>
+                <form onSubmit={handleSaveProfile} className="space-y-6">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName">First Name</Label>
+                      <Input
+                        id="firstName"
+                        value={profileFirstName}
+                        onChange={(e) => setProfileFirstName(e.target.value)}
+                        disabled={loading}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="fullName">Full Name</Label>
+                      <Input
+                        id="fullName"
+                        value={profileFullName}
+                        onChange={(e) => setProfileFullName(e.target.value)}
+                        disabled={loading}
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone Number</Label>
                     <Input
                       id="phone"
-                      type="tel"
+                      placeholder="+254..."
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      disabled={profileLoading}
+                      disabled={loading}
                     />
                   </div>
 
@@ -275,262 +285,202 @@ export const SettingsPage = () => {
                     <Label htmlFor="avatarUrl">Avatar URL</Label>
                     <Input
                       id="avatarUrl"
+                      placeholder="https://..."
                       value={avatarUrl}
                       onChange={(e) => setAvatarUrl(e.target.value)}
-                      placeholder="https://..."
-                      disabled={profileLoading}
+                      disabled={loading}
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Email (Cannot be changed)</Label>
-                    <Input
-                      value={user.email || ""}
-                      disabled
-                      className="bg-gray-100 cursor-not-allowed"
-                    />
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button type="submit" disabled={profileLoading}>
-                    {profileLoading ? "Saving..." : "Save Changes"}
+                  <Button type="submit" disabled={loading}>
+                    {loading ? "Saving..." : "Save Profile"}
                   </Button>
-                </CardFooter>
-              </form>
+                </form>
+              </CardContent>
             </Card>
           </TabsContent>
 
           {/* Security Tab */}
-          <TabsContent value="security" className="mt-6">
+          <TabsContent value="security">
             <Card>
               <CardHeader>
-                <CardTitle>Change Password</CardTitle>
-                <CardDescription>Update your password regularly for security</CardDescription>
+                <CardTitle>Security Settings</CardTitle>
+                <CardDescription>Manage your password and security</CardDescription>
               </CardHeader>
-              <form onSubmit={handleChangePassword}>
-                <CardContent className="space-y-4">
+              <CardContent>
+                <form onSubmit={handleChangePassword} className="space-y-6">
                   <div className="space-y-2">
                     <Label htmlFor="newPassword">New Password</Label>
-                    <div className="relative">
-                      <Input
-                        id="newPassword"
-                        type={showNewPassword ? "text" : "password"}
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        disabled={passwordLoading}
-                        placeholder="••••••••"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                        disabled={passwordLoading}
-                      >
-                        {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                      </button>
-                    </div>
+                    <Input
+                      id="newPassword"
+                      type="password"
+                      placeholder="••••••••"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      disabled={loading}
+                    />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <div className="relative">
-                      <Input
-                        id="confirmPassword"
-                        type={showConfirmPassword ? "text" : "password"}
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        disabled={passwordLoading}
-                        placeholder="••••••••"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                        disabled={passwordLoading}
-                      >
-                        {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                      </button>
-                    </div>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      placeholder="••••••••"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      disabled={loading}
+                    />
                   </div>
 
-                  <p className="text-xs text-gray-500 mt-2">
-                    Password must be at least 8 characters
-                  </p>
-                </CardContent>
-                <CardFooter>
-                  <Button type="submit" disabled={passwordLoading}>
-                    {passwordLoading ? "Updating..." : "Update Password"}
+                  <Button type="submit" disabled={loading}>
+                    {loading ? "Updating..." : "Update Password"}
                   </Button>
-                </CardFooter>
-              </form>
+                </form>
+              </CardContent>
             </Card>
           </TabsContent>
 
           {/* Notifications Tab */}
-          <TabsContent value="notifications" className="mt-6">
+          <TabsContent value="notifications">
             <Card>
               <CardHeader>
-                <CardTitle>Notification Settings</CardTitle>
-                <CardDescription>Choose how you want to receive updates</CardDescription>
+                <CardTitle>Notification Preferences</CardTitle>
+                <CardDescription>Choose how you receive updates</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6 pt-6">
+              <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label className="text-base font-semibold">Email Notifications</Label>
-                    <p className="text-sm text-gray-600 mt-1">Receive email alerts</p>
+                    <p className="font-semibold text-slate-900">Email Notifications</p>
+                    <p className="text-sm text-slate-600">Receive updates via email</p>
                   </div>
                   <Switch
-                    checked={notifications.email}
-                    onCheckedChange={() => handleNotificationToggle("email")}
+                    checked={emailNotifications}
+                    onCheckedChange={setEmailNotifications}
                   />
                 </div>
-
+                <Separator />
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label className="text-base font-semibold">SMS Notifications</Label>
-                    <p className="text-sm text-gray-600 mt-1">Receive SMS alerts</p>
+                    <p className="font-semibold text-slate-900">SMS Notifications</p>
+                    <p className="text-sm text-slate-600">Receive updates via SMS</p>
                   </div>
                   <Switch
-                    checked={notifications.sms}
-                    onCheckedChange={() => handleNotificationToggle("sms")}
+                    checked={smsNotifications}
+                    onCheckedChange={setSmsNotifications}
                   />
                 </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-base font-semibold">Push Notifications</Label>
-                    <p className="text-sm text-gray-600 mt-1">Receive push notifications</p>
-                  </div>
-                  <Switch
-                    checked={notifications.push}
-                    onCheckedChange={() => handleNotificationToggle("push")}
-                  />
-                </div>
+                <Button onClick={handleSaveNotifications} className="mt-6 w-full">
+                  Save Preferences
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
 
           {/* Privacy Tab */}
-          <TabsContent value="privacy" className="mt-6">
+          <TabsContent value="privacy">
             <Card>
               <CardHeader>
                 <CardTitle>Privacy Settings</CardTitle>
-                <CardDescription>Control who can see your information</CardDescription>
+                <CardDescription>Control your data and visibility</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6 pt-6">
+              <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label className="text-base font-semibold">Public Profile</Label>
-                    <p className="text-sm text-gray-600 mt-1">Make your profile visible to others</p>
+                    <p className="font-semibold text-slate-900">Public Profile</p>
+                    <p className="text-sm text-slate-600">Allow others to see your profile</p>
                   </div>
-                  <Switch
-                    checked={privacy.profilePublic}
-                    onCheckedChange={() => handlePrivacyToggle("profilePublic")}
-                  />
+                  <Switch checked={profilePublic} onCheckedChange={setProfilePublic} />
                 </div>
-
+                <Separator />
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label className="text-base font-semibold">Show Email</Label>
-                    <p className="text-sm text-gray-600 mt-1">Display email on profile</p>
+                    <p className="font-semibold text-slate-900">Data Collection</p>
+                    <p className="text-sm text-slate-600">Allow us to collect usage data</p>
                   </div>
                   <Switch
-                    checked={privacy.showEmail}
-                    onCheckedChange={() => handlePrivacyToggle("showEmail")}
+                    checked={dataCollection}
+                    onCheckedChange={setDataCollection}
                   />
                 </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-base font-semibold">Allow Messages</Label>
-                    <p className="text-sm text-gray-600 mt-1">Allow others to message you</p>
-                  </div>
-                  <Switch
-                    checked={privacy.allowMessages}
-                    onCheckedChange={() => handlePrivacyToggle("allowMessages")}
-                  />
-                </div>
+                <Button onClick={handleSavePrivacy} className="mt-6 w-full">
+                  Save Settings
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
 
           {/* Account Tab */}
-          <TabsContent value="account" className="mt-6 space-y-6">
-            <Card className="border-yellow-200 bg-yellow-50">
+          <TabsContent value="account">
+            <Card>
               <CardHeader>
-                <CardTitle>Pause Account</CardTitle>
-                <CardDescription>Temporarily disable your account</CardDescription>
+                <CardTitle>Account Actions</CardTitle>
+                <CardDescription>Manage your account</CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600 mb-4">
-                  Your account will be deactivated. You can reactivate it by logging in again.
-                </p>
-              </CardContent>
-              <CardFooter>
-                <Button
-                  variant="outline"
-                  className="text-yellow-700 border-yellow-200 hover:bg-yellow-100"
-                  onClick={handlePauseAccount}
-                >
-                  Pause Account
-                </Button>
-              </CardFooter>
-            </Card>
-
-            <Card className="border-red-200 bg-red-50">
-              <CardHeader>
-                <CardTitle>Delete Account</CardTitle>
-                <CardDescription>Permanently delete your account and data</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600 mb-4">
-                  This action cannot be undone. Please contact support for assistance.
-                </p>
-              </CardContent>
-              <CardFooter>
-                <Dialog>
+              <CardContent className="space-y-4">
+                {/* Pause Account */}
+                <Dialog open={pauseDialogOpen} onOpenChange={setPauseDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="text-red-700 border-red-200 hover:bg-red-100"
-                    >
+                    <Button variant="outline" className="w-full justify-start text-left">
+                      Pause Account
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Pause Account</DialogTitle>
+                      <DialogDescription>
+                        Your account will be temporarily suspended. You can reactivate it anytime by logging in.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                      </DialogClose>
+                      <Button
+                        variant="outline"
+                        onClick={handlePauseAccount}
+                        disabled={loading}
+                      >
+                        Pause Account
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
+                <Separator />
+
+                {/* Delete Account */}
+                <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left text-red-600">
+                      <Trash2 className="mr-2 h-4 w-4" />
                       Delete Account
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Delete Account</DialogTitle>
+                      <DialogTitle className="flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5 text-red-600" />
+                        Delete Account
+                      </DialogTitle>
                       <DialogDescription>
-                        Are you sure you want to delete your account? This action cannot be undone.
+                        Account deletion is permanent and cannot be undone. To delete your account, please contact our support team.
                       </DialogDescription>
                     </DialogHeader>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 my-4">
-                      <p className="text-sm text-blue-900">
-                        Please contact support@kejahub.com for account deletion assistance.
-                      </p>
-                    </div>
                     <DialogFooter>
+                      <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                      </DialogClose>
                       <Button
                         variant="outline"
-                        onClick={(e) => {
-                          const closeButton = e.currentTarget.closest(
-                            "[role='dialog']"
-                          )?.querySelector("[data-state='open']");
-                          if (closeButton) (closeButton as HTMLElement).click();
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        variant="destructive"
                         onClick={handleDeleteAccount}
                       >
-                        Sign Out
+                        Contact Support
                       </Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
-              </CardFooter>
+              </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
